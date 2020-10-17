@@ -1,0 +1,138 @@
+/**
+ * This is an example file distributed as part of the Turbo Rascal Syntax Error
+ * development platform.
+ * 
+ * https://turborascal.com
+ * https://github.com/leuat/TRSE
+ *
+ * License: GPL V3
+ *
+ * Splash screen and 40/80 selection added 9/2020 by Fuzzybad 
+ * Modified logic in InitTabs() to be more visually interesting
+ * 
+ */
+program Sines;
+var  
+   	i,j,k: byte; 
+   	zp,tp:pointer;
+
+  	vals : array[8] of byte = ($20, $2E, $A6, $A0, $A0, $A6, $2E, $20);
+   	list : array[256] of byte;
+
+	// Used for keyboard input
+	key,numkeys : byte;
+	
+	// Text for splash screen  	
+	titlemsg: string  = ("TRSE EXAMPLE 8 'SINES'");
+	authormsg: string = ("40/80 VERSION 9/2020");
+	promptmsg: string = ("USE ", 244, "0 OR ", 248, "0 COLUMN SCREEN?");
+	exitmsg: string   = (211, 208, 193, 195, 197, " TO QUIT");
+
+	// User selection for screen width 
+	myscreenwidth: byte = 0;
+
+
+/* 
+	Method to get a char from the keyboard buffer
+	TRSE procedures return accumulator value
+*/
+procedure getKey();
+begin
+	call(^$ffe4);	// getin
+end;
+	
+
+/* 
+	Method which shows title screen and checks screen width
+*/
+procedure showTitle();
+begin
+	// Clear screen
+	clearscreen($20, screen_char_loc);
+
+	// Show the title text
+	moveto(9,1,hi(screen_char_loc));
+   	printString(titlemsg,0,22);
+
+	moveto(10,2,hi(screen_char_loc));
+   	printString(authormsg,0,20);
+
+	// Ask user if they have 40 or 80 column screen
+	moveto(7,4,hi(screen_char_loc));
+    printString(promptmsg,0,27);    
+
+	// Show the quit instruction
+	moveto(14,11,hi(screen_char_loc));
+   	printString(exitmsg,0,13);
+
+	while (myscreenwidth=0) do	begin
+		// 009E			No. of Chars. in Keyboard Buffer (Queue)
+		// 00E3 		Size of Keyboard Buffer
+		// 0270-027A  	Keyboard Buffer Queue (FIFO)
+
+		// Is there a value in the character buffer?
+		numkeys := peek(^$009E, 0);
+
+		if(numkeys > 0) then begin
+			key := getKey();
+
+			// 52 is '4'
+			if(key = 52) then 
+		    	myscreenwidth := 40;
+
+			// 56 is '8'
+			if(key = 56) then 
+		    	myscreenwidth := 80;
+
+		end;
+    end;
+end;
+
+
+procedure InitTabs();
+begin
+	//for i:=0 to 0 do list[i]:=vals[(sine[i]/13)&7]; // original
+	//for i:=0 to 0 do list[i]:=vals[(sine[i]/3)&11]; // clean, cool looking (11/11)
+	for i:=0 to 0 do list[i]:=vals[(sine[i]/13)&9]; // looks like a wave (13/9, 9/11)
+end;
+
+
+procedure Render();
+begin
+	j:=k;
+	zp:=screen_char_loc;
+	k:=k+2; // Speed control
+	
+	for i:=0 to screen_height do 
+	begin
+		j:=sine[k+i*2]/2;
+		j:=j+sine[k+j*2]/4;
+		
+		tp:=list + j;
+		memcpy(tp,0,zp,myscreenwidth);
+		zp:=zp+myscreenwidth;
+		inc(j);
+	end;
+end;
+
+
+begin
+	// Show the title and check number of columns
+	showTitle();	
+	
+	InitTabs();
+	
+	while (true) do begin
+		Render();
+		
+		// Exit if user pressed space
+		if(getKey() = 32) then begin
+		    // Clear screen
+			clearscreen($20, screen_char_loc);
+
+			//call(^$fd16);	// RESET
+		    call(^$fd49);	// Trigger NMI	    
+		end;
+	end;
+	
+end.

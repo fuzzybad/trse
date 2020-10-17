@@ -1,0 +1,185 @@
+/**
+ * This is an example file distributed as part of the Turbo Rascal Syntax Error
+ * development platform.
+ * 
+ * https://turborascal.com
+ * https://github.com/leuat/TRSE
+ *
+ * License: GPL V3
+ *
+ * Splash screen and 40/80 selection added 9/2020 by Fuzzybad 
+ * 
+ */
+program Tutorial3_plasma;
+var
+	// some plasma variables
+	c,val,c2x, c2y,ax, ay : byte;
+	x,y : byte;
+	colorP: pointer;
+	
+	// Used for keyboard input
+	key,numkeys : byte;
+	
+	// Text for splash screen  	
+	titlemsg: string  = ("TRSE EXAMPLE 6  'PLASMA'");
+	authormsg: string = ("40/80 VERSION 9/2020");
+	promptmsg: string = ("USE ", 244, "0 OR ", 248, "0 COLUMN SCREEN?");
+	exitmsg: string   = (211, 208, 193, 195, 197, " TO QUIT");
+
+	// User selection for screen width 
+	myscreenwidth: byte = 0;
+
+	// charset will be placed at $2000 in bank 1	
+	@define charsetLocation $2000
+	 // look in the character set
+	@define baseCharacter $68
+
+	// mini sine table
+    siny : array[screen_height] of byte; 
+	sinx : array[80] of byte;
+
+	// Lookup table for division by 16
+	lookupDiv : array[256] of byte;
+
+	vals : array[8] of byte = ($20, $2E,  $A6, $A0, $A0, $A6, $2E, $20);
+
+
+/* 
+	Method to get a char from the keyboard buffer
+	TRSE procedures return accumulator value
+*/
+procedure getKey();
+begin
+	call(^$ffe4);	// getin
+end;
+	
+
+/* 
+	Method which shows title screen and checks screen width
+*/
+procedure showTitle();
+begin
+	// Clear screen
+	clearscreen($20, screen_char_loc);
+
+	// Show the title text
+	moveto(8,1,hi(screen_char_loc));
+   	printString(titlemsg,0,24);
+
+	moveto(10,2,hi(screen_char_loc));
+   	printString(authormsg,0,20);
+
+	// Ask user if they have 40 or 80 column screen
+	moveto(7,4,hi(screen_char_loc));
+    printString(promptmsg,0,27);    
+
+	// Show the quit instruction
+	moveto(14,11,hi(screen_char_loc));
+   	printString(exitmsg,0,13);
+
+	while (myscreenwidth=0) do	begin
+		// 009E			No. of Chars. in Keyboard Buffer (Queue)
+		// 00E3 		Size of Keyboard Buffer
+		// 0270-027A  	Keyboard Buffer Queue (FIFO)
+
+		// Is there a value in the character buffer?
+		numkeys := peek(^$009E, 0);
+
+		if(numkeys > 0) then begin
+			key := getKey();
+
+			// 52 is '4'
+			if(key = 52) then 
+		    	myscreenwidth := 40;
+
+			// 56 is '8'
+			if(key = 56) then 
+		    	myscreenwidth := 80;
+
+		end;
+    end;
+end;
+
+
+// Plasma procedure
+procedure Plasma();
+begin
+	c2x:=ax;
+	c2y:=ay;
+	
+	// Set up y-sine table
+	for x:=0 to screen_height do begin 
+		siny[x]:=  sine[c2x] + sine[c2y];
+		c2x:=c2x+4;
+		c2y:=c2y+9;
+	end;
+
+	ax:=ax+3;
+	ay:=ay-5;
+
+	// Set up x-sine table
+	for x:=0 to myscreenwidth do begin 
+		sinx[x] := sine[c2x] + sine[c2y];
+		c2x:=c2x+3;
+		c2y:=c2y+7;
+
+	end;
+	// Move cursor to (1,y) on $0400 on bank 1	
+	// moveto could also be replaced with : screenmemory:=$0400 + @y_start*40;
+ 	moveto(0,0, hi(screen_char_loc)); // Full screen, runs slower
+	//moveto(0,screen_height/2, hi(screen_char_loc)); // Half screen, runs faster
+	
+	
+	for y:=0 to screen_height do begin
+		val:=siny[y];
+		for x:=0 to myscreenwidth do begin
+		
+			// here, we take (sin[x]+val) and divide by 16. However, since this is a slow procedure,
+			// we have created a lookup table instead!
+			c:=lookupDiv[ (sinx[x] +val) ];
+			// Set the screen memory
+			screenmemory[x]:=vals[c];
+
+		end;
+		// Increase screen memory pointer by MYSCREENWIDTH (next row)
+		screenmemory:=screenmemory+myscreenwidth;
+		// Increase color pointer by MYSCREENWIDTH (next row)
+		colorP:=colorP+myscreenwidth;
+	end;
+
+end;
+
+
+procedure InitDivision();
+begin
+	for x:=0 to 256 do lookupDiv[x]:=x/32; // Simply store values divided by 16
+end;
+
+
+begin
+	// Show the title and check number of columns
+	showTitle();
+	
+	// Set charmap location at $2000
+	InitDivision();
+	ax:=1;
+	ay:=5;
+
+	// Clear screen and color memory
+	ClearScreen($20, screen_char_loc);
+	
+	// Main loop
+	while (true) do begin
+		Plasma();
+				
+		// Exit if user pressed space
+		if(getKey() = 32) then begin
+		    // Clear screen
+			clearscreen($20, screen_char_loc);
+
+			//call(^$fd16);	// RESET
+		    call(^$fd49);	// Trigger NMI	    
+		end;
+	end;
+
+end.
