@@ -1,7 +1,13 @@
 Repository of code built using the fantastic Turbo Rascal Syntax Error (TRSE) development environment.
 
-Sceenshots: /fuzzybad/trse/tree/main/pet/screenshots
-Binaries (PRG files): /fuzzybad/trse/tree/main/pet/prg
+Sceenshots:
+
+https://github.com/fuzzybad/trse/tree/main/pet/screenshots
+
+
+Binaries (PRG files): 
+
+https://github.com/fuzzybad/trse/tree/main/pet/prg
 
 
 
