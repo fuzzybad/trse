@@ -1,4 +1,4 @@
-# Random stuff built using the Turbo Rascal Syntax Error (TRSE) development environment.
+## Random stuff built using the Turbo Rascal Syntax Error (TRSE) development environment.
 
 ### PET Demos
 [Sceenshots](https://github.com/fuzzybad/trse/tree/main/pet/screenshots) | 
