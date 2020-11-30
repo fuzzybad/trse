@@ -1,0 +1,257 @@
+/**
+ * This is an example file distributed as part of the Turbo Rascal Syntax Error
+ * development platform.
+ * 
+ * https://turborascal.com
+ * https://github.com/leuat/TRSE
+ *
+ * License: GPL V3
+ *
+ * Splash screen and 40/80 selection added 9/2020 by Fuzzybad 
+ * 
+ */
+program MatrixEffect;
+var 
+	// These have to be constants, as createaddresstable() 
+	// doesn't work with regular vars for this param.
+	const SCREEN_40: byte = 40;
+	const SCREEN_80: byte = 80;
+
+	i,j : byte; 	
+	
+	// Following are used to define message area 
+	xpos1, xpos2, ypos1, ypos2 : byte;
+
+   	// The ypos array will contain the current pos for each column, ranging from 0-200. These values are divided by 8
+   	// before being used as a y-coordinate
+   	ypos : array[80] of byte;
+   	
+   	// Yadd contains the addition value for each column. Is reset for each cycle
+   	yadd : array[80] of byte;
+   	
+   	// Screen and color address tables
+	saddr: array[80] of integer; // Screen address table
+	caddr: array[80] of integer; // Color adress table
+  	sp:pointer;
+
+	// Used for keyboard input
+	key,numkeys : byte;
+	
+	// Text for splash screen  	
+	titlemsg: string  = ("TRSE EXAMPLE 5  'MATRIX'");
+	authormsg: string = ("WOC VERSION 11/2020 FUZZYBAD");
+	promptmsg: string = ("USE ", 244, "0 OR ", 248, "0 COLUMN SCREEN?");
+	exitmsg: string   = (211, 208, 193, 195, 197, " TO QUIT");
+
+	// Text for message area
+	msg_0: string  = ("WORLD OF COMMODORE 2020");
+	msg_1: string  = ("                       ");
+	msg_2: string  = ("   DECEMBER 5, 2020    ");
+	msg_3: string  = ("                       ");
+	msg_4: string  = ("TORONTO PET USERS GROUP");
+
+	// # of chars in the width
+	// @TODO: There must be some way to calculate string length..
+	msg_len: byte = 23;
+
+	// User selection for screen width 
+	myscreenwidth: byte = 0;
+
+
+/* 
+	Method to get a char from the keyboard buffer
+	TRSE procedures return accumulator value
+*/
+procedure getKey();
+begin
+	call(^$ffe4);	// getin
+end;
+	
+
+/* 
+	Method which shows title screen and checks screen width
+*/
+procedure showTitle();
+begin
+	// Set uppercase
+	poke(^59468, 0, 12);
+	
+	// Clear screen
+	clearscreen($20, screen_char_loc);
+
+	// Show the title text
+	moveto(8,1,hi(screen_char_loc));
+   	printString(titlemsg,0,24);
+
+	moveto(6,2,hi(screen_char_loc));
+   	printString(authormsg,0,28);
+
+	// Ask user if they have 40 or 80 column screen
+	moveto(7,4,hi(screen_char_loc));
+    printString(promptmsg,0,27);    
+
+	// Show the quit instruction
+	moveto(14,11,hi(screen_char_loc));
+   	printString(exitmsg,0,13);
+
+	while (myscreenwidth=0) do	begin
+		// 009E			No. of Chars. in Keyboard Buffer (Queue)
+		// 00E3 		Size of Keyboard Buffer
+		// 0270-027A  	Keyboard Buffer Queue (FIFO)
+
+		// Is there a value in the character buffer?
+		numkeys := peek(^$009E, 0);
+
+		if(numkeys > 0) then begin
+			key := getKey();
+
+			// 52 is '4'
+			if(key = 52) then 
+		    	myscreenwidth := 40;
+
+			// 56 is '8'
+			if(key = 56) then 
+		    	myscreenwidth := 80;
+
+		end;
+    end;
+end;
+
+
+/*
+	Method that initializes the lookup tables used in this program
+*/
+procedure InitTables();
+begin
+	// Yadd has random values (0-255)/80 +1
+	for i:=0 to myscreenwidth do yadd[i]:=random()/myscreenwidth+1;
+	
+	// ypos has values 0-128
+	for i:=0 to myscreenwidth do ypos[i]:=random()/2;
+	
+	// Sets up the address tables for the screen & color memory    
+	if(myscreenwidth = 40) then 
+		createaddresstable(saddr,screen_char_loc,SCREEN_40,screen_height);
+	
+	if(myscreenwidth = 80) then 
+		createaddresstable(saddr,screen_char_loc,SCREEN_80,screen_height);
+
+end;
+
+/*
+	Small method that fills a color at a specific x/y value on screen.
+	Only fills the value if the y is in a valid range 0..24
+	If y is less than zero (>240), then we just cycle add with 25 
+*/
+procedure FillColor(xx,yy,cc:byte);
+begin
+	if (yy>240) then yy:=yy+screen_height;
+	if (yy<screen_height) then 
+	begin
+		sp:=AddressTable(saddr,xx,yy);
+		sp[0]:=cc;	
+	end;
+end;
+
+
+/*
+	Show the message
+*/
+procedure displayMessage();
+begin
+	xpos1 := (myscreenwidth - msg_len) / 2;
+	xpos2 := xpos1 + msg_len;
+
+	if(myscreenwidth = 40) then 
+	begin
+		ypos1 := 6;
+		ypos2 := 14;
+	end;
+	
+	if(myscreenwidth = 80) then 
+	begin
+		ypos1 := 3;
+		ypos2 := 8;	
+	end;
+
+	// @TODO Put strings into array and print using loop
+	moveto(xpos1,3,hi(screen_char_loc));
+   	printString(msg_0,0,msg_len);
+	moveto(xpos1,4,hi(screen_char_loc));
+   	printString(msg_1,0,msg_len);
+	moveto(xpos1,5,hi(screen_char_loc));
+   	printString(msg_2,0,msg_len);
+	moveto(xpos1,6,hi(screen_char_loc));
+   	printString(msg_3,0,msg_len);
+	moveto(xpos1,7,hi(screen_char_loc));
+   	printString(msg_4,0,msg_len);
+end;
+
+
+/*
+	Renders the matrix effect
+*/
+procedure RenderMatrix();
+begin
+	// Loop through the 40/80 columns
+	for i:=0 to myscreenwidth do 
+	begin
+		// Calculate actualy y screen position
+		j:=ypos[i]/8;
+		
+		// Print random character
+		if( j<screen_height ) then 
+		begin
+			// This creates space for the message
+			if( (i<xpos1 or i>=xpos2) or (j<ypos1 or j>=ypos2) ) then 			
+			begin
+				sp:=AddressTable(saddr,i,j);
+				sp[0]:=random()/4; // random character is located between 0 and 64
+			end;
+		end;
+		
+		// Fill the "tail" colors
+		FillColor(i,j-8,$20);
+		
+		// increase ypos[i] with yadd[i]		
+		ypos[i]:=ypos[i]+yadd[i];
+		
+		// Reset values when ypos is outside of the screen
+		if (ypos[i]>=240) then
+		begin 
+			ypos[i]:=0;
+			yadd[i]:=random()/myscreenwidth+1;
+		end;
+	end;	
+end;	
+
+
+/*
+	Main block
+*/
+begin
+	// Show the title and check number of columns
+	showTitle();	
+
+	// Initialize tables	
+	InitTables();
+
+	// Display the message (not working from here for some reason)
+	//displayMessage();
+
+	// Loop effect
+	while(true) do begin
+		displayMessage();
+
+		RenderMatrix();	
+			
+		// Exit if user pressed space
+		if(getKey() = 32) then begin
+		    // Clear screen
+			clearscreen($20, screen_char_loc);
+
+			//call(^$fd16);	// RESET
+		    call(^$fd49);	// Trigger NMI	    
+		end;
+	end;
+end.
