@@ -1,21 +1,23 @@
  processor 6502
 	org $400
 	; Starting new memory block at $400
+StartBlock400
 	.byte    $0, $0E, $08, $0A, $00, $9E, $20, $28
 	.byte   $31,$30,$34,$30
 	.byte    $29, $00, $00, $00
 	; Ending memory block
-EndBlock2641
+EndBlock400
 	org $410
 	; Starting new memory block at $410
+StartBlock410
 MatrixEffect
 	jmp block1
-i	dc.b	
-j	dc.b	
-xpos1	dc.b	
-xpos2	dc.b	
-ypos1	dc.b	
-ypos2	dc.b	
+i	dc.b	0
+j	dc.b	0
+xpos1	dc.b	0
+xpos2	dc.b	0
+ypos1	dc.b	0
+ypos2	dc.b	0
 ypos	dc.b	 
 	org ypos+80
 yadd	dc.b	 
@@ -23,8 +25,7 @@ yadd	dc.b
 saddr	dc.w	 
 	org saddr+160
 sp	= $02
-key	dc.b	
-numkeys	dc.b	
+key	dc.b	0
 titlemsg		dc.b	"TRSE EXAMPLE 5  'MATRIX'"
 	dc.b	0
 authormsg		dc.b	"WOC VERSION 11/2020 FUZZYBAD"
@@ -54,6 +55,7 @@ msg_4		dc.b	"TORONTO PET USERS GROUP"
 	dc.b	0
 msg_len	dc.b	$17
 myscreenwidth	dc.b	$00
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : init16x8div
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
@@ -82,6 +84,7 @@ divloop16	asl initdiv16x8_dividend	;dividend lb & hb*2, msb -> Carry
 skip16	dex
 	bne divloop16
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : init8x8div
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
@@ -104,11 +107,13 @@ div8x8_loop2 dex
 	lda div8x8_d
 div8x8_def_end
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initmoveto
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
 	jmp initmoveto_moveto2
 screenmemory =  $fe
+colormemory =  $fc
 screen_x = $4c
 screen_y = $4e
 SetScreenPosition
@@ -137,6 +142,7 @@ sxdone
 	rts
 initmoveto_moveto2
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initprintstring
 	;    Procedure type : User-defined procedure
 print_text = $4c
@@ -160,6 +166,7 @@ printstring_skip
 	jmp printstringloop
 printstring_done
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initrandom256
 	;    Procedure type : User-defined procedure
 	; init random256
@@ -180,6 +187,7 @@ initrandom256_RandomSkip3
 ; //	Method to get a char from the keyboard buffer
 ; //	TRSE procedures return accumulator value
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : getKey
 	;    Procedure type : User-defined procedure
 getKey
@@ -189,6 +197,7 @@ getKey
 ; // getin 
 ; //	Method which shows title screen and checks screen width
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : showTitle
 	;    Procedure type : User-defined procedure
 showTitle
@@ -292,17 +301,8 @@ showTitle_ConditionalTrueBlock16: ;Main true block ;keep
 ; // 00E3 		Size of Keyboard Buffer
 ; // 0270-027A  	Keyboard Buffer Queue(FIFO)
 ; // Is there a value in the character buffer?
-	; Assigning single variable : numkeys
-	; Peek
-	lda $9e + $0
-	; Calling storevariable
-	sta numkeys
-	; Binary clause Simplified: GREATER
-	; Compare with pure num / var optimization
-	cmp #$0;keep
-	bcc showTitle_elsedoneblock54
-	beq showTitle_elsedoneblock54
-showTitle_ConditionalTrueBlock52: ;Main true block ;keep 
+; // NOTE: Doesn't work on early ROMS
+; //numkeys := peek(^$009E, 0);
 	; Assigning single variable : key
 	jsr getKey
 	; Calling storevariable
@@ -310,35 +310,35 @@ showTitle_ConditionalTrueBlock52: ;Main true block ;keep
 	; Binary clause Simplified: EQUALS
 	; Compare with pure num / var optimization
 	cmp #$34;keep
-	bne showTitle_elsedoneblock72
-showTitle_ConditionalTrueBlock70: ;Main true block ;keep 
+	bne showTitle_elsedoneblock36
+showTitle_ConditionalTrueBlock34: ;Main true block ;keep 
 	
 ; // 52 is '4'
 	; Assigning single variable : myscreenwidth
 	lda #$28
 	; Calling storevariable
 	sta myscreenwidth
-showTitle_elsedoneblock72
+showTitle_elsedoneblock36
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$38;keep
-	bne showTitle_elsedoneblock78
-showTitle_ConditionalTrueBlock76: ;Main true block ;keep 
+	bne showTitle_elsedoneblock42
+showTitle_ConditionalTrueBlock40: ;Main true block ;keep 
 	
 ; // 56 is '8'
 	; Assigning single variable : myscreenwidth
 	lda #$50
 	; Calling storevariable
 	sta myscreenwidth
-showTitle_elsedoneblock78
-showTitle_elsedoneblock54
+showTitle_elsedoneblock42
 	jmp showTitle_while15
 showTitle_elsedoneblock18
 	rts
 	
 ; //	Method that initializes the lookup tables used in this program
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : InitTables
 	;    Procedure type : User-defined procedure
 InitTables
@@ -346,7 +346,7 @@ InitTables
 	lda #$0
 	; Calling storevariable
 	sta i
-InitTables_forloop82
+InitTables_forloop46
 	
 ; // Yadd has random values(0-255)/80 +1
 	; Assigning single variable : yadd
@@ -365,17 +365,19 @@ InitTables_forloop82
 	; Calling storevariable
 	ldx i ; optimized, look out for bugs
 	sta yadd,x
-	; IS ONPAGE
+InitTables_forloopcounter48
+	; Compare is onpage
 	inc i
 	lda myscreenwidth
 	cmp i ;keep
-	bne InitTables_forloop82
-InitTables_loopdone89: ;keep
+	bne InitTables_forloop46
+InitTables_loopdone55: ;keep
+InitTables_forloopend47
 	; Assigning single variable : i
 	lda #$0
 	; Calling storevariable
 	sta i
-InitTables_forloop90
+InitTables_forloop56
 	
 ; // ypos has values 0-128
 	; Assigning single variable : ypos
@@ -386,18 +388,20 @@ InitTables_forloop90
 	; Calling storevariable
 	ldx i ; optimized, look out for bugs
 	sta ypos,x
-	; IS ONPAGE
+InitTables_forloopcounter58
+	; Compare is onpage
 	inc i
 	lda myscreenwidth
 	cmp i ;keep
-	bne InitTables_forloop90
-InitTables_loopdone93: ;keep
+	bne InitTables_forloop56
+InitTables_loopdone61: ;keep
+InitTables_forloopend57
 	; Binary clause Simplified: EQUALS
 	lda myscreenwidth
 	; Compare with pure num / var optimization
 	cmp #$28;keep
-	bne InitTables_elsedoneblock97
-InitTables_ConditionalTrueBlock95: ;Main true block ;keep 
+	bne InitTables_elsedoneblock65
+InitTables_ConditionalTrueBlock63: ;Main true block ;keep 
 	
 ; // Sets up the address tables for the screen & color memory    
 	; ----------
@@ -408,28 +412,28 @@ InitTables_ConditionalTrueBlock95: ;Main true block ;keep
 	sta saddr,x   ; Address of table
 	tya
 	sta saddr+1,x
-InitTables_dtloop102
+InitTables_dtloop70
 	tay
 	lda saddr,x
 	inx
 	inx
 	clc
 	adc #$28
-	bcc InitTables_dtnooverflow103
+	bcc InitTables_dtnooverflow71
 	iny
-InitTables_dtnooverflow103
+InitTables_dtnooverflow71
 	sta saddr,x
 	tya
 	sta saddr+1,x
 	cpx #$30
-	bcc InitTables_dtloop102
-InitTables_elsedoneblock97
+	bcc InitTables_dtloop70
+InitTables_elsedoneblock65
 	; Binary clause Simplified: EQUALS
 	lda myscreenwidth
 	; Compare with pure num / var optimization
 	cmp #$50;keep
-	bne InitTables_elsedoneblock107
-InitTables_ConditionalTrueBlock105: ;Main true block ;keep 
+	bne InitTables_elsedoneblock75
+InitTables_ConditionalTrueBlock73: ;Main true block ;keep 
 	; ----------
 	; DefineAddressTable address, StartValue, IncrementValue, TableSize
 	ldy #>$8000
@@ -438,50 +442,51 @@ InitTables_ConditionalTrueBlock105: ;Main true block ;keep
 	sta saddr,x   ; Address of table
 	tya
 	sta saddr+1,x
-InitTables_dtloop112
+InitTables_dtloop80
 	tay
 	lda saddr,x
 	inx
 	inx
 	clc
 	adc #$50
-	bcc InitTables_dtnooverflow113
+	bcc InitTables_dtnooverflow81
 	iny
-InitTables_dtnooverflow113
+InitTables_dtnooverflow81
 	sta saddr,x
 	tya
 	sta saddr+1,x
 	cpx #$30
-	bcc InitTables_dtloop112
-InitTables_elsedoneblock107
+	bcc InitTables_dtloop80
+InitTables_elsedoneblock75
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : FillColor
 	;    Procedure type : User-defined procedure
-xx	dc.b	
-yy	dc.b	
-cc	dc.b	
-FillColor_block114
+xx	dc.b	0
+yy	dc.b	0
+cc	dc.b	0
+FillColor_block82
 FillColor
-	; Binary clause Simplified: GREATER
+	; Optimization: replacing a > N with a >= N+1
+	; Binary clause Simplified: GREATEREQUAL
 	lda yy
 	; Compare with pure num / var optimization
-	cmp #$f0;keep
-	bcc FillColor_elsedoneblock118
-	beq FillColor_elsedoneblock118
-FillColor_ConditionalTrueBlock116: ;Main true block ;keep 
+	cmp #$f1;keep
+	bcc FillColor_elsedoneblock86
+FillColor_ConditionalTrueBlock84: ;Main true block ;keep 
 	; Assigning single variable : yy
 	; Optimizer: a = a +/- b
 	lda yy
 	clc
 	adc #$19
 	sta yy
-FillColor_elsedoneblock118
+FillColor_elsedoneblock86
 	; Binary clause Simplified: LESS
 	lda yy
 	; Compare with pure num / var optimization
 	cmp #$19;keep
-	bcs FillColor_elsedoneblock124
-FillColor_ConditionalTrueBlock122: ;Main true block ;keep 
+	bcs FillColor_elsedoneblock92
+FillColor_ConditionalTrueBlock90: ;Main true block ;keep 
 	; Assigning single variable : sp
 	; ----------
 	; AddressTable address, xoffset, yoffset
@@ -493,9 +498,9 @@ FillColor_ConditionalTrueBlock122: ;Main true block ;keep
 	ldy saddr+1,x   ; Address of table hi
 	clc
 	adc xx
-	bcc FillColor_dtnooverflow128
+	bcc FillColor_dtnooverflow96
 	iny  ; overflow into high byte
-FillColor_dtnooverflow128
+FillColor_dtnooverflow96
 	sta sp
 	sty sp+1
 	; Assigning single variable : sp
@@ -503,11 +508,12 @@ FillColor_dtnooverflow128
 	ldy #$0 ; optimized, look out for bugs
 	lda cc
 	sta (sp),y
-FillColor_elsedoneblock124
+FillColor_elsedoneblock92
 	rts
 	
 ; //	Show the message
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : displayMessage
 	;    Procedure type : User-defined procedure
 displayMessage
@@ -535,8 +541,8 @@ displayMessage
 	lda myscreenwidth
 	; Compare with pure num / var optimization
 	cmp #$28;keep
-	bne displayMessage_elsedoneblock133
-displayMessage_ConditionalTrueBlock131: ;Main true block ;keep 
+	bne displayMessage_elsedoneblock101
+displayMessage_ConditionalTrueBlock99: ;Main true block ;keep 
 	; Assigning single variable : ypos1
 	lda #$6
 	; Calling storevariable
@@ -545,13 +551,13 @@ displayMessage_ConditionalTrueBlock131: ;Main true block ;keep
 	lda #$e
 	; Calling storevariable
 	sta ypos2
-displayMessage_elsedoneblock133
+displayMessage_elsedoneblock101
 	; Binary clause Simplified: EQUALS
 	lda myscreenwidth
 	; Compare with pure num / var optimization
 	cmp #$50;keep
-	bne displayMessage_elsedoneblock139
-displayMessage_ConditionalTrueBlock137: ;Main true block ;keep 
+	bne displayMessage_elsedoneblock107
+displayMessage_ConditionalTrueBlock105: ;Main true block ;keep 
 	; Assigning single variable : ypos1
 	lda #$3
 	; Calling storevariable
@@ -560,7 +566,7 @@ displayMessage_ConditionalTrueBlock137: ;Main true block ;keep
 	lda #$8
 	; Calling storevariable
 	sta ypos2
-displayMessage_elsedoneblock139
+displayMessage_elsedoneblock107
 	
 ; // @TODO Put strings into array and print using loop
 	lda xpos1
@@ -637,6 +643,7 @@ displayMessage_elsedoneblock139
 	
 ; //	Renders the matrix effect
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : RenderMatrix
 	;    Procedure type : User-defined procedure
 RenderMatrix
@@ -644,7 +651,7 @@ RenderMatrix
 	lda #$0
 	; Calling storevariable
 	sta i
-RenderMatrix_forloop153
+RenderMatrix_forloop121
 	
 ; // Loop through the 40/80 columns
 ; // Calculate actualy y screen position
@@ -662,38 +669,38 @@ RenderMatrix_forloop153
 	; Binary clause Simplified: LESS
 	; Compare with pure num / var optimization
 	cmp #$19;keep
-	bcs RenderMatrix_elsedoneblock158
-RenderMatrix_ConditionalTrueBlock156: ;Main true block ;keep 
+	bcs RenderMatrix_elsedoneblock167
+RenderMatrix_ConditionalTrueBlock165: ;Main true block ;keep 
 	; Binary clause Simplified: LESS
 	lda i
 	; Compare with pure num / var optimization
 	cmp xpos1;keep
-	bcs RenderMatrix_localfailed179
-	jmp RenderMatrix_ConditionalTrueBlock173
-RenderMatrix_localfailed179: ;keep
+	bcs RenderMatrix_localfailed188
+	jmp RenderMatrix_ConditionalTrueBlock182
+RenderMatrix_localfailed188: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: GREATEREQUAL
 	lda i
 	; Compare with pure num / var optimization
 	cmp xpos2;keep
-	bcc RenderMatrix_localfailed178
-	jmp RenderMatrix_ConditionalTrueBlock173
-RenderMatrix_localfailed178: ;keep
+	bcc RenderMatrix_localfailed187
+	jmp RenderMatrix_ConditionalTrueBlock182
+RenderMatrix_localfailed187: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: LESS
 	lda j
 	; Compare with pure num / var optimization
 	cmp ypos1;keep
-	bcs RenderMatrix_localfailed180
-	jmp RenderMatrix_ConditionalTrueBlock173
-RenderMatrix_localfailed180: ;keep
+	bcs RenderMatrix_localfailed189
+	jmp RenderMatrix_ConditionalTrueBlock182
+RenderMatrix_localfailed189: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: GREATEREQUAL
 	lda j
 	; Compare with pure num / var optimization
 	cmp ypos2;keep
-	bcc RenderMatrix_elsedoneblock175
-RenderMatrix_ConditionalTrueBlock173: ;Main true block ;keep 
+	bcc RenderMatrix_elsedoneblock184
+RenderMatrix_ConditionalTrueBlock182: ;Main true block ;keep 
 	
 ; // Print random character
 ; // This creates space for the message
@@ -708,9 +715,9 @@ RenderMatrix_ConditionalTrueBlock173: ;Main true block ;keep
 	ldy saddr+1,x   ; Address of table hi
 	clc
 	adc i
-	bcc RenderMatrix_dtnooverflow182
+	bcc RenderMatrix_dtnooverflow191
 	iny  ; overflow into high byte
-RenderMatrix_dtnooverflow182
+RenderMatrix_dtnooverflow191
 	sta sp
 	sty sp+1
 	; Assigning single variable : sp
@@ -720,10 +727,11 @@ RenderMatrix_dtnooverflow182
 	lsr
 	lsr
 	; Calling storevariable
+	; Storing to a pointer
 	ldy #$0
 	sta (sp),y
-RenderMatrix_elsedoneblock175
-RenderMatrix_elsedoneblock158
+RenderMatrix_elsedoneblock184
+RenderMatrix_elsedoneblock167
 	
 ; // Fill the "tail" colors
 	; Assigning single variable : xx
@@ -759,8 +767,8 @@ RenderMatrix_elsedoneblock158
 	; Load Byte array
 	; Compare with pure num / var optimization
 	cmp #$f0;keep
-	bcc RenderMatrix_elsedoneblock186
-RenderMatrix_ConditionalTrueBlock184: ;Main true block ;keep 
+	bcc RenderMatrix_elsedoneblock195
+RenderMatrix_ConditionalTrueBlock193: ;Main true block ;keep 
 	
 ; // Reset values when ypos is outside of the screen
 	; Assigning single variable : ypos
@@ -784,14 +792,16 @@ RenderMatrix_ConditionalTrueBlock184: ;Main true block ;keep
 	; Calling storevariable
 	ldx i ; optimized, look out for bugs
 	sta yadd,x
-RenderMatrix_elsedoneblock186
+RenderMatrix_elsedoneblock195
+RenderMatrix_forloopcounter123
 	inc i
 	lda myscreenwidth
 	cmp i ;keep
-	beq RenderMatrix_loopdone232
-RenderMatrix_loopnotdone233
-	jmp RenderMatrix_forloop153
-RenderMatrix_loopdone232
+	beq RenderMatrix_loopdone202
+RenderMatrix_loopnotdone203
+	jmp RenderMatrix_forloop121
+RenderMatrix_loopdone202
+RenderMatrix_forloopend122
 	rts
 block1
 	
@@ -802,13 +812,13 @@ block1
 	
 ; // Initialize tables	
 	jsr InitTables
-MainProgram_while234
+MainProgram_while204
 	; Binary clause Simplified: NOTEQUALS
 	lda #$1
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	beq MainProgram_elsedoneblock237
-MainProgram_ConditionalTrueBlock235: ;Main true block ;keep 
+	beq MainProgram_elsedoneblock207
+MainProgram_ConditionalTrueBlock205: ;Main true block ;keep 
 	
 ; // Display the message(not working from here for some reason)
 ; //displayMessage();
@@ -819,15 +829,15 @@ MainProgram_ConditionalTrueBlock235: ;Main true block ;keep
 	jsr getKey
 	; Compare with pure num / var optimization
 	cmp #$20;keep
-	bne MainProgram_elsedoneblock251
-MainProgram_ConditionalTrueBlock249: ;Main true block ;keep 
+	bne MainProgram_elsedoneblock221
+MainProgram_ConditionalTrueBlock219: ;Main true block ;keep 
 	
 ; // Exit if user pressed space
 ; // Clear screen
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainProgram_clearloop255
+MainProgram_clearloop225
 	dex
 	sta $0000+$8000,x
 	sta $00fa+$8000,x
@@ -837,15 +847,14 @@ MainProgram_clearloop255
 	sta $04e2+$8000,x
 	sta $05dc+$8000,x
 	sta $06d6+$8000,x
-	bne MainProgram_clearloop255
+	bne MainProgram_clearloop225
 	
 ; //call(^$fd16);	
 ; // RESET
 	jsr $fd49
-MainProgram_elsedoneblock251
-	jmp MainProgram_while234
-MainProgram_elsedoneblock237
-EndSymbol
+MainProgram_elsedoneblock221
+	jmp MainProgram_while204
+MainProgram_elsedoneblock207
 	; End of program
 	; Ending memory block
-EndBlock2643
+EndBlock410

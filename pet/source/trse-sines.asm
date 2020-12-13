@@ -1,27 +1,27 @@
  processor 6502
 	org $400
 	; Starting new memory block at $400
+StartBlock400
 	.byte    $0, $0E, $08, $0A, $00, $9E, $20, $28
 	.byte   $31,$30,$34,$30
 	.byte    $29, $00, $00, $00
 	; Ending memory block
-EndBlock3119
+EndBlock400
 	org $410
 	; Starting new memory block at $410
+StartBlock410
 Sines
 		jsr initsine_calculate
 	jmp block1
-i	dc.b	
-j	dc.b	
-k	dc.b	
+i	dc.b	0
+j	dc.b	0
+k	dc.b	0
 zp	= $02
 tp	= $04
 vals	dc.b $020, $02e, $0a6, $0a0, $0a0, $0a6, $02e, $020
-	dc.b 
 list	dc.b	 
 	org list+256
-key	dc.b	
-numkeys	dc.b	
+key	dc.b	0
 titlemsg		dc.b	"TRSE EXAMPLE 8 'SINES'"
 	dc.b	0
 authormsg		dc.b	"40/80 VERSION 9/2020"
@@ -40,6 +40,7 @@ exitmsg		dc.b	211
 	dc.b	" TO QUIT"
 	dc.b	0
 myscreenwidth	dc.b	$00
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : init16x8div
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
@@ -68,6 +69,7 @@ divloop16	asl initdiv16x8_dividend	;dividend lb & hb*2, msb -> Carry
 skip16	dex
 	bne divloop16
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : init16x8mul
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
@@ -94,6 +96,7 @@ mul16x8_enterLoop  ; accumulating multiply entry point (enter with .A=lo, .Y=hi)
 	bcs mul16x8_doAdd
 	bne mul16x8_loop
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : init8x8div
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
@@ -116,6 +119,7 @@ div8x8_loop2 dex
 	lda div8x8_d
 div8x8_def_end
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initeightbitmul
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
@@ -146,11 +150,13 @@ mul_end
 	rts
 initeightbitmul_multiply_eightbit2
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initmoveto
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
 	jmp initmoveto_moveto3
 screenmemory =  $fe
+colormemory =  $fc
 screen_x = $4c
 screen_y = $4e
 SetScreenPosition
@@ -179,6 +185,7 @@ sxdone
 	rts
 initmoveto_moveto3
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initprintstring
 	;    Procedure type : User-defined procedure
 print_text = $4c
@@ -202,6 +209,7 @@ printstring_skip
 	jmp printstringloop
 printstring_done
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initsinetable
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
@@ -236,11 +244,13 @@ initsin_b
 	bpl initsin_a
 	rts
 	
+; // Used for keyboard input
 ; // Text for splash screen  	
 ; // User selection for screen width  
 ; //	Method to get a char from the keyboard buffer
 ; //	TRSE procedures return accumulator value
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : getKey
 	;    Procedure type : User-defined procedure
 getKey
@@ -250,9 +260,16 @@ getKey
 ; // getin 
 ; //	Method which shows title screen and checks screen width
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : showTitle
 	;    Procedure type : User-defined procedure
 showTitle
+	
+; // Set uppercase
+	; Poke
+	; Optimization: shift is zero
+	lda #$c
+	sta $e84c
 	
 ; // Clear screen
 	; Clear screen with offset
@@ -347,17 +364,8 @@ showTitle_ConditionalTrueBlock16: ;Main true block ;keep
 ; // 00E3 		Size of Keyboard Buffer
 ; // 0270-027A  	Keyboard Buffer Queue(FIFO)
 ; // Is there a value in the character buffer?
-	; Assigning single variable : numkeys
-	; Peek
-	lda $9e + $0
-	; Calling storevariable
-	sta numkeys
-	; Binary clause Simplified: GREATER
-	; Compare with pure num / var optimization
-	cmp #$0;keep
-	bcc showTitle_elsedoneblock54
-	beq showTitle_elsedoneblock54
-showTitle_ConditionalTrueBlock52: ;Main true block ;keep 
+; // NOTE: Doesn't work on early ROMS
+; //numkeys := peek(^$009E, 0);
 	; Assigning single variable : key
 	jsr getKey
 	; Calling storevariable
@@ -365,32 +373,32 @@ showTitle_ConditionalTrueBlock52: ;Main true block ;keep
 	; Binary clause Simplified: EQUALS
 	; Compare with pure num / var optimization
 	cmp #$34;keep
-	bne showTitle_elsedoneblock72
-showTitle_ConditionalTrueBlock70: ;Main true block ;keep 
+	bne showTitle_elsedoneblock36
+showTitle_ConditionalTrueBlock34: ;Main true block ;keep 
 	
 ; // 52 is '4'
 	; Assigning single variable : myscreenwidth
 	lda #$28
 	; Calling storevariable
 	sta myscreenwidth
-showTitle_elsedoneblock72
+showTitle_elsedoneblock36
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$38;keep
-	bne showTitle_elsedoneblock78
-showTitle_ConditionalTrueBlock76: ;Main true block ;keep 
+	bne showTitle_elsedoneblock42
+showTitle_ConditionalTrueBlock40: ;Main true block ;keep 
 	
 ; // 56 is '8'
 	; Assigning single variable : myscreenwidth
 	lda #$50
 	; Calling storevariable
 	sta myscreenwidth
-showTitle_elsedoneblock78
-showTitle_elsedoneblock54
+showTitle_elsedoneblock42
 	jmp showTitle_while15
 showTitle_elsedoneblock18
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : InitTabs
 	;    Procedure type : User-defined procedure
 InitTabs
@@ -398,11 +406,11 @@ InitTabs
 	lda #$0
 	; Calling storevariable
 	sta i
-InitTabs_forloop82
+InitTabs_forloop46
 	
-; //for i:=0 to 0 do list[i]:=vals[(sine[i]/13)&7]; 
+; //for i:=0 to 255 do list[i]:=vals[(sine[i]/13)&7]; 
 ; // original
-; //for i:=0 to 0 do list[i]:=vals[(sine[i]/3)&11]; 
+; //for i:=0 to 255 do list[i]:=vals[(sine[i]/3)&11]; 
 ; // clean, cool looking(11/11)
 	; Assigning single variable : list
 	; Load Byte array
@@ -425,15 +433,18 @@ InitTabs_forloop82
 	; Calling storevariable
 	ldx i ; optimized, look out for bugs
 	sta list,x
-	; IS ONPAGE
+InitTabs_forloopcounter48
+	; Compare is onpage
 	inc i
-	lda #$0
+	lda #$ff
 	cmp i ;keep
-	bne InitTabs_forloop82
-InitTabs_loopdone89: ;keep
+	bne InitTabs_forloop46
+InitTabs_loopdone55: ;keep
+InitTabs_forloopend47
 	rts
 	
 ; // looks like a wave(13/9, 9/11)
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : Render
 	;    Procedure type : User-defined procedure
 Render
@@ -442,8 +453,8 @@ Render
 	; Calling storevariable
 	sta j
 	; Assigning single variable : zp
-	lda #0
-	ldx #128
+	lda #$00
+	ldx #$80
 	sta zp
 	stx zp+1
 	; Assigning single variable : k
@@ -456,7 +467,7 @@ Render
 	lda #$0
 	; Calling storevariable
 	sta i
-Render_forloop91
+Render_forloop57
 	
 ; // Speed control
 	; Assigning single variable : j
@@ -500,66 +511,72 @@ Render_forloop91
 	 ; end add / sub var with constant
 	; Calling storevariable
 	sta j
+	
+; //tp:=#list;		
 	; Assigning single variable : tp
 	; INTEGER optimization: a=b+c 
-	lda list
+	lda #<list
 	clc
 	adc j
 	sta tp+0
-	lda list+1
+	lda #>list
 	adc #0
 	sta tp+1
+	
+; //tp:=tp + j;
 	; memcpy
 	ldy #0
-Render_memcpy94
+Render_memcpy67
 	lda (tp),y
 	sta (zp),y
 	iny
 	cpy myscreenwidth
-	bne Render_memcpy94
+	bne Render_memcpy67
 	; Assigning single variable : zp
 	lda zp
 	clc
 	adc myscreenwidth
 	sta zp+0
 	; Optimization : A := A op 8 bit - var and bvar are the same - perform inc
-	bcc Render_WordAdd95
+	bcc Render_WordAdd68
 	inc zp+1
-Render_WordAdd95
+Render_WordAdd68
 	inc j
-	; IS ONPAGE
+Render_forloopcounter59
+	; Compare is onpage
 	inc i
 	lda #$19
 	cmp i ;keep
-	bne Render_forloop91
-Render_loopdone102: ;keep
+	bne Render_forloop57
+Render_loopdone70: ;keep
+Render_forloopend58
 	rts
 block1
 	
 ; // Show the title and check number of columns
 	jsr showTitle
 	jsr InitTabs
-MainProgram_while103
+MainProgram_while71
 	; Binary clause Simplified: NOTEQUALS
 	lda #$1
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	beq MainProgram_elsedoneblock106
-MainProgram_ConditionalTrueBlock104: ;Main true block ;keep 
+	beq MainProgram_elsedoneblock74
+MainProgram_ConditionalTrueBlock72: ;Main true block ;keep 
 	jsr Render
 	; Binary clause Simplified: EQUALS
 	jsr getKey
 	; Compare with pure num / var optimization
 	cmp #$20;keep
-	bne MainProgram_elsedoneblock120
-MainProgram_ConditionalTrueBlock118: ;Main true block ;keep 
+	bne MainProgram_elsedoneblock88
+MainProgram_ConditionalTrueBlock86: ;Main true block ;keep 
 	
 ; // Exit if user pressed space
 ; // Clear screen
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainProgram_clearloop124
+MainProgram_clearloop92
 	dex
 	sta $0000+$8000,x
 	sta $00fa+$8000,x
@@ -569,15 +586,14 @@ MainProgram_clearloop124
 	sta $04e2+$8000,x
 	sta $05dc+$8000,x
 	sta $06d6+$8000,x
-	bne MainProgram_clearloop124
+	bne MainProgram_clearloop92
 	
 ; //call(^$fd16);	
 ; // RESET
 	jsr $fd49
-MainProgram_elsedoneblock120
-	jmp MainProgram_while103
-MainProgram_elsedoneblock106
-EndSymbol
+MainProgram_elsedoneblock88
+	jmp MainProgram_while71
+MainProgram_elsedoneblock74
 	; End of program
 	; Ending memory block
-EndBlock3121
+EndBlock410

@@ -11,15 +11,14 @@
  * 
  */
 program Randomness;
-var  
-	random_color,x,y,index: byte; 
+var 
+	random_color,x,y,index: byte;
 	// Array of random bytes
 	random_values : array[256] of byte; 
 	// Pointer to screen and color ram
-	screenP, zp : pointer;
-	
+	screenP, zp : pointer;	
 	// Used for keyboard input
-	key,numkeys : byte;
+	key : byte;
 	
 	// Text for splash screen  	
 	titlemsg: string  = ("TRSE EXAMPLE 4  'RANDOMNESS'");
@@ -30,7 +29,7 @@ var
 	// Holds value from user selection for screen width 
 	myscreenwidth: byte = 0;
 
-
+ 
 /* 
 	Method to get a char from the keyboard buffer
 	TRSE procedures return accumulator value
@@ -39,13 +38,16 @@ procedure getKey();
 begin
 	call(^$ffe4);	// getin
 end;
-	
 
+	
 /* 
 	Method which shows title screen and checks screen width
 */
 procedure showTitle();
 begin
+	// Set uppercase
+	poke(^59468, 0, 12);
+	
 	// Clear screen
 	clearscreen($20, screen_char_loc);
 
@@ -68,24 +70,22 @@ begin
 		// 009E			No. of Chars. in Keyboard Buffer (Queue)
 		// 00E3 		Size of Keyboard Buffer
 		// 0270-027A  	Keyboard Buffer Queue (FIFO)
-
 		// Is there a value in the character buffer?
-		numkeys := peek(^$009E, 0);
+		// NOTE: Doesn't work on early ROMS
+		//numkeys := peek(^$009E, 0);
+		
+		key := getKey();
 
-		if(numkeys > 0) then begin
-			key := getKey();
+		// 52 is '4'
+		if(key = 52) then 
+	    	myscreenwidth := 40;
 
-			// 52 is '4'
-			if(key = 52) then 
-		    	myscreenwidth := 40;
-
-			// 56 is '8'
-			if(key = 56) then 
-		    	myscreenwidth := 80;
-
-		end;
+		// 56 is '8'
+		if(key = 56) then 
+	    	myscreenwidth := 80;
     end;
 end;
+
 
 // Initialize a random table of 256 bytes
 // generator
@@ -96,6 +96,7 @@ begin
 		random_values[x]:=Random();
     end;
 end;
+
 
 begin
 	// Show the title and check number of columns
@@ -109,17 +110,17 @@ begin
 	// infinite loop
 	while (true) do  begin
 		// Set pointer to point to beginning of screen/color ram ($0400 and $D800)
-		screenP:=screen_char_loc;
+		screenP:=#screen_char_loc;
 		// loop y		
 		for y:=0 to screen_height do begin
 			// moves current screen position
 			// Select some random color
-			zp:=random_values+index;
-			memcpy(zp,0,screenP,myscreenwidth);
+			zp:=#random_values+index;
+			memcpy(zp,0,screenP,80);
 			index:=index+11;
-			screenP:=screenP+myscreenwidth;
+			screenP:=screenP+screen_width;
 		end;
-		
+				
 		// Exit if user pressed space
 		if(getKey() = 32) then begin
 		    // Clear screen
@@ -129,7 +130,6 @@ begin
 		    call(^$fd49);	// Trigger NMI	    
 		end;
 	end;
-
 end.
 
-
+// eof

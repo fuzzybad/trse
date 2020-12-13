@@ -13,14 +13,14 @@
  */
 program Sines;
 var  
-   	i,j,k: byte; 
-   	zp,tp:pointer;
-
-  	vals : array[8] of byte = ($20, $2E, $A6, $A0, $A0, $A6, $2E, $20);
-   	list : array[256] of byte;
+	i,j,k: byte; 
+	zp,tp:pointer;
+   
+	vals : array[8] of byte = ($20, $2E,  $A6, $A0, $A0, $A6, $2E, $20);
+	list : array[256] of byte;
 
 	// Used for keyboard input
-	key,numkeys : byte;
+	key: byte;
 	
 	// Text for splash screen  	
 	titlemsg: string  = ("TRSE EXAMPLE 8 'SINES'");
@@ -47,6 +47,9 @@ end;
 */
 procedure showTitle();
 begin
+	// Set uppercase
+	poke(^59468, 0, 12);
+	
 	// Clear screen
 	clearscreen($20, screen_char_loc);
 
@@ -69,51 +72,50 @@ begin
 		// 009E			No. of Chars. in Keyboard Buffer (Queue)
 		// 00E3 		Size of Keyboard Buffer
 		// 0270-027A  	Keyboard Buffer Queue (FIFO)
-
 		// Is there a value in the character buffer?
-		numkeys := peek(^$009E, 0);
+		// NOTE: Doesn't work on early ROMS
+		//numkeys := peek(^$009E, 0);
+		
+		key := getKey();
 
-		if(numkeys > 0) then begin
-			key := getKey();
+		// 52 is '4'
+		if(key = 52) then 
+	    	myscreenwidth := 40;
 
-			// 52 is '4'
-			if(key = 52) then 
-		    	myscreenwidth := 40;
-
-			// 56 is '8'
-			if(key = 56) then 
-		    	myscreenwidth := 80;
-
-		end;
+		// 56 is '8'
+		if(key = 56) then 
+	    	myscreenwidth := 80;
     end;
 end;
 
-
 procedure InitTabs();
 begin
-	//for i:=0 to 0 do list[i]:=vals[(sine[i]/13)&7]; // original
-	//for i:=0 to 0 do list[i]:=vals[(sine[i]/3)&11]; // clean, cool looking (11/11)
-	for i:=0 to 0 do list[i]:=vals[(sine[i]/13)&9]; // looks like a wave (13/9, 9/11)
+	//for i:=0 to 255 do list[i]:=vals[(sine[i]/13)&7]; // original
+	//for i:=0 to 255 do list[i]:=vals[(sine[i]/3)&11]; // clean, cool looking (11/11)
+	for i:=0 to 255 do list[i]:=vals[(sine[i]/13)&9]; // looks like a wave (13/9, 9/11)
 end;
-
 
 procedure Render();
 begin
 	j:=k;
-	zp:=screen_char_loc;
+	zp:=#screen_char_loc;
 	k:=k+2; // Speed control
 	
 	for i:=0 to screen_height do 
 	begin
 		j:=sine[k+i*2]/2;
 		j:=j+sine[k+j*2]/4;
-		
-		tp:=list + j;
+
+		//tp:=#list;		
+		tp:=#list + j;
+		//tp:=tp + j;
 		memcpy(tp,0,zp,myscreenwidth);
 		zp:=zp+myscreenwidth;
 		inc(j);
 	end;
 end;
+
+
 
 
 begin
@@ -134,5 +136,6 @@ begin
 		    call(^$fd49);	// Trigger NMI	    
 		end;
 	end;
-	
 end.
+
+// eof

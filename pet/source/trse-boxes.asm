@@ -1,26 +1,26 @@
  processor 6502
 	org $400
 	; Starting new memory block at $400
+StartBlock400
 	.byte    $0, $0E, $08, $0A, $00, $9E, $20, $28
 	.byte   $31,$30,$34,$30
 	.byte    $29, $00, $00, $00
 	; Ending memory block
-EndBlock5190
+EndBlock400
 	org $410
 	; Starting new memory block at $410
+StartBlock410
 Boxes
 	jmp block1
 saddr	dc.w	 
 	org saddr+50
 box	dc.b $055, $043, $049, $05d, $04b, $043, $04a, $05d
-	dc.b 
 i	dc.b	$00
 x	dc.b	$00
 y	dc.b	$00
 dx	dc.b	$00
 dy	dc.b	$00
-key	dc.b	
-numkeys	dc.b	
+key	dc.b	0
 titlemsg		dc.b	"TRSE EXAMPLE 3 'BOXES'"
 	dc.b	0
 authormsg		dc.b	"40/80 VERSION 9/2020"
@@ -39,6 +39,7 @@ exitmsg		dc.b	211
 	dc.b	" TO QUIT"
 	dc.b	0
 myscreenwidth	dc.b	$00
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initdrawtextbox
 	;    Procedure type : User-defined procedure
 	; ----------
@@ -129,11 +130,13 @@ BotLoopTextBox
 	lda idtb_petscii_br
 	sta ($4c),y
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initmoveto
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
 	jmp initmoveto_moveto2
 screenmemory =  $fe
+colormemory =  $fc
 screen_x = $4c
 screen_y = $4e
 SetScreenPosition
@@ -162,6 +165,7 @@ sxdone
 	rts
 initmoveto_moveto2
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initprintstring
 	;    Procedure type : User-defined procedure
 print_text = $4c
@@ -200,6 +204,7 @@ printstring_done
 ; //	Method to get a char from the keyboard buffer
 ; //	TRSE procedures return accumulator value
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : getKey
 	;    Procedure type : User-defined procedure
 getKey
@@ -209,9 +214,16 @@ getKey
 ; // getin 
 ; //	Method which shows title screen and checks screen width
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : showTitle
 	;    Procedure type : User-defined procedure
 showTitle
+	
+; // Set uppercase
+	; Poke
+	; Optimization: shift is zero
+	lda #$c
+	sta $e84c
 	
 ; // Clear screen
 	; Clear screen with offset
@@ -306,17 +318,8 @@ showTitle_ConditionalTrueBlock15: ;Main true block ;keep
 ; // 00E3 		Size of Keyboard Buffer
 ; // 0270-027A  	Keyboard Buffer Queue(FIFO)
 ; // Is there a value in the character buffer?
-	; Assigning single variable : numkeys
-	; Peek
-	lda $9e + $0
-	; Calling storevariable
-	sta numkeys
-	; Binary clause Simplified: GREATER
-	; Compare with pure num / var optimization
-	cmp #$0;keep
-	bcc showTitle_elsedoneblock53
-	beq showTitle_elsedoneblock53
-showTitle_ConditionalTrueBlock51: ;Main true block ;keep 
+; // NOTE: Doesn't work on early ROMS
+; //numkeys := peek(^$009E, 0);
 	; Assigning single variable : key
 	jsr getKey
 	; Calling storevariable
@@ -324,29 +327,28 @@ showTitle_ConditionalTrueBlock51: ;Main true block ;keep
 	; Binary clause Simplified: EQUALS
 	; Compare with pure num / var optimization
 	cmp #$34;keep
-	bne showTitle_elsedoneblock71
-showTitle_ConditionalTrueBlock69: ;Main true block ;keep 
+	bne showTitle_elsedoneblock35
+showTitle_ConditionalTrueBlock33: ;Main true block ;keep 
 	
 ; // 52 is '4'
 	; Assigning single variable : myscreenwidth
 	lda #$28
 	; Calling storevariable
 	sta myscreenwidth
-showTitle_elsedoneblock71
+showTitle_elsedoneblock35
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$38;keep
-	bne showTitle_elsedoneblock77
-showTitle_ConditionalTrueBlock75: ;Main true block ;keep 
+	bne showTitle_elsedoneblock41
+showTitle_ConditionalTrueBlock39: ;Main true block ;keep 
 	
 ; // 56 is '8'
 	; Assigning single variable : myscreenwidth
 	lda #$50
 	; Calling storevariable
 	sta myscreenwidth
-showTitle_elsedoneblock77
-showTitle_elsedoneblock53
+showTitle_elsedoneblock41
 	jmp showTitle_while14
 showTitle_elsedoneblock17
 	rts
@@ -359,7 +361,7 @@ block1
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainProgram_clearloop80
+MainProgram_clearloop44
 	dex
 	sta $0000+$8000,x
 	sta $00fa+$8000,x
@@ -369,13 +371,13 @@ MainProgram_clearloop80
 	sta $04e2+$8000,x
 	sta $05dc+$8000,x
 	sta $06d6+$8000,x
-	bne MainProgram_clearloop80
+	bne MainProgram_clearloop44
 	; Binary clause Simplified: EQUALS
 	lda myscreenwidth
 	; Compare with pure num / var optimization
 	cmp #$28;keep
-	bne MainProgram_elsedoneblock84
-MainProgram_ConditionalTrueBlock82: ;Main true block ;keep 
+	bne MainProgram_elsedoneblock48
+MainProgram_ConditionalTrueBlock46: ;Main true block ;keep 
 	
 ; // Sets up the address tables for the screen & color memory    
 	; ----------
@@ -386,28 +388,28 @@ MainProgram_ConditionalTrueBlock82: ;Main true block ;keep
 	sta saddr,x   ; Address of table
 	tya
 	sta saddr+1,x
-MainProgram_dtloop89
+MainProgram_dtloop53
 	tay
 	lda saddr,x
 	inx
 	inx
 	clc
 	adc #$28
-	bcc MainProgram_dtnooverflow90
+	bcc MainProgram_dtnooverflow54
 	iny
-MainProgram_dtnooverflow90
+MainProgram_dtnooverflow54
 	sta saddr,x
 	tya
 	sta saddr+1,x
 	cpx #$30
-	bcc MainProgram_dtloop89
-MainProgram_elsedoneblock84
+	bcc MainProgram_dtloop53
+MainProgram_elsedoneblock48
 	; Binary clause Simplified: EQUALS
 	lda myscreenwidth
 	; Compare with pure num / var optimization
 	cmp #$50;keep
-	bne MainProgram_elsedoneblock94
-MainProgram_ConditionalTrueBlock92: ;Main true block ;keep 
+	bne MainProgram_elsedoneblock58
+MainProgram_ConditionalTrueBlock56: ;Main true block ;keep 
 	; ----------
 	; DefineAddressTable address, StartValue, IncrementValue, TableSize
 	ldy #>$8000
@@ -416,22 +418,22 @@ MainProgram_ConditionalTrueBlock92: ;Main true block ;keep
 	sta saddr,x   ; Address of table
 	tya
 	sta saddr+1,x
-MainProgram_dtloop99
+MainProgram_dtloop63
 	tay
 	lda saddr,x
 	inx
 	inx
 	clc
 	adc #$50
-	bcc MainProgram_dtnooverflow100
+	bcc MainProgram_dtnooverflow64
 	iny
-MainProgram_dtnooverflow100
+MainProgram_dtnooverflow64
 	sta saddr,x
 	tya
 	sta saddr+1,x
 	cpx #$30
-	bcc MainProgram_dtloop99
-MainProgram_elsedoneblock94
+	bcc MainProgram_dtloop63
+MainProgram_elsedoneblock58
 	
 ; // dx and dy are initialized to 1
 	; Assigning single variable : dx
@@ -441,21 +443,21 @@ MainProgram_elsedoneblock94
 	; Assigning single variable : dy
 	; Calling storevariable
 	sta dy
-MainProgram_while101
+MainProgram_while65
 	; Binary clause Simplified: NOTEQUALS
 	lda #$1
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	beq MainProgram_localfailed131
-	jmp MainProgram_ConditionalTrueBlock102
-MainProgram_localfailed131
-	jmp MainProgram_elsedoneblock104
-MainProgram_ConditionalTrueBlock102: ;Main true block ;keep 
+	beq MainProgram_localfailed97
+	jmp MainProgram_ConditionalTrueBlock66
+MainProgram_localfailed97
+	jmp MainProgram_elsedoneblock68
+MainProgram_ConditionalTrueBlock66: ;Main true block ;keep 
 	; Assigning single variable : i
 	lda #$0
 	; Calling storevariable
 	sta i
-MainProgram_forloop133
+MainProgram_forloop99
 	
 ; // Make sure we only draw 1 box per frame
 ; // Add the delta dx and dy to x and y
@@ -463,12 +465,14 @@ MainProgram_forloop133
 	ldx #$2 ; optimized, look out for bugs
 	dex
 	bne *-1
-	; IS ONPAGE
+MainProgram_forloopcounter101
+	; Compare is onpage
 	inc i
 	lda #$ff
 	cmp i ;keep
-	bne MainProgram_forloop133
-MainProgram_loopdone136: ;keep
+	bne MainProgram_forloop99
+MainProgram_loopdone104: ;keep
+MainProgram_forloopend100
 	; Assigning single variable : x
 	; 8 bit binop
 	; Add/sub where right value is constant number
@@ -493,11 +497,11 @@ MainProgram_loopdone136: ;keep
 	sec
 	sbc #$9
 	 ; end add / sub var with constant
-MainProgram_temp1_var139 = $56
-	sta MainProgram_temp1_var139
+MainProgram_temp1_var107 = $56
+	sta MainProgram_temp1_var107
 	lda x
-	cmp MainProgram_temp1_var139 ;keep
-	bne MainProgram_casenext138
+	cmp MainProgram_temp1_var107 ;keep
+	bne MainProgram_casenext106
 	
 ; // Flip dx and dy when borders are reached
 ; //71: dx := -1;
@@ -505,37 +509,37 @@ MainProgram_temp1_var139 = $56
 	lda #$ff
 	; Calling storevariable
 	sta dx
-	jmp MainProgram_caseend137
-MainProgram_casenext138
+	jmp MainProgram_caseend105
+MainProgram_casenext106
 	lda x
 	cmp #$0 ;keep
-	bne MainProgram_casenext141
+	bne MainProgram_casenext109
 	; Assigning single variable : dx
 	lda #$1
 	; Calling storevariable
 	sta dx
-	jmp MainProgram_caseend137
-MainProgram_casenext141
-MainProgram_caseend137
+	jmp MainProgram_caseend105
+MainProgram_casenext109
+MainProgram_caseend105
 	lda y
 	cmp #$14 ;keep
-	bne MainProgram_casenext144
+	bne MainProgram_casenext112
 	; Assigning single variable : dy
 	lda #$ff
 	; Calling storevariable
 	sta dy
-	jmp MainProgram_caseend143
-MainProgram_casenext144
+	jmp MainProgram_caseend111
+MainProgram_casenext112
 	lda y
 	cmp #$0 ;keep
-	bne MainProgram_casenext146
+	bne MainProgram_casenext114
 	; Assigning single variable : dy
 	lda #$1
 	; Calling storevariable
 	sta dy
-	jmp MainProgram_caseend143
-MainProgram_casenext146
-MainProgram_caseend143
+	jmp MainProgram_caseend111
+MainProgram_casenext114
+MainProgram_caseend111
 	
 ; // Draw two boxes in opposing corners
 	; ----------
@@ -545,12 +549,12 @@ MainProgram_caseend143
 	sta idtb_at_lo
 	stx idtb_at_hi
 	ldx #8
-MainProgram_PetsciiCopy148
+MainProgram_PetsciiCopy116
 	dex
 	lda box,x
 	sta idtb_petscii_tl,x
 	cpx #0
-	bne MainProgram_PetsciiCopy148
+	bne MainProgram_PetsciiCopy116
 	lda x
 	sta idtb_t_col
 	lda y
@@ -573,12 +577,12 @@ MainProgram_PetsciiCopy148
 	sta idtb_at_lo
 	stx idtb_at_hi
 	ldx #8
-MainProgram_PetsciiCopy149
+MainProgram_PetsciiCopy117
 	dex
 	lda box,x
 	sta idtb_petscii_tl,x
 	cpx #0
-	bne MainProgram_PetsciiCopy149
+	bne MainProgram_PetsciiCopy117
 	; 8 bit binop
 	; Add/sub where right value is constant number
 	; 8 bit binop
@@ -613,15 +617,15 @@ MainProgram_PetsciiCopy149
 	jsr getKey
 	; Compare with pure num / var optimization
 	cmp #$20;keep
-	bne MainProgram_elsedoneblock153
-MainProgram_ConditionalTrueBlock151: ;Main true block ;keep 
+	bne MainProgram_elsedoneblock121
+MainProgram_ConditionalTrueBlock119: ;Main true block ;keep 
 	
 ; // Exit if user pressed space
 ; // Clear screen
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainProgram_clearloop157
+MainProgram_clearloop125
 	dex
 	sta $0000+$8000,x
 	sta $00fa+$8000,x
@@ -631,15 +635,14 @@ MainProgram_clearloop157
 	sta $04e2+$8000,x
 	sta $05dc+$8000,x
 	sta $06d6+$8000,x
-	bne MainProgram_clearloop157
+	bne MainProgram_clearloop125
 	
 ; //call(^$fd16);	
 ; // RESET
 	jsr $fd49
-MainProgram_elsedoneblock153
-	jmp MainProgram_while101
-MainProgram_elsedoneblock104
-EndSymbol
+MainProgram_elsedoneblock121
+	jmp MainProgram_while65
+MainProgram_elsedoneblock68
 	; End of program
 	; Ending memory block
-EndBlock5192
+EndBlock410

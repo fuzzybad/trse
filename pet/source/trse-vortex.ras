@@ -43,6 +43,9 @@ end;
 */
 procedure showTitle();
 begin
+	// Set uppercase
+	poke(^59468, 0, 12);
+	
 	// Clear screen
 	clearscreen($20, screen_char_loc);
 
@@ -65,29 +68,25 @@ begin
 		// 009E			No. of Chars. in Keyboard Buffer (Queue)
 		// 00E3 		Size of Keyboard Buffer
 		// 0270-027A  	Keyboard Buffer Queue (FIFO)
-
 		// Is there a value in the character buffer?
-		numkeys := peek(^$009E, 0);
+		// NOTE: Doesn't work on early ROMS
+		//numkeys := peek(^$009E, 0);
+		
+		key := getKey();
 
-		if(numkeys > 0) then begin
-			key := getKey();
+		// 52 is '4'
+		if(key = 52) then 
+	    	myscreenwidth := 40;
 
-			// 52 is '4'
-			if(key = 52) then 
-		    	myscreenwidth := 40;
-
-			// 56 is '8'
-			if(key = 56) then 
-		    	myscreenwidth := 80;
-
-		end;
+		// 56 is '8'
+		if(key = 56) then 
+	    	myscreenwidth := 80;
     end;
 end;
 
 
 procedure RenderScreen();
 begin
-	
 	// could equally well have written "screenmemory:=screen_char_loc;"
 	moveto(0,0,hi(screen_char_loc));
 	// Set cp to point to color memory
@@ -153,6 +152,6 @@ begin
 		    call(^$fd49);	// Trigger NMI	    
 		end;
 	end;
-	
-
 end.
+
+// eof

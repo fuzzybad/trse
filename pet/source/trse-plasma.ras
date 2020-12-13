@@ -59,6 +59,9 @@ end;
 */
 procedure showTitle();
 begin
+	// Set uppercase
+	poke(^59468, 0, 12);
+	
 	// Clear screen
 	clearscreen($20, screen_char_loc);
 
@@ -83,21 +86,19 @@ begin
 		// 0270-027A  	Keyboard Buffer Queue (FIFO)
 
 		// Is there a value in the character buffer?
-		numkeys := peek(^$009E, 0);
+		// NOTE: Doesn't work on early ROMS
+		//numkeys := peek(^$009E, 0);
+		
+		key := getKey();
 
-		if(numkeys > 0) then begin
-			key := getKey();
+		// 52 is '4'
+		if(key = 52) then 
+	    	myscreenwidth := 40;
 
-			// 52 is '4'
-			if(key = 52) then 
-		    	myscreenwidth := 40;
-
-			// 56 is '8'
-			if(key = 56) then 
-		    	myscreenwidth := 80;
-
-		end;
-    end;
+		// 56 is '8'
+		if(key = 56) then 
+	    	myscreenwidth := 80;
+	end;
 end;
 
 
@@ -122,13 +123,12 @@ begin
 		sinx[x] := sine[c2x] + sine[c2y];
 		c2x:=c2x+3;
 		c2y:=c2y+7;
-
 	end;
+	
 	// Move cursor to (1,y) on $0400 on bank 1	
 	// moveto could also be replaced with : screenmemory:=$0400 + @y_start*40;
  	moveto(0,0, hi(screen_char_loc)); // Full screen, runs slower
 	//moveto(0,screen_height/2, hi(screen_char_loc)); // Half screen, runs faster
-	
 	
 	for y:=0 to screen_height do begin
 		val:=siny[y];
@@ -146,7 +146,6 @@ begin
 		// Increase color pointer by MYSCREENWIDTH (next row)
 		colorP:=colorP+myscreenwidth;
 	end;
-
 end;
 
 
@@ -181,5 +180,6 @@ begin
 		    call(^$fd49);	// Trigger NMI	    
 		end;
 	end;
-
 end.
+
+// eof

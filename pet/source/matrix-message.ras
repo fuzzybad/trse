@@ -31,7 +31,7 @@ var
    	
    	// Screen and color address tables
 	saddr: array[80] of integer; // Screen address table
-	caddr: array[80] of integer; // Color adress table
+	//caddr: array[80] of integer; // Color adress table
   	sp:pointer;
 
 	// Used for keyboard input
@@ -100,20 +100,18 @@ begin
 		// 0270-027A  	Keyboard Buffer Queue (FIFO)
 
 		// Is there a value in the character buffer?
-		numkeys := peek(^$009E, 0);
+		// NOTE: Doesn't work on early ROMS
+		//numkeys := peek(^$009E, 0);
+		
+		key := getKey();
 
-		if(numkeys > 0) then begin
-			key := getKey();
+		// 52 is '4'
+		if(key = 52) then 
+	    	myscreenwidth := 40;
 
-			// 52 is '4'
-			if(key = 52) then 
-		    	myscreenwidth := 40;
-
-			// 56 is '8'
-			if(key = 56) then 
-		    	myscreenwidth := 80;
-
-		end;
+		// 56 is '8'
+		if(key = 56) then 
+	    	myscreenwidth := 80;
     end;
 end;
 
@@ -131,10 +129,10 @@ begin
 	
 	// Sets up the address tables for the screen & color memory    
 	if(myscreenwidth = 40) then 
-		createaddresstable(saddr,screen_char_loc,SCREEN_40,screen_height);
+		createaddresstable(#saddr,screen_char_loc,SCREEN_40,screen_height);
 	
 	if(myscreenwidth = 80) then 
-		createaddresstable(saddr,screen_char_loc,SCREEN_80,screen_height);
+		createaddresstable(#saddr,screen_char_loc,SCREEN_80,screen_height);
 
 end;
 
@@ -148,7 +146,7 @@ begin
 	if (yy>240) then yy:=yy+screen_height;
 	if (yy<screen_height) then 
 	begin
-		sp:=AddressTable(saddr,xx,yy);
+		sp:=AddressTable(#saddr,xx,yy);
 		sp[0]:=cc;	
 	end;
 end;
@@ -205,7 +203,7 @@ begin
 			// This creates space for the message
 			if( (i<xpos1 or i>=xpos2) or (j<ypos1 or j>=ypos2) ) then 			
 			begin
-				sp:=AddressTable(saddr,i,j);
+				sp:=AddressTable(#saddr,i,j);
 				sp[0]:=random()/4; // random character is located between 0 and 64
 			end;
 		end;

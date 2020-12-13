@@ -60,6 +60,9 @@ end;
 */
 procedure showTitle();
 begin
+	// Set uppercase
+	poke(^59468, 0, 12);
+	
 	// Clear screen
 	clearscreen($20, screen_char_loc);
 
@@ -82,22 +85,19 @@ begin
 		// 009E			No. of Chars. in Keyboard Buffer (Queue)
 		// 00E3 		Size of Keyboard Buffer
 		// 0270-027A  	Keyboard Buffer Queue (FIFO)
-
 		// Is there a value in the character buffer?
-		numkeys := peek(^$009E, 0);
+		// NOTE: Doesn't work on early ROMS
+		//numkeys := peek(^$009E, 0);
+		
+		key := getKey();
 
-		if(numkeys > 0) then begin
-			key := getKey();
+		// 52 is '4'
+		if(key = 52) then 
+	    	myscreenwidth := 40;
 
-			// 52 is '4'
-			if(key = 52) then 
-		    	myscreenwidth := 40;
-
-			// 56 is '8'
-			if(key = 56) then 
-		    	myscreenwidth := 80;
-
-		end;
+		// 56 is '8'
+		if(key = 56) then 
+	    	myscreenwidth := 80;
     end;
 end;
 
@@ -111,10 +111,10 @@ begin
     
 	// Sets up the address tables for the screen & color memory    
 	if(myscreenwidth = 40) then 
-		createaddresstable(saddr,screen_char_loc,SCREEN_40,screen_height);
+		createaddresstable(#saddr,screen_char_loc,SCREEN_40,screen_height);
 	
 	if(myscreenwidth = 80) then 
-		createaddresstable(saddr,screen_char_loc,SCREEN_80,screen_height);
+		createaddresstable(#saddr,screen_char_loc,SCREEN_80,screen_height);
 
 	// dx and dy are initialized to 1
 	dx:=1;
@@ -139,8 +139,8 @@ begin
 		end;
 		
 		// Draw two boxes in opposing corners
-		drawtextbox(saddr, box, x, y, 9, 5);
-		drawtextbox(saddr, box, myscreenwidth-9 - x, 20 - y, 9, 5);
+		drawtextbox(#saddr, #box, x, y, 9, 5);
+		drawtextbox(#saddr, #box, myscreenwidth-9 - x, 20 - y, 9, 5);
 		
 		// Exit if user pressed space
 		if(getKey() = 32) then begin
@@ -152,3 +152,5 @@ begin
 		end;
 	end;
 end.
+
+// eof

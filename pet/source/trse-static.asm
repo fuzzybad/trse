@@ -1,24 +1,25 @@
  processor 6502
 	org $400
 	; Starting new memory block at $400
+StartBlock400
 	.byte    $0, $0E, $08, $0A, $00, $9E, $20, $28
 	.byte   $31,$30,$34,$30
 	.byte    $29, $00, $00, $00
 	; Ending memory block
-EndBlock5236
+EndBlock400
 	org $410
 	; Starting new memory block at $410
+StartBlock410
 Randomness
 	jmp block1
-x	dc.b	
-y	dc.b	
-index	dc.b	
+x	dc.b	0
+y	dc.b	0
+index	dc.b	0
 random_values	dc.b	 
 	org random_values+256
 screenP	= $02
 zp	= $04
-key	dc.b	
-numkeys	dc.b	
+key	dc.b	0
 titlemsg		dc.b	"TRSE EXAMPLE 4  'RANDOMNESS'"
 	dc.b	0
 authormsg		dc.b	"40/80 VERSION 9/2020"
@@ -37,11 +38,13 @@ exitmsg		dc.b	211
 	dc.b	" TO QUIT"
 	dc.b	0
 myscreenwidth	dc.b	$00
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initmoveto
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
 	jmp initmoveto_moveto2
 screenmemory =  $fe
+colormemory =  $fc
 screen_x = $4c
 screen_y = $4e
 SetScreenPosition
@@ -70,6 +73,7 @@ sxdone
 	rts
 initmoveto_moveto2
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initprintstring
 	;    Procedure type : User-defined procedure
 print_text = $4c
@@ -93,6 +97,7 @@ printstring_skip
 	jmp printstringloop
 printstring_done
 	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initrandom256
 	;    Procedure type : User-defined procedure
 	; init random256
@@ -105,11 +110,13 @@ initrandom256_RandomSkip3
 	sta Random+1
 	rts
 	
+; // Used for keyboard input
 ; // Text for splash screen  	
 ; // Holds value from user selection for screen width  
 ; //	Method to get a char from the keyboard buffer
 ; //	TRSE procedures return accumulator value
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : getKey
 	;    Procedure type : User-defined procedure
 getKey
@@ -119,9 +126,16 @@ getKey
 ; // getin 
 ; //	Method which shows title screen and checks screen width
 ; //
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : showTitle
 	;    Procedure type : User-defined procedure
 showTitle
+	
+; // Set uppercase
+	; Poke
+	; Optimization: shift is zero
+	lda #$c
+	sta $e84c
 	
 ; // Clear screen
 	; Clear screen with offset
@@ -216,17 +230,8 @@ showTitle_ConditionalTrueBlock16: ;Main true block ;keep
 ; // 00E3 		Size of Keyboard Buffer
 ; // 0270-027A  	Keyboard Buffer Queue(FIFO)
 ; // Is there a value in the character buffer?
-	; Assigning single variable : numkeys
-	; Peek
-	lda $9e + $0
-	; Calling storevariable
-	sta numkeys
-	; Binary clause Simplified: GREATER
-	; Compare with pure num / var optimization
-	cmp #$0;keep
-	bcc showTitle_elsedoneblock54
-	beq showTitle_elsedoneblock54
-showTitle_ConditionalTrueBlock52: ;Main true block ;keep 
+; // NOTE: Doesn't work on early ROMS
+; //numkeys := peek(^$009E, 0);
 	; Assigning single variable : key
 	jsr getKey
 	; Calling storevariable
@@ -234,35 +239,35 @@ showTitle_ConditionalTrueBlock52: ;Main true block ;keep
 	; Binary clause Simplified: EQUALS
 	; Compare with pure num / var optimization
 	cmp #$34;keep
-	bne showTitle_elsedoneblock72
-showTitle_ConditionalTrueBlock70: ;Main true block ;keep 
+	bne showTitle_elsedoneblock36
+showTitle_ConditionalTrueBlock34: ;Main true block ;keep 
 	
 ; // 52 is '4'
 	; Assigning single variable : myscreenwidth
 	lda #$28
 	; Calling storevariable
 	sta myscreenwidth
-showTitle_elsedoneblock72
+showTitle_elsedoneblock36
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$38;keep
-	bne showTitle_elsedoneblock78
-showTitle_ConditionalTrueBlock76: ;Main true block ;keep 
+	bne showTitle_elsedoneblock42
+showTitle_ConditionalTrueBlock40: ;Main true block ;keep 
 	
 ; // 56 is '8'
 	; Assigning single variable : myscreenwidth
 	lda #$50
 	; Calling storevariable
 	sta myscreenwidth
-showTitle_elsedoneblock78
-showTitle_elsedoneblock54
+showTitle_elsedoneblock42
 	jmp showTitle_while15
 showTitle_elsedoneblock18
 	rts
 	
 ; // Initialize a random table of 256 bytes
 ; // generator
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : InitializeRandom
 	;    Procedure type : User-defined procedure
 InitializeRandom
@@ -270,7 +275,7 @@ InitializeRandom
 	lda #$0
 	; Calling storevariable
 	sta x
-InitializeRandom_forloop82
+InitializeRandom_forloop46
 	
 ; // same as : for x:=0 to 0 do begin..
 	; Assigning single variable : random_values
@@ -278,14 +283,16 @@ InitializeRandom_forloop82
 	; Calling storevariable
 	ldx x ; optimized, look out for bugs
 	sta random_values,x
-	; IS ONPAGE
+InitializeRandom_forloopcounter48
+	; Compare is onpage
 	inc x
 	; Integer constant assigning
 	ldy #$01
 	lda #$00
 	cmp x ;keep
-	bne InitializeRandom_forloop82
-InitializeRandom_loopdone85: ;keep
+	bne InitializeRandom_forloop46
+InitializeRandom_loopdone51: ;keep
+InitializeRandom_forloopend47
 	rts
 block1
 	
@@ -298,50 +305,50 @@ block1
 	lda #$0
 	; Calling storevariable
 	sta index
-MainProgram_while86
+MainProgram_while52
 	; Binary clause Simplified: NOTEQUALS
 	lda #$1
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	beq MainProgram_localfailed109
-	jmp MainProgram_ConditionalTrueBlock87
-MainProgram_localfailed109
-	jmp MainProgram_elsedoneblock89
-MainProgram_ConditionalTrueBlock87: ;Main true block ;keep 
+	beq MainProgram_localfailed77
+	jmp MainProgram_ConditionalTrueBlock53
+MainProgram_localfailed77
+	jmp MainProgram_elsedoneblock55
+MainProgram_ConditionalTrueBlock53: ;Main true block ;keep 
 	
 ; // infinite loop
 ; // Set pointer to point to beginning of screen/color ram($0400 and $D800)
 	; Assigning single variable : screenP
-	lda #0
-	ldx #128
+	lda #$00
+	ldx #$80
 	sta screenP
 	stx screenP+1
 	; Assigning single variable : y
 	lda #$0
 	; Calling storevariable
 	sta y
-MainProgram_forloop111
+MainProgram_forloop79
 	
 ; // loop y		
 ; // moves current screen position
 ; // Select some random color
 	; Assigning single variable : zp
 	; INTEGER optimization: a=b+c 
-	lda random_values
+	lda #<random_values
 	clc
 	adc index
 	sta zp+0
-	lda random_values+1
+	lda #>random_values
 	adc #0
 	sta zp+1
 	; memcpy
 	ldy #0
-MainProgram_memcpy114
+MainProgram_memcpy88
 	lda (zp),y
 	sta (screenP),y
 	iny
-	cpy myscreenwidth
-	bne MainProgram_memcpy114
+	cpy #$50
+	bne MainProgram_memcpy88
 	; Assigning single variable : index
 	; Optimizer: a = a +/- b
 	lda index
@@ -351,31 +358,33 @@ MainProgram_memcpy114
 	; Assigning single variable : screenP
 	lda screenP
 	clc
-	adc myscreenwidth
+	adc #$50
 	sta screenP+0
 	; Optimization : A := A op 8 bit - var and bvar are the same - perform inc
-	bcc MainProgram_WordAdd115
+	bcc MainProgram_WordAdd89
 	inc screenP+1
-MainProgram_WordAdd115
-	; IS ONPAGE
+MainProgram_WordAdd89
+MainProgram_forloopcounter81
+	; Compare is onpage
 	inc y
 	lda #$19
 	cmp y ;keep
-	bne MainProgram_forloop111
-MainProgram_loopdone120: ;keep
+	bne MainProgram_forloop79
+MainProgram_loopdone90: ;keep
+MainProgram_forloopend80
 	; Binary clause Simplified: EQUALS
 	jsr getKey
 	; Compare with pure num / var optimization
 	cmp #$20;keep
-	bne MainProgram_elsedoneblock124
-MainProgram_ConditionalTrueBlock122: ;Main true block ;keep 
+	bne MainProgram_elsedoneblock94
+MainProgram_ConditionalTrueBlock92: ;Main true block ;keep 
 	
 ; // Exit if user pressed space
 ; // Clear screen
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainProgram_clearloop128
+MainProgram_clearloop98
 	dex
 	sta $0000+$8000,x
 	sta $00fa+$8000,x
@@ -385,15 +394,14 @@ MainProgram_clearloop128
 	sta $04e2+$8000,x
 	sta $05dc+$8000,x
 	sta $06d6+$8000,x
-	bne MainProgram_clearloop128
+	bne MainProgram_clearloop98
 	
 ; //call(^$fd16);	
 ; // RESET
 	jsr $fd49
-MainProgram_elsedoneblock124
-	jmp MainProgram_while86
-MainProgram_elsedoneblock89
-EndSymbol
+MainProgram_elsedoneblock94
+	jmp MainProgram_while52
+MainProgram_elsedoneblock55
 	; End of program
 	; Ending memory block
-EndBlock5238
+EndBlock410
