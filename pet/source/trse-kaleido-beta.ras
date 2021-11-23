@@ -1,0 +1,430 @@
+/**
+ * This was created using the Turbo Rascal Syntax Error development platform.
+ * 
+ * https://turborascal.com
+ * https://github.com/leuat/TRSE
+ *
+ * License: GPL V3
+ *
+ * Enhanced version of KALEIDOSCOPE from:
+ *  "32 BASIC Programs for the PET Computer"
+ * 
+ * BASIC version: Tom Rugg and Phil Feldman (1979)
+ * TRSE version: Jessica Petersen <fuzzybad@gmail.com> (Nov 2021)
+ * 
+ */
+program Kaleido;
+var  
+	// Main program vars
+	centerX 	  : byte = 0;
+	centerY 	  : byte = 12;
+	start_pos 	  : byte = 1;
+	stop_pos 	  : byte = 12; // 12 Increasing this value fills the screen, but need to check for overrun
+	dir			  : byte = 1;
+	char_start 	  : byte;
+	char_start_st : byte = 65;
+	char_offset   : byte = 63;
+	num_chars	  : byte = 6;	// Number of chars in the array
+	speed 		  : byte = 1;	// Recommended values 0-9
+	rev_enable	  : byte = 0;	// 0=Disable, 1=Enable reverse chars
+	pattern_type  : byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
+	myscreenwidth : byte = 40;	// Screen Width
+	char_arr 	  : array[12] of byte;
+	p 			  : pointer;
+	plotIndex, plotIndexMax, mainIndex, colSelect, x1, y1, x2, y2, i, temp : byte;
+
+	// test vars
+	test:    string = ("                ");
+	testint: integer;
+	
+	// Used for keyboard input
+	key: byte;
+	
+	// Text for splash screen  	
+	titlemsg:  string = ("KALEIDOSCOPE B1");
+	authormsg: string = ("TRSE VERSION 11/2021 FUZZYBAD");
+	 // PRESS ANY KEY
+	promptmsg: string = (208, 210, 197, 211, 211, 32, 193, 206, 217, 32, 203, 197, 217);
+	inst1: string = ("P - TOGGLE PATTERN TYPE");
+	inst2: string = ("F - TOGGLE FULL-SCREEN");
+	inst3: string = ("S - TOGGLE 40/80 COL");
+	inst4: string = ("R - ENABLE/DISABLE REV CHARS");
+	inst5: string = ("Z/X/C/V - SELECT CHAR RANGE");
+	inst6: string = ("0-9 - ADJUST SPEED");
+	inst7: string = ("Q - QUIT");
+
+	//promptmsg: string = ("USE ", 244, "0 OR ", 248, "0 COLUMN SCREEN?");
+	//exitmsg:   string = (211, 208, 193, 195, 197, " TO QUIT");
+
+
+/* 
+	Method to get a char from the keyboard buffer
+	TRSE procedures return accumulator value
+*/
+procedure GetKey();
+begin
+	call(^$ffe4);	// getin
+end;
+
+// Do timing delay 
+// @TODO: Find better way than delay loop
+procedure DoDelay();
+begin
+	if( speed > 0 ) then
+	begin
+		for i := 0 to speed do	
+		begin
+			wait(255);
+		end;
+	end;
+end;
+	
+
+/* 
+	Method which shows title screen and checks screen width
+*/
+procedure ShowTitle();
+begin
+	// Set uppercase
+	poke(^59468, 0, 12);
+	
+	// Clear screen
+	clearscreen($20, screen_char_loc);
+	
+	// Center the title text
+	temp := myscreenwidth / 2 - length(titlemsg) / 2;
+	moveto(temp, 1, hi(screen_char_loc));
+   	printString(titlemsg, 0, length(titlemsg));
+
+	// Center the author text
+	temp := myscreenwidth / 2 - length(authormsg) / 2;
+	moveto(temp, 2, hi(screen_char_loc));
+   	printString(authormsg, 0, length(authormsg));
+
+	// Display Controls
+	x1 := 8;
+	moveto(x1, 4, hi(screen_char_loc));
+    printString(inst1, 0, length(inst1));
+
+	moveto(x1, 5, hi(screen_char_loc));
+    printString(inst2, 0, length(inst2));
+
+	moveto(x1, 6, hi(screen_char_loc));
+    printString(inst3, 0, length(inst3));
+
+	moveto(x1, 7, hi(screen_char_loc));
+    printString(inst4, 0, length(inst4));
+
+	moveto(x1, 8, hi(screen_char_loc));
+    printString(inst5, 0, length(inst5));
+
+	moveto(x1, 9, hi(screen_char_loc));
+    printString(inst6, 0, length(inst6));
+
+	moveto(x1, 10, hi(screen_char_loc));
+    printString(inst7, 0, length(inst7));
+
+	// Center prompt to continue
+	// printString function seems to be geared towards 80-col PETs
+	// This is a workaround for 40-col PETs
+	temp := myscreenwidth / 2 - length(titlemsg) / 2 + myscreenwidth;
+	moveto(temp, 11, hi(screen_char_loc));
+    printString(promptmsg, 0, length(promptmsg));
+
+	// Pause until key pressed
+	while( GetKey() = 0 ) do begin
+	end;
+
+end;
+
+// Fill char array
+procedure InitData();
+begin
+	// Set center based on screen width setting
+	centerX := myscreenwidth / 2 - 1;
+	
+	for i := 0 to num_chars do							// line 150
+	begin
+		// Populate char_arr with 50/50 split between these ranges:
+		// 65-128 and 193-256
+		char_start := char_start_st;
+	
+		// Option for reverse chars
+		if( rev_enable = 1 ) then
+		begin
+			if( Random() > 127 ) then				// line 165
+				char_start := char_start + 128;		// line 165
+		end;
+			
+		char_arr[i] := Random() & char_offset + char_start;
+	end;
+end; 
+
+// Check for any user inputs
+procedure CheckInputs();
+begin	
+	key := GetKey();
+
+	// Q - Quit
+	if(key = 81) then begin
+		clearscreen($20, screen_char_loc);
+		call(^$fd49);	// NMI	    
+		//call(^$fd16);	// RESET		
+	end;
+	
+	// 0-9 Adjust speed 
+	if(key = 48) then speed := 9; // (slowest)
+	if(key = 49) then speed := 8;
+	if(key = 50) then speed := 7;
+	if(key = 51) then speed := 6;
+	if(key = 52) then speed := 5;
+	if(key = 53) then speed := 4;
+	if(key = 54) then speed := 3;
+	if(key = 55) then speed := 2;
+	if(key = 56) then speed := 1;
+	if(key = 57) then speed := 0; // (fastest)
+		
+	// Z/X/C/V - Adjust character range
+	if(key = 90) then
+	begin
+		char_start := 76;
+		char_offset := 5;
+		InitData();
+	end;
+	if(key = 88) then
+	begin
+		char_start_st := 76;
+		char_offset   := 30;		
+		InitData();
+	end;
+	if(key = 67) then
+	begin
+		char_start_st := 116;
+		char_offset   := 12;		
+		InitData();
+	end;
+	if(key = 8) then
+	begin
+		char_start_st := 65;
+		char_offset   := 63;
+		InitData();
+	end;
+
+	// R - Enable/Disable reverse chars
+	if(key = 82) then
+	begin
+		if( rev_enable = 1 ) then rev_enable := 0 
+		else rev_enable := 1;
+	end;
+
+	// S - Toggle 40/80 Col Screen
+	if(key = 83) then
+	begin
+		if( myscreenwidth = 40 ) then 
+		begin
+			myscreenwidth 	:= 80;
+			centerX 	  	:= myscreenwidth / 2 - 1;
+			clearscreen($20, screen_char_loc);
+		end 
+		else begin
+			myscreenwidth 	:= 40;
+			centerX 	  	:= myscreenwidth / 2 - 1;
+			clearscreen($20, screen_char_loc);
+		end;
+	end;
+
+	// P - Toggle 4/8-point pattern
+	if(key = 80) then
+	begin
+		if( pattern_type = 1 ) then 
+		begin						// 4-point pattern
+			pattern_type := 0;
+			num_chars := 12;
+		end
+		else begin 					// 8-point pattern
+			num_chars := 6;
+			pattern_type := 1;
+		end;
+	end;
+
+	// F - Toggle Full-Screen display
+	if(key = 70) then
+	begin
+		// Check current direction of pattern
+		if (dir = 1) then
+		begin
+			// Pattern moving outward
+			start_pos := 1;
+			
+			if( stop_pos = 12 ) then stop_pos := myscreenwidth / 2
+			else stop_pos := 12;
+		end
+		else begin
+			// Pattern moving inward
+			stop_pos := 1;
+			
+			if( start_pos = 12 ) then start_pos := myscreenwidth / 2
+			else start_pos := 12;
+		end;
+
+		clearscreen($20, screen_char_loc);
+	end;
+
+	//moveto(1, 1, hi(screen_char_loc));
+	//PrintDecimal(key, 2);
+	//printString(test,0,10);
+end;
+
+
+// Poke value into an address
+procedure PokeAddr(pokeaddr_x:byte, pokeaddr_y:byte, pokeaddr_v:byte);
+begin
+	if( pokeaddr_x > myscreenwidth-1 ) then return; //pokeaddr_x := myscreenwidth;
+	if( pokeaddr_x < 0) then return; //pokeaddr_x := 1;
+	if( pokeaddr_y > 24) then return; //pokeaddr_y := 24;
+	if( pokeaddr_y < 0) then return; //pokeaddr_y := 1;
+	
+	// Uses precalculated pointer value
+	p := screen_char_loc + myscreenwidth * pokeaddr_y + pokeaddr_x;
+
+	poke(p, 0, pokeaddr_v);
+end;
+
+
+//////////////////////////
+// Plot chars on screen
+//////////////////////////
+procedure Plot();
+begin
+	// Call timing delay
+	DoDelay();
+	
+	// Map chars in the up/down/across indexes
+	PokeAddr(x1, y1, char_arr[0]);				// line 900
+
+	if (mainIndex = 1) then return;				// line 910
+	
+	colSelect := mainIndex / 2 + 1;				// line 920
+
+	// Modifies character range selection and will take effect 
+	// next time InitData() runs
+	char_start := mainIndex - colSelect - 1;	// line 920
+
+	// Select pattern style
+	if( pattern_type = 1 ) then plotIndexMax := colSelect 
+	else plotIndexMax := mainIndex;
+
+	// Map chars surrounding the up/down/across indexes
+	for plotIndex := 1 to plotIndexMax do			// line 930
+	begin
+		if (x1 = centerX) then					// line 940
+		begin
+			x2 := x1 + plotIndex;
+			y2 := y1;
+			PokeAddr(x2, y2, char_arr[plotIndex]);
+			x2 := x1 - plotIndex;
+			PokeAddr(x2, y2, char_arr[plotIndex]);
+		end 
+		else if (y1 = centerY) then			// line 950
+		begin
+			x2 := x1;
+			y2 := y1 + plotIndex;
+			PokeAddr(x2, y2, char_arr[plotIndex]);
+			y2 := y1 - plotIndex;
+			PokeAddr(x2, y2, char_arr[plotIndex]);
+		end
+		else begin
+
+			y2 := y1;						// line 970
+			if (x1<centerX) then			// line 970
+			begin
+				x2 := x1 + plotIndex;
+				PokeAddr(x2, y2, char_arr[plotIndex]);
+			end else begin
+				x2 := x1 - plotIndex;		// line 980
+				PokeAddr(x2, y2, char_arr[plotIndex]);
+			end;
+			
+			x2 := x1;						// line 990
+			if( y1<centerY ) then			// line 990
+			begin
+				y2 := y1 + plotIndex;
+				PokeAddr(x2, y2, char_arr[plotIndex]);
+			end else begin
+				y2 := y1 - plotIndex;		// line 1000
+				PokeAddr(x2, y2, char_arr[plotIndex]);
+			end;
+
+		end;
+	end;
+end;
+
+// Update the display
+procedure MainLoop();
+begin
+	for mainIndex := start_pos to stop_pos step dir do		// line 200
+	begin		
+		// Map the data
+		x1 := centerX + mainIndex;			// line 210
+		y1 := centerY;						// line 210
+		Plot();								// line 210
+		x1 := centerX - mainIndex;			// line 220
+		Plot();								// line 220
+		x1 := centerX;						// line 230
+		y1 := centerY + mainIndex;			// line 230
+		Plot();								// line 230
+		y1 := centerY - mainIndex;			// line 240
+		Plot();								// line 240
+
+		// Only plot these for 8-point pattern
+		if( pattern_type = 1 ) then
+		begin
+			x1 := centerX + mainIndex;			// line 250
+			y1 := centerY + mainIndex;			// line 250
+			Plot();								// line 250
+			x1 := centerX - mainIndex;			// line 260
+			y1 := centerY - mainIndex;			// line 260
+			Plot();								// line 260
+			y1 := centerY + mainIndex;			// line 270
+			Plot();								// line 270
+			x1 := centerX + mainIndex; 			// line 280
+			y1 := centerY - mainIndex;			// line 280
+			Plot();								// line 280
+		end;
+	end;
+
+	// Reverse direction after each cycle
+	dir 	  := -dir;
+	temp	  := start_pos;
+	start_pos := stop_pos;
+	stop_pos  := temp;
+
+	// Debug 
+	//call(^$fd49);	// Trigger NMI	
+end;
+
+begin
+	// Show the title and check number of columns
+	ShowTitle();	
+
+	// Init char array	
+	InitData();
+
+	// Clear screen
+	clearscreen($20, screen_char_loc);
+	
+	while (true) do begin
+		MainLoop();
+
+		// Check for user input	
+		CheckInputs();
+		
+		// Delay mechanism here?
+		
+		// Get fresh array of chars
+		InitData();		
+
+	end;
+end.
+
+// eof
