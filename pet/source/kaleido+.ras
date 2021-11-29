@@ -19,7 +19,7 @@
 program Kaleido;
 var  
 	// Main program vars
-	centerX 	  	 	: byte = 20;
+	centerX 	  	 	: byte = SCREEN_WIDTH / 2;
 	centerY 	  	 	: byte = SCREEN_HEIGHT / 2;
 	start_pos 	  	: byte = 1;
 	stop_pos 	  	: byte = 20;
@@ -27,7 +27,7 @@ var
 	char_start 	  	: byte;
 	char_start_st 	: byte = 65;
 	char_offset   	: byte = 63;
-	myscreenwidth 	: byte = 40;	// Screen Width
+	myscreenwidth 	: byte = SCREEN_WIDTH;
 	num_chars	  	: byte = 6;	// Number of chars in the array
 	speed 		  	: byte = 3;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
@@ -44,12 +44,10 @@ var
 	// Text for splash screen  	
 	titlemsg:  string = ("KALEIDOSCOPE+");
 	authormsg1: string = ("JESSICA PETERSEN <FUZZYBAD>, 2021");
-	authormsg2: string = ("BASED ON KALEIDO");
+	authormsg2: string = ("BASED ON A ROUTINE BY");
 	authormsg3: string = ("RUGG AND FELDMAN, 1979");
 	inst1: string = ("0-9 - ADJUST SPEED");
-	inst2: string = ("F   - TOGGLE FULL-SCREEN");
-	inst3: string = ("S   - TOGGLE 40/80 COL");
-	inst4: string = ("Q   - QUIT");
+	inst2: string = ("Q   - QUIT");
 	// PRESS ANY KEY
 	promptmsg: string = (208, 210, 197, 211, 211, 32, 193, 206, 217, 32, 203, 197, 217);
 
@@ -86,20 +84,17 @@ end;
 // Debug up to 3 numeric vars
 procedure PrintXYZ( myX:signed byte, myY:signed byte, myZ:signed byte );
 begin
-	// Erase values
-	moveto(1, 5, hi(screen_char_loc));
+	// Erase & print values
+	moveto(1, 5, hi(SCREEN_CHAR_LOC));
 	PrintDecimal(0, 2);
-	moveto(1, 6, hi(screen_char_loc));
-	PrintDecimal(0, 2);
-	moveto(1, 7, hi(screen_char_loc));
-	PrintDecimal(0, 2);
-
-	// Print values
-	moveto(1, 5, hi(screen_char_loc));
 	PrintDecimal(myX, 2);
-	moveto(1, 6, hi(screen_char_loc));
+
+	moveto(1, 6, hi(SCREEN_CHAR_LOC));
+	PrintDecimal(0, 2);
 	PrintDecimal(myY, 2);
-	moveto(1, 7, hi(screen_char_loc));
+
+	moveto(1, 7, hi(SCREEN_CHAR_LOC));
+	PrintDecimal(0, 2);
 	PrintDecimal(myZ, 2);
 end;
  
@@ -110,44 +105,59 @@ begin
 	poke(^59468, 0, 12);
 	
 	// Clear screen
-	clearscreen($20, screen_char_loc);
+	clearscreen($20, SCREEN_CHAR_LOC);
+
+	// Default to 40 columns
+	myscreenwidth := 40;
+	centerX := myscreenwidth / 2;
+
+	// Determine PET model by checking first byte of EDIT ROM at $E000
+	//	$A0 [160] = B1
+	//	$48 [72]  = B2
+	//	$36 [54]  = B4-40
+	//	$4B [75]  = B4-80
+	temp := peek(^$E000, 1);	
+	
+	// Set 80 columns
+	if( temp = 75 ) then
+	begin
+		if( myscreenwidth = 40 ) then myscreenwidth := 80
+		else myscreenwidth := 40;
+		centerX := myscreenwidth / 2 - 1;
+		clearscreen($20, SCREEN_CHAR_LOC);
+	end;
 	
 	// Center the title text
 	x1 := myscreenwidth / 2 - length(titlemsg) / 2;
-	moveto(x1, 1, hi(screen_char_loc));
+	moveto(x1, 1, hi(SCREEN_CHAR_LOC));
    	printString(titlemsg, 0, length(titlemsg));
 
 	// Center the author message
 	x1 := myscreenwidth / 2 - length(authormsg1) / 2;
-	moveto(x1, 2, hi(screen_char_loc));
+	moveto(x1, 2, hi(SCREEN_CHAR_LOC));
    	printString(authormsg1, 0, length(authormsg1));
 
 	x1 := myscreenwidth / 2 - length(authormsg2) / 2;
-	moveto(x1, 4, hi(screen_char_loc));
+	moveto(x1, 4, hi(SCREEN_CHAR_LOC));
    	printString(authormsg2, 0, length(authormsg2));
 
 	x1 := myscreenwidth / 2 - length(authormsg3) / 2;
-	moveto(x1, 5, hi(screen_char_loc));
+	moveto(x1, 5, hi(SCREEN_CHAR_LOC));
    	printString(authormsg3, 0, length(authormsg3));
 
 	// Display Controls
-	x1 := 9;
-	moveto(x1, 7, hi(screen_char_loc));
+	x1 := myscreenwidth / 2 - 9;
+	moveto(x1, 7, hi(SCREEN_CHAR_LOC));
     printString(inst1, 0, length(inst1));
 
-	moveto(x1, 8, hi(screen_char_loc));
+	moveto(x1, 8, hi(SCREEN_CHAR_LOC));
     printString(inst2, 0, length(inst2));
-
-	moveto(x1, 9, hi(screen_char_loc));
-    printString(inst3, 0, length(inst3));
-
-	moveto(x1, 10, hi(screen_char_loc));
-    printString(inst4, 0, length(inst4));
 
 	// Center prompt to continue
 	// TRSE seems bugged at counting length of numeric strings
-	moveto(14, 12, hi(screen_char_loc));
-   	printString(promptmsg, 0, length(promptmsg));
+	x1 := myscreenwidth / 2 - 13 / 2;
+	moveto(x1, 12, hi(SCREEN_CHAR_LOC));
+   	printString(promptmsg, 0, 13);
 
 	WaitForKeypress();
 end;
@@ -182,7 +192,7 @@ begin
 
 	// Q - Quit
 	if(key = 81) then begin
-		clearscreen($20, screen_char_loc);
+		clearscreen($20, SCREEN_CHAR_LOC);
 		call(^$fd49);	// NMI	    
 		//call(^$fd16);	// RESET		
 	end;
@@ -206,28 +216,7 @@ begin
 		else myscreenwidth := 40;
 
 		centerX := myscreenwidth / 2 - 1;
-		clearscreen($20, screen_char_loc);
-	end;
-
-	// F - Toggle Full-Screen display
-	if(key = 70) then
-	begin
-		// Set pattern moving outward
-		dir := 1;
-		start_pos := 1;
-
-		// Toggle the flag
-		if( full_screen = 0 ) then 
-		begin
-			full_screen	:= 1;
-			stop_pos		:= myscreenwidth / 2;
-		end
-		else begin
-			full_screen	:= 0;
-			stop_pos		:= SCREEN_HEIGHT / 2;
-		end;
-		
-		clearscreen($20, screen_char_loc);
+		clearscreen($20, SCREEN_CHAR_LOC);
 	end;
 end;
 
@@ -240,8 +229,8 @@ begin
 	if( pokeaddr_y > SCREEN_HEIGHT - 1 ) then return;
 	if( pokeaddr_y < 0) then return;
 	
-	// Uses precalculated pointer value
-	p := screen_char_loc + myscreenwidth * pokeaddr_y + pokeaddr_x;
+	// Pointer to screen RAM
+	p := SCREEN_CHAR_LOC + myscreenwidth * pokeaddr_y + pokeaddr_x;
 
 	poke(p, 0, pokeaddr_v);
 end;
@@ -332,19 +321,18 @@ procedure MainLoop();
 begin
 	for mainIndex := start_pos to stop_pos step dir do	// line 200
 	begin		
-		// Map the data
-		// Right
+		// Draw Right
 		x1 := centerX + mainIndex;			// line 210
 		y1 := centerY;						// line 210
 		Plot();								// line 210
-		// Left
+		// Draw Left
 		x1 := centerX - mainIndex;			// line 220
 		Plot();								// line 220
-		// Down
+		// Draw Down
 		x1 := centerX;						// line 230
 		y1 := centerY + mainIndex;			// line 230
 		Plot();								// line 230
-		// Up
+		// Draw Up
 		y1 := centerY - mainIndex;			// line 240
 		Plot();								// line 240
 
@@ -401,7 +389,7 @@ begin
 			temp := myscreenwidth / 4;
 			centerX := Random() & temp + (myscreenwidth - temp) / 2;
 			centerY := Random() & 6 + 9;
-			clearscreen($20, screen_char_loc);
+			clearscreen($20, SCREEN_CHAR_LOC);
 		end;
 	end;
 
@@ -441,6 +429,27 @@ begin
 		else rev_enable := 1;
 	end;
 
+	// Toggle pattern size
+	if( Random() < 16 ) then
+	begin
+		// Set pattern moving outward
+		dir := 1;
+		start_pos := 1;
+
+		// Toggle the flag
+		if( full_screen = 0 ) then 
+		begin
+			full_screen	:= 1;
+			stop_pos		:= 20;
+		end
+		else begin
+			full_screen	:= 0;
+			stop_pos		:= 12;
+		end;
+		
+		clearscreen($20, SCREEN_CHAR_LOC);
+	end;
+	
 	// Debug
 	//PrintXYZ(temp, 0, 0);
 	//WaitForKeypress();
@@ -455,7 +464,7 @@ begin
 	InitData();
 
 	// Clear screen
-	clearscreen($20, screen_char_loc);
+	clearscreen($20, SCREEN_CHAR_LOC);
 	
 	while (true) do begin
 		MainLoop();
