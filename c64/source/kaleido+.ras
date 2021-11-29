@@ -19,20 +19,20 @@
 program Kaleido;
 var  
 	// Main program vars
-	centerX 	  	 	: byte = SCREEN_WIDTH / 2;
-	centerY 	  	 	: byte = SCREEN_HEIGHT / 2;
+	centerX 	  		: byte = SCREEN_WIDTH / 2;
+	centerY 	  		: byte = SCREEN_HEIGHT / 2;
 	start_pos 	  	: byte = 1;
 	stop_pos 	  	: byte = 20;
 	dir			  	: byte = 1;
 	char_start 	  	: byte;
 	char_start_st 	: byte = 65;
 	char_offset   	: byte = 63;
-	myscreenwidth 	: byte = SCREEN_WIDTH;
 	num_chars	  	: byte = 6;	// Number of chars in the array
 	speed 		  	: byte = 3;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
 	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
 	full_screen   	: byte = 1;	// Flag for full-screen mode
+	curr_color		: byte = 1;	// Current color
 	char_arr 	  	: array[12] of byte;
 	p 			  	: pointer;
 	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp : byte;
@@ -42,12 +42,12 @@ var
 	key: byte;
 	
 	// Text for splash screen  	
-	titlemsg:  string = ("KALEIDOSCOPE+");
-	authormsg1: string = ("JESSICA PETERSEN <FUZZYBAD>, 2021");
-	authormsg2: string = ("BASED ON ROUTINE BY");
-	authormsg3: string = ("RUGG AND FELDMAN, 1979");
-	inst1: string = ("0-9 - ADJUST SPEED");
-	inst2: string = ("Q   - QUIT");
+	titlemsg:	string = ("KALEIDOSCOPE+");
+	authormsg1: 	string = ("JESSICA PETERSEN <FUZZYBAD>, 2021");
+	authormsg2: 	string = ("BASED ON ROUTINE BY");
+	authormsg3: 	string = ("RUGG AND FELDMAN, 1979");
+	inst1: 		string = ("0-9 - ADJUST SPEED");
+	inst2: 		string = ("Q   - QUIT");
 	// PRESS ANY KEY
 	promptmsg: string = (208, 210, 197, 211, 211, 32, 193, 206, 217, 32, 203, 197, 217);
 
@@ -104,74 +104,57 @@ begin
 	// Set uppercase
 	poke(^59468, 0, 12);
 	
+	// Set background/border colors
+	poke(SCREEN_BG_COL, 0, BLACK);
+	poke(SCREEN_FG_COL, 0, BLACK);
+	
 	// Clear screen
 	clearscreen($20, SCREEN_CHAR_LOC);
-
-	// Default to 40 columns
-	myscreenwidth := 40;
-	centerX := myscreenwidth / 2;
-
-	// Determine PET model by checking first byte of EDIT ROM at $E000
-	//	$A0 [160] = B1
-	//	$48 [72]  = B2
-	//	$36 [54]  = B4-40
-	//	$4B [75]  = B4-80
-	temp := peek(^$E000, 1);	
 	
-	// Set 80 columns
-	if( temp = 75 ) then
-	begin
-		if( myscreenwidth = 40 ) then myscreenwidth := 80
-		else myscreenwidth := 40;
-		centerX := myscreenwidth / 2 - 1;
-		clearscreen($20, SCREEN_CHAR_LOC);
-	end;
+	// Set cyan color
+	clearscreen(3, SCREEN_COL_LOC);
 	
 	// Center the title text
-	x1 := myscreenwidth / 2 - length(titlemsg) / 2;
+	x1 := SCREEN_WIDTH / 2 - length(titlemsg) / 2;
 	moveto(x1, 1, hi(SCREEN_CHAR_LOC));
    	printString(titlemsg, 0, length(titlemsg));
 
 	// Center the author message
-	x1 := myscreenwidth / 2 - length(authormsg1) / 2;
-	moveto(x1, 2, hi(SCREEN_CHAR_LOC));
+	x1 := SCREEN_WIDTH / 2 - length(authormsg1) / 2;
+	moveto(x1, 3, hi(SCREEN_CHAR_LOC));
    	printString(authormsg1, 0, length(authormsg1));
 
-	x1 := myscreenwidth / 2 - length(authormsg2) / 2;
-	moveto(x1, 4, hi(SCREEN_CHAR_LOC));
+	x1 := SCREEN_WIDTH / 2 - length(authormsg2) / 2;
+	moveto(x1, 6, hi(SCREEN_CHAR_LOC));
    	printString(authormsg2, 0, length(authormsg2));
 
-	x1 := myscreenwidth / 2 - length(authormsg3) / 2;
-	moveto(x1, 5, hi(SCREEN_CHAR_LOC));
+	x1 := SCREEN_WIDTH / 2 - length(authormsg3) / 2;
+	moveto(x1, 8, hi(SCREEN_CHAR_LOC));
    	printString(authormsg3, 0, length(authormsg3));
 
 	// Display Controls
-	x1 := myscreenwidth / 2 - 9;
-	moveto(x1, 7, hi(SCREEN_CHAR_LOC));
+	x1 := 11;
+	moveto(x1, 12, hi(SCREEN_CHAR_LOC));
     printString(inst1, 0, length(inst1));
 
-	moveto(x1, 8, hi(SCREEN_CHAR_LOC));
+	moveto(x1, 14, hi(SCREEN_CHAR_LOC));
     printString(inst2, 0, length(inst2));
 
 	// Center prompt to continue
 	// TRSE seems bugged at counting length of numeric strings
-	x1 := myscreenwidth / 2 - 13 / 2;
-	moveto(x1, 12, hi(SCREEN_CHAR_LOC));
-   	printString(promptmsg, 0, 13);
+	x1 := SCREEN_WIDTH / 2 - 13 / 2;
+	moveto(x1, 20, hi(SCREEN_CHAR_LOC));
+   	printString(promptmsg, 0, length(promptmsg));
 
 	WaitForKeypress();
 end;
 
 // Fill char array
 procedure InitData();
-begin
-	// Set center based on screen width setting
-	//centerX := myscreenwidth / 2 - 1;
-	
+begin	
 	for i := 0 to num_chars do							// line 150
 	begin
-		// Populate char_arr with 50/50 split between these ranges:
-		// 65-128 and 193-256
+		// Populate char_arr 
 		char_start := char_start_st;
 		
 		// Option for reverse chars
@@ -208,31 +191,26 @@ begin
 	if(key = 55) then speed := 2;
 	if(key = 56) then speed := 1;
 	if(key = 57) then speed := 0; // (fastest)
-		
-	// S - Toggle 40/80 Col Screen
-	if(key = 83) then
-	begin
-		if( myscreenwidth = 40 ) then myscreenwidth := 80
-		else myscreenwidth := 40;
-
-		centerX := myscreenwidth / 2 - 1;
-		clearscreen($20, SCREEN_CHAR_LOC);
-	end;
 end;
 
 
 // Poke value into an address
 procedure PokeAddr(pokeaddr_x:byte, pokeaddr_y:byte, pokeaddr_v:byte);
 begin
-	if( pokeaddr_x > myscreenwidth - 1 ) then return;
+	if( pokeaddr_x > SCREEN_WIDTH - 1 ) then return;
 	if( pokeaddr_x < 0) then return;
 	if( pokeaddr_y > SCREEN_HEIGHT - 1 ) then return;
 	if( pokeaddr_y < 0) then return;
 	
-	// Pointer to screen RAM
-	p := SCREEN_CHAR_LOC + myscreenwidth * pokeaddr_y + pokeaddr_x;
-
+	// Pointer value to screen RAM
+	p := SCREEN_CHAR_LOC + SCREEN_WIDTH * pokeaddr_y + pokeaddr_x;
 	poke(p, 0, pokeaddr_v);
+
+	// Pointer value to color RAM
+	p := SCREEN_COL_LOC + SCREEN_WIDTH * pokeaddr_y + pokeaddr_x;
+	poke(p, 0, curr_color);
+
+
 end;
 
 
@@ -247,7 +225,7 @@ begin
 
 	// Call timing delay
 	DoDelay();
-	
+
 	// Map chars in the up/down/across indexes
 	PokeAddr(x1, y1, char_arr[0]);				// line 900
 
@@ -321,18 +299,24 @@ procedure MainLoop();
 begin
 	for mainIndex := start_pos to stop_pos step dir do	// line 200
 	begin		
-		// Draw Right
+		// Update color
+		curr_color := Random() & 15;
+		// If black, pick another color..
+		while( curr_color = 0 ) do curr_color := Random() & 15;
+		
+		// Map the data
+		// Right
 		x1 := centerX + mainIndex;			// line 210
 		y1 := centerY;						// line 210
 		Plot();								// line 210
-		// Draw Left
+		// Left
 		x1 := centerX - mainIndex;			// line 220
 		Plot();								// line 220
-		// Draw Down
+		// Down
 		x1 := centerX;						// line 230
 		y1 := centerY + mainIndex;			// line 230
 		Plot();								// line 230
-		// Draw Up
+		// Up
 		y1 := centerY - mainIndex;			// line 240
 		Plot();								// line 240
 
@@ -385,8 +369,9 @@ begin
 		// Randomly change center point
 		if( temp < 32 ) then
 		begin
-			temp := myscreenwidth / 5;
-			centerX := Random() & temp + (myscreenwidth - temp) / 2;
+			//centerX := Random() & 10 + 15;
+			temp := SCREEN_WIDTH / 5;
+			centerX := Random() & temp + (SCREEN_WIDTH - temp) / 2;
 			centerY := Random() & 5 + 10;			
 			clearscreen($20, SCREEN_CHAR_LOC);
 		end;
@@ -427,7 +412,7 @@ begin
 		if( rev_enable = 1 ) then rev_enable := 0 
 		else rev_enable := 1;
 	end;
-
+	
 	// Toggle pattern size
 	if( Random() < 16 ) then
 	begin
@@ -439,16 +424,16 @@ begin
 		if( full_screen = 0 ) then 
 		begin
 			full_screen	:= 1;
-			stop_pos		:= 20;
+			stop_pos		:= SCREEN_WIDTH / 2;
 		end
 		else begin
 			full_screen	:= 0;
-			stop_pos		:= 12;
+			stop_pos		:= SCREEN_HEIGHT / 2;
 		end;
 		
 		clearscreen($20, SCREEN_CHAR_LOC);
 	end;
-	
+
 	// Debug
 	//PrintXYZ(temp, 0, 0);
 	//WaitForKeypress();
