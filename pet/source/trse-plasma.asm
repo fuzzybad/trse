@@ -1,15 +1,18 @@
  processor 6502
-	org $400
-	; Starting new memory block at $400
-StartBlock400
-	.byte    $0, $0E, $08, $0A, $00, $9E, $20, $28
+	org $401
+StartBlock401:
+	; Starting new memory block at $401
+	.byte $b ; lo byte of next line
+	.byte $4 ; hi byte of next line
+	.byte $0a, $00 ; line 10 (lo, hi)
+	.byte $9e, $20 ; SYS token and a space
 	.byte   $31,$30,$34,$30
-	.byte    $29, $00, $00, $00
-	; Ending memory block
-EndBlock400
+	.byte $00, $00, $00 ; end of program
+	; Ending memory block at $401
+EndBlock401:
 	org $410
+StartBlock410:
 	; Starting new memory block at $410
-StartBlock410
 Tutorial3_plasma
 		jsr initsine_calculate
 	jmp block1
@@ -21,17 +24,12 @@ ax	dc.b	0
 ay	dc.b	0
 x	dc.b	0
 y	dc.b	0
-colorP	= $02
-key	dc.b	0
-titlemsg		dc.b	"TRSE EXAMPLE 6  'PLASMA'"
+x1	dc.b	0
+temp	dc.b	0
+colorP	= $68
+titlemsg		dc.b	"TRSE 'PLASMA' DEMO"
 	dc.b	0
-authormsg		dc.b	"40/80 VERSION 9/2020"
-	dc.b	0
-promptmsg		dc.b	"USE "
-	dc.b	244
-	dc.b	"0 OR "
-	dc.b	248
-	dc.b	"0 COLUMN SCREEN?"
+authormsg		dc.b	"40/80 VERSION FUZZYBAD"
 	dc.b	0
 exitmsg		dc.b	211
 	dc.b	208
@@ -52,15 +50,16 @@ vals	dc.b $020, $02e, $0a6, $0a0, $0a0, $0a6, $02e, $020
 	; ***********  Defining procedure : init16x8div
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
-initdiv16x8_divisor = $4c     ;$59 used for hi-byte
-initdiv16x8_dividend = $4e	  ;$fc used for hi-byte
-initdiv16x8_remainder = $50	  ;$fe used for hi-byte
-initdiv16x8_result = $4e ;save memory by reusing divident to store the result
-divide16x8	lda #0	        ;preset remainder to 0
+initdiv16x8_divisor = $80     ;$59 used for hi-byte
+initdiv16x8_dividend = $82	  ;$fc used for hi-byte
+initdiv16x8_remainder = $84	  ;$fe used for hi-byte
+initdiv16x8_result = $82 ;save memory by reusing divident to store the result
+divide16x8
+	lda #0	        ;preset remainder to 0
 	sta initdiv16x8_remainder
 	sta initdiv16x8_remainder+1
 	ldx #16	        ;repeat for each bit: ...
-divloop16	asl initdiv16x8_dividend	;dividend lb & hb*2, msb -> Carry
+divloop16:	asl initdiv16x8_dividend	;dividend lb & hb*2, msb -> Carry
 	rol initdiv16x8_dividend+1
 	rol initdiv16x8_remainder	;remainder lb & hb * 2 + msb from carry
 	rol initdiv16x8_remainder+1
@@ -74,27 +73,30 @@ divloop16	asl initdiv16x8_dividend	;dividend lb & hb*2, msb -> Carry
 	sta initdiv16x8_remainder+1	;else save substraction result as new remainder,
 	sty initdiv16x8_remainder
 	inc initdiv16x8_result	;and INCrement result cause divisor fit in 1 times
-skip16	dex
+skip16
+	dex
 	bne divloop16
 	rts
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : init8x8div
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
-div8x8_c = $4c
-div8x8_d = $4e
-div8x8_e = $50
+div8x8_c = $80
+div8x8_d = $82
+div8x8_e = $84
 	; Normal 8x8 bin div
 div8x8_procedure
 	lda #$00
 	ldx #$07
 	clc
-div8x8_loop1 rol div8x8_d
+div8x8_loop1
+	rol div8x8_d
 	rol
 	cmp div8x8_c
 	bcc div8x8_loop2
 	sbc div8x8_c
-div8x8_loop2 dex
+div8x8_loop2
+	dex
 	bpl div8x8_loop1
 	rol div8x8_d
 	lda div8x8_d
@@ -106,9 +108,9 @@ div8x8_def_end
 	;    Requires initialization : no
 	jmp initmoveto_moveto2
 screenmemory =  $fe
-colormemory =  $fc
-screen_x = $4c
-screen_y = $4e
+colormemory =  $fb
+screen_x = $80
+screen_y = $82
 SetScreenPosition
 	sta screenmemory+1
 	lda #0
@@ -138,8 +140,8 @@ initmoveto_moveto2
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initprintstring
 	;    Procedure type : User-defined procedure
-print_text = $4c
-print_number_text .dc "    ",0
+print_text = $80
+print_number_text: .dc "    ",0
 printstring
 	ldy #0
 printstringloop
@@ -165,8 +167,8 @@ printstring_done
 	;    Requires initialization : no
 sine .byte 0 
 	org sine +#255
-value .word 0
-delta .word 0
+value: .word 0
+delta: .word 0
 initsine_calculate
 	ldy #$3f
 	ldx #$00
@@ -199,36 +201,76 @@ initsin_b
 ; // charset will be placed at $2000 in bank 1	
 ; // look in the character set
 ; // mini sine table
-; // Lookup table for division by 16 
+; // Lookup table for division by 16
 ; //	Method to get a char from the keyboard buffer
 ; //	TRSE procedures return accumulator value
-; //
 	; NodeProcedureDecl -1
-	; ***********  Defining procedure : getKey
+	; ***********  Defining procedure : GetKey
 	;    Procedure type : User-defined procedure
-getKey
+GetKey
 	jsr $ffe4
 	rts
 	
-; // getin 
-; //	Method which shows title screen and checks screen width
-; //
+; // getin
+; // Wait for user input
 	; NodeProcedureDecl -1
-	; ***********  Defining procedure : showTitle
+	; ***********  Defining procedure : WaitForKeypress
 	;    Procedure type : User-defined procedure
-showTitle
+WaitForKeypress
 	
-; // Set uppercase
-	; Poke
-	; Optimization: shift is zero
-	lda #$c
-	sta $e84c
+; // Pause until key pressed
+	lda #$0
+	; Calling storevariable on generic assign expression
+	sta temp
+WaitForKeypress_while5
+WaitForKeypress_loopstart9
+	; Binary clause Simplified: EQUALS
+	lda temp
+	; Compare with pure num / var optimization
+	cmp #$0;keep
+	bne WaitForKeypress_elsedoneblock8
+WaitForKeypress_ConditionalTrueBlock6: ;Main true block ;keep 
+	jsr GetKey
+	; Calling storevariable on generic assign expression
+	sta temp
+	jmp WaitForKeypress_while5
+WaitForKeypress_elsedoneblock8
+WaitForKeypress_loopend10
+	rts
 	
-; // Clear screen
+; // Determine screen width to use
+	; NodeProcedureDecl -1
+	; ***********  Defining procedure : SetScreenWidth
+	;    Procedure type : User-defined procedure
+SetScreenWidth
+	; Binary clause Simplified: EQUALS
+	; Peek
+	lda $e000 + $1;keep
+	; Compare with pure num / var optimization
+	cmp #$4b;keep
+	bne SetScreenWidth_elseblock16
+SetScreenWidth_ConditionalTrueBlock15: ;Main true block ;keep 
+	
+; // Determine PET model by checking first byte of EDIT ROM at $E000
+; //	$A0 [160] = B1
+; //	$48 [72]  = B2
+; //	$36 [54]  = B4-40
+; //	$4B [75]  = B4-80	
+	lda #$50
+	; Calling storevariable on generic assign expression
+	sta myscreenwidth
+	jmp SetScreenWidth_elsedoneblock17
+SetScreenWidth_elseblock16
+	lda #$28
+	; Calling storevariable on generic assign expression
+	sta myscreenwidth
+SetScreenWidth_elsedoneblock17
+	
+; //centerX := myscreenwidth / 2 - 1;
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-showTitle_clearloop5
+SetScreenWidth_clearloop22
 	dex
 	sta $0000+$8000,x
 	sta $00fa+$8000,x
@@ -238,65 +280,99 @@ showTitle_clearloop5
 	sta $04e2+$8000,x
 	sta $05dc+$8000,x
 	sta $06d6+$8000,x
-	bne showTitle_clearloop5
+	bne SetScreenWidth_clearloop22
+	rts
 	
-; // Show the title text
-	; MoveTo optimization
-	lda #$58
-	sta screenmemory
+; //	Method which shows title screen and checks screen width
+	; NodeProcedureDecl -1
+	; ***********  Defining procedure : showTitle
+	;    Procedure type : User-defined procedure
+showTitle
+	
+; // Determine screen width and clear it
+	jsr SetScreenWidth
+	
+; // Set uppercase
+	; Poke
+	; Optimization: shift is zero
+	lda #$c
+	sta $e84c
+	
+; // Center the title text
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #9
+showTitle_rightvarAddSub_var24 = $54
+	sta showTitle_rightvarAddSub_var24
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc showTitle_rightvarAddSub_var24
+	; Calling storevariable on generic assign expression
+	sta x1
+	sta screen_x
+	lda #$1
+	sta screen_y
 	lda #>$8000
-	clc
-	adc #$00
-	sta screenmemory+1
+	jsr SetScreenPosition
 	clc
 	lda #<titlemsg
 	adc #$0
 	ldy #>titlemsg
 	sta print_text+0
 	sty print_text+1
-	ldx #$18 ; optimized, look out for bugs
+	ldx #$12 ; optimized, look out for bugs
 	jsr printstring
-	; MoveTo optimization
-	lda #$aa
-	sta screenmemory
+	
+; // Center the author text
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #11
+showTitle_rightvarAddSub_var27 = $54
+	sta showTitle_rightvarAddSub_var27
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc showTitle_rightvarAddSub_var27
+	; Calling storevariable on generic assign expression
+	sta x1
+	sta screen_x
+	lda #$3
+	sta screen_y
 	lda #>$8000
-	clc
-	adc #$00
-	sta screenmemory+1
+	jsr SetScreenPosition
 	clc
 	lda #<authormsg
 	adc #$0
 	ldy #>authormsg
 	sta print_text+0
 	sty print_text+1
-	ldx #$14 ; optimized, look out for bugs
+	ldx #$16 ; optimized, look out for bugs
 	jsr printstring
 	
-; // Ask user if they have 40 or 80 column screen
-	; MoveTo optimization
-	lda #$47
-	sta screenmemory
+; // Center exit message
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #6
+showTitle_rightvarAddSub_var30 = $54
+	sta showTitle_rightvarAddSub_var30
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc showTitle_rightvarAddSub_var30
+	; Calling storevariable on generic assign expression
+	sta x1
+	sta screen_x
+	lda #$c
+	sta screen_y
 	lda #>$8000
-	clc
-	adc #$01
-	sta screenmemory+1
-	clc
-	lda #<promptmsg
-	adc #$0
-	ldy #>promptmsg
-	sta print_text+0
-	sty print_text+1
-	ldx #$1b ; optimized, look out for bugs
-	jsr printstring
-	
-; // Show the quit instruction
-	; MoveTo optimization
-	lda #$7e
-	sta screenmemory
-	lda #>$8000
-	clc
-	adc #$03
-	sta screenmemory+1
+	jsr SetScreenPosition
 	clc
 	lda #<exitmsg
 	adc #$0
@@ -305,51 +381,9 @@ showTitle_clearloop5
 	sty print_text+1
 	ldx #$d ; optimized, look out for bugs
 	jsr printstring
-showTitle_while14
-	; Binary clause Simplified: EQUALS
-	lda myscreenwidth
-	; Compare with pure num / var optimization
-	cmp #$0;keep
-	bne showTitle_elsedoneblock17
-showTitle_ConditionalTrueBlock15: ;Main true block ;keep 
 	
-; // 009E			No. of Chars. in Keyboard Buffer(Queue)
-; // 00E3 		Size of Keyboard Buffer
-; // 0270-027A  	Keyboard Buffer Queue(FIFO)
-; // Is there a value in the character buffer?
-; // NOTE: Doesn't work on early ROMS
-; //numkeys := peek(^$009E, 0);
-	; Assigning single variable : key
-	jsr getKey
-	; Calling storevariable
-	sta key
-	; Binary clause Simplified: EQUALS
-	; Compare with pure num / var optimization
-	cmp #$34;keep
-	bne showTitle_elsedoneblock35
-showTitle_ConditionalTrueBlock33: ;Main true block ;keep 
-	
-; // 52 is '4'
-	; Assigning single variable : myscreenwidth
-	lda #$28
-	; Calling storevariable
-	sta myscreenwidth
-showTitle_elsedoneblock35
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$38;keep
-	bne showTitle_elsedoneblock41
-showTitle_ConditionalTrueBlock39: ;Main true block ;keep 
-	
-; // 56 is '8'
-	; Assigning single variable : myscreenwidth
-	lda #$50
-	; Calling storevariable
-	sta myscreenwidth
-showTitle_elsedoneblock41
-	jmp showTitle_while14
-showTitle_elsedoneblock17
+; // Pause until user presses key
+	jsr WaitForKeypress
 	rts
 	
 ; // Plasma procedure
@@ -357,108 +391,102 @@ showTitle_elsedoneblock17
 	; ***********  Defining procedure : Plasma
 	;    Procedure type : User-defined procedure
 Plasma
-	; Assigning single variable : c2x
 	lda ax
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta c2x
-	; Assigning single variable : c2y
 	lda ay
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta c2y
-	; Assigning single variable : x
 	lda #$0
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta x
-Plasma_forloop45
+Plasma_forloop34
 	
 ; // Set up y-sine table
-	; Assigning single variable : siny
 	; 8 bit binop
 	; Add/sub where right value is constant number
-	; Load Unknown type array
+	; Load Unknown type array, assuming BYTE
 	ldx c2x
 	lda sine,x
 	clc
-	; Load Unknown type array
+	; Load Unknown type array, assuming BYTE
 	ldx c2y
 	adc sine,x
 	 ; end add / sub var with constant
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	ldx x ; optimized, look out for bugs
 	sta siny,x
-	; Assigning single variable : c2x
 	; Optimizer: a = a +/- b
 	lda c2x
 	clc
 	adc #$4
 	sta c2x
-	; Assigning single variable : c2y
 	; Optimizer: a = a +/- b
 	lda c2y
 	clc
 	adc #$9
 	sta c2y
-Plasma_forloopcounter47
+Plasma_forloopcounter36
+Plasma_loopstart37
 	; Compare is onpage
+	; Test Inc dec D
 	inc x
 	lda #$19
 	cmp x ;keep
-	bne Plasma_forloop45
-Plasma_loopdone50: ;keep
-Plasma_forloopend46
-	; Assigning single variable : ax
+	bne Plasma_forloop34
+Plasma_loopdone41: ;keep
+Plasma_forloopend35
+Plasma_loopend38
 	; Optimizer: a = a +/- b
 	lda ax
 	clc
 	adc #$3
 	sta ax
-	; Assigning single variable : ay
 	; Optimizer: a = a +/- b
 	lda ay
 	sec
 	sbc #$5
 	sta ay
-	; Assigning single variable : x
 	lda #$0
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta x
-Plasma_forloop51
+Plasma_forloop42
 	
 ; // Set up x-sine table
-	; Assigning single variable : sinx
 	; 8 bit binop
 	; Add/sub where right value is constant number
-	; Load Unknown type array
+	; Load Unknown type array, assuming BYTE
 	ldx c2x
 	lda sine,x
 	clc
-	; Load Unknown type array
+	; Load Unknown type array, assuming BYTE
 	ldx c2y
 	adc sine,x
 	 ; end add / sub var with constant
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	ldx x ; optimized, look out for bugs
 	sta sinx,x
-	; Assigning single variable : c2x
 	; Optimizer: a = a +/- b
 	lda c2x
 	clc
 	adc #$3
 	sta c2x
-	; Assigning single variable : c2y
 	; Optimizer: a = a +/- b
 	lda c2y
 	clc
 	adc #$7
 	sta c2y
-Plasma_forloopcounter53
+Plasma_forloopcounter44
+Plasma_loopstart45
 	; Compare is onpage
+	; Test Inc dec D
 	inc x
 	lda myscreenwidth
 	cmp x ;keep
-	bne Plasma_forloop51
-Plasma_loopdone56: ;keep
-Plasma_forloopend52
+	bne Plasma_forloop42
+Plasma_loopdone49: ;keep
+Plasma_forloopend43
+Plasma_loopend46
 	
 ; // Move cursor to(1,y) on $0400 on bank 1	
 ; // moveto could also be replaced with : screenmemory:=$0400 + @y_start*40;
@@ -469,30 +497,26 @@ Plasma_forloopend52
 	clc
 	adc #$00
 	sta screenmemory+1
-	; Assigning single variable : y
 	lda #$0
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta y
-Plasma_forloop57
+Plasma_forloop50
 	
 ; // Full screen, runs slower
 ; //moveto(0,screen_height/2, hi(screen_char_loc)); 
 ; // Half screen, runs faster
-	; Assigning single variable : val
 	; Load Byte array
 	ldx y
 	lda siny,x
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta val
-	; Assigning single variable : x
 	lda #$0
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta x
-Plasma_forloop70
+Plasma_forloop67
 	
 ; // here, we take(sin[x]+val) and divide by 16. However, since this is a slow procedure,
 ; // we have created a lookup table instead!
-	; Assigning single variable : c
 	; Load Byte array
 	; 8 bit binop
 	; Add/sub where right value is constant number
@@ -504,67 +528,68 @@ Plasma_forloop70
 	 ; end add / sub var with constant
 	tax
 	lda lookupDiv,x
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta c
 	
 ; // Set the screen memory
-	; Assigning single variable : screenmemory
 	; Load Byte array
 	tax ; optimized x, look out for bugs L22 ORG 	ldx c
 	lda vals,x
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	; Storing to a pointer
 	ldy x ; optimized, look out for bugs
 	sta (screenmemory),y
-Plasma_forloopcounter72
+Plasma_forloopcounter69
+Plasma_loopstart70
 	; Compare is onpage
+	; Test Inc dec D
 	inc x
 	lda myscreenwidth
 	cmp x ;keep
-	bne Plasma_forloop70
-Plasma_loopdone75: ;keep
-Plasma_forloopend71
+	bne Plasma_forloop67
+Plasma_loopdone74: ;keep
+Plasma_forloopend68
+Plasma_loopend71
 	
 ; // Increase screen memory pointer by MYSCREENWIDTH(next row)
-	; Assigning single variable : screenmemory
 	lda screenmemory
 	clc
 	adc myscreenwidth
 	sta screenmemory+0
 	; Optimization : A := A op 8 bit - var and bvar are the same - perform inc
-	bcc Plasma_WordAdd76
+	bcc Plasma_WordAdd75
 	inc screenmemory+1
-Plasma_WordAdd76
+Plasma_WordAdd75
 	
 ; // Increase color pointer by MYSCREENWIDTH(next row)
-	; Assigning single variable : colorP
 	lda colorP
 	clc
 	adc myscreenwidth
 	sta colorP+0
 	; Optimization : A := A op 8 bit - var and bvar are the same - perform inc
-	bcc Plasma_WordAdd77
+	bcc Plasma_WordAdd76
 	inc colorP+1
-Plasma_WordAdd77
-Plasma_forloopcounter59
+Plasma_WordAdd76
+Plasma_forloopcounter52
+Plasma_loopstart53
 	; Compare is onpage
+	; Test Inc dec D
 	inc y
 	lda #$19
 	cmp y ;keep
-	bne Plasma_forloop57
-Plasma_loopdone78: ;keep
-Plasma_forloopend58
+	bne Plasma_forloop50
+Plasma_loopdone77: ;keep
+Plasma_forloopend51
+Plasma_loopend54
 	rts
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : InitDivision
 	;    Procedure type : User-defined procedure
 InitDivision
-	; Assigning single variable : x
 	lda #$0
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta x
-InitDivision_forloop80
-	; Assigning single variable : lookupDiv
+InitDivision_forloop79
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
 	lda x
@@ -573,19 +598,22 @@ InitDivision_forloop80
 	lsr
 	lsr
 	lsr
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	ldx x ; optimized, look out for bugs
 	sta lookupDiv,x
-InitDivision_forloopcounter82
+InitDivision_forloopcounter81
+InitDivision_loopstart82
 	; Compare is onpage
+	; Test Inc dec D
 	inc x
 	; Integer constant assigning
 	ldy #$01
 	lda #$00
 	cmp x ;keep
-	bne InitDivision_forloop80
-InitDivision_loopdone85: ;keep
-InitDivision_forloopend81
+	bne InitDivision_forloop79
+InitDivision_loopdone86: ;keep
+InitDivision_forloopend80
+InitDivision_loopend83
 	rts
 block1
 	
@@ -595,20 +623,18 @@ block1
 	
 ; // Set charmap location at $2000
 	jsr InitDivision
-	; Assigning single variable : ax
 	lda #$1
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta ax
-	; Assigning single variable : ay
 	lda #$5
-	; Calling storevariable
+	; Calling storevariable on generic assign expression
 	sta ay
 	
 ; // Clear screen and color memory
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainProgram_clearloop86
+MainProgram_clearloop87
 	dex
 	sta $0000+$8000,x
 	sta $00fa+$8000,x
@@ -618,30 +644,33 @@ MainProgram_clearloop86
 	sta $04e2+$8000,x
 	sta $05dc+$8000,x
 	sta $06d6+$8000,x
-	bne MainProgram_clearloop86
-MainProgram_while87
+	bne MainProgram_clearloop87
+MainProgram_while88
+MainProgram_loopstart92
 	; Binary clause Simplified: NOTEQUALS
 	lda #$1
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	beq MainProgram_elsedoneblock90
-MainProgram_ConditionalTrueBlock88: ;Main true block ;keep 
+	beq MainProgram_elsedoneblock91
+MainProgram_ConditionalTrueBlock89: ;Main true block ;keep 
 	
 ; // Main loop
 	jsr Plasma
+	
+; // Trigger NMI	    
 	; Binary clause Simplified: EQUALS
-	jsr getKey
+	jsr GetKey
 	; Compare with pure num / var optimization
 	cmp #$20;keep
-	bne MainProgram_elsedoneblock104
-MainProgram_ConditionalTrueBlock102: ;Main true block ;keep 
+	bne MainProgram_elsedoneblock107
+MainProgram_ConditionalTrueBlock105: ;Main true block ;keep 
 	
 ; // Exit if user pressed space
 ; // Clear screen
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainProgram_clearloop108
+MainProgram_clearloop111
 	dex
 	sta $0000+$8000,x
 	sta $00fa+$8000,x
@@ -651,14 +680,15 @@ MainProgram_clearloop108
 	sta $04e2+$8000,x
 	sta $05dc+$8000,x
 	sta $06d6+$8000,x
-	bne MainProgram_clearloop108
+	bne MainProgram_clearloop111
 	
 ; //call(^$fd16);	
 ; // RESET
 	jsr $fd49
-MainProgram_elsedoneblock104
-	jmp MainProgram_while87
-MainProgram_elsedoneblock90
+MainProgram_elsedoneblock107
+	jmp MainProgram_while88
+MainProgram_elsedoneblock91
+MainProgram_loopend93
 	; End of program
-	; Ending memory block
-EndBlock410
+	; Ending memory block at $410
+EndBlock410:

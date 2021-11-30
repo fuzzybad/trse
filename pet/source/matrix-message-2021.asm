@@ -17,8 +17,11 @@ MatrixEffect
 	jmp block1
 i	dc.b	0
 j	dc.b	0
-x1	dc.b	0
 temp	dc.b	0
+x1	dc.b	0
+x2	dc.b	0
+y1	dc.b	0
+y2	dc.b	0
 ypos	dc.b	 
 	org ypos+80
 yadd	dc.b	 
@@ -28,7 +31,7 @@ saddr	dc.w
 sp	= $68
 titlemsg		dc.b	"TRSE 'MATRIX' DEMO"
 	dc.b	0
-authormsg		dc.b	"40/80 VERSION FUZZYBAD"
+authormsg		dc.b	"40/80 MESSAGE VERSION FUZZYBAD"
 	dc.b	0
 exitmsg		dc.b	211
 	dc.b	208
@@ -37,6 +40,17 @@ exitmsg		dc.b	211
 	dc.b	197
 	dc.b	" TO QUIT"
 	dc.b	0
+msg_0		dc.b	"WORLD OF COMMODORE 2021"
+	dc.b	0
+msg_1		dc.b	"                       "
+	dc.b	0
+msg_2		dc.b	"   DECEMBER 4, 2021    "
+	dc.b	0
+msg_3		dc.b	"                       "
+	dc.b	0
+msg_4		dc.b	"TORONTO PET USERS GROUP"
+	dc.b	0
+msg_len	dc.b	$17
 myscreenwidth	dc.b	$00
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : init16x8div
@@ -167,6 +181,9 @@ initrandom256_RandomSkip3
 	rts
 	
 ; // Text for splash screen  	
+; // Text for message area
+; // # of chars in the width
+; // @TODO: There must be some way to calculate string length..
 ; // User selection for screen width 
 ; //	Method to get a char from the keyboard buffer
 ; //	TRSE procedures return accumulator value
@@ -295,7 +312,7 @@ showTitle_rightvarAddSub_var25 = $54
 ; // Center the author text
 	; 8 bit binop
 	; Add/sub right value is variable/expression
-	lda #11
+	lda #15
 showTitle_rightvarAddSub_var28 = $54
 	sta showTitle_rightvarAddSub_var28
 	; Right is PURE NUMERIC : Is word =0
@@ -317,7 +334,7 @@ showTitle_rightvarAddSub_var28 = $54
 	ldy #>authormsg
 	sta print_text+0
 	sty print_text+1
-	ldx #$16 ; optimized, look out for bugs
+	ldx #$1e ; optimized, look out for bugs
 	jsr printstring
 	
 ; // Center exit message
@@ -526,7 +543,130 @@ FillColor_dtnooverflow89
 FillColor_elsedoneblock85
 	rts
 	
-; //	Renders the actual matrix effect
+; //	Show the message
+	; NodeProcedureDecl -1
+	; ***********  Defining procedure : displayMessage
+	;    Procedure type : User-defined procedure
+displayMessage
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	lda myscreenwidth
+	sec
+	sbc msg_len
+	 ; end add / sub var with constant
+	lsr
+	; Calling storevariable on generic assign expression
+	sta x1
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	clc
+	adc msg_len
+	 ; end add / sub var with constant
+	; Calling storevariable on generic assign expression
+	sta x2
+	; Binary clause Simplified: EQUALS
+	lda myscreenwidth
+	; Compare with pure num / var optimization
+	cmp #$28;keep
+	bne displayMessage_elsedoneblock94
+displayMessage_ConditionalTrueBlock92: ;Main true block ;keep 
+	lda #$6
+	; Calling storevariable on generic assign expression
+	sta y1
+	lda #$e
+	; Calling storevariable on generic assign expression
+	sta y2
+displayMessage_elsedoneblock94
+	; Binary clause Simplified: EQUALS
+	lda myscreenwidth
+	; Compare with pure num / var optimization
+	cmp #$50;keep
+	bne displayMessage_elsedoneblock100
+displayMessage_ConditionalTrueBlock98: ;Main true block ;keep 
+	lda #$3
+	; Calling storevariable on generic assign expression
+	sta y1
+	lda #$8
+	; Calling storevariable on generic assign expression
+	sta y2
+displayMessage_elsedoneblock100
+	
+; // @TODO Put strings into array and print using loop
+	lda x1
+	sta screen_x
+	lda #$3
+	sta screen_y
+	lda #>$8000
+	jsr SetScreenPosition
+	clc
+	lda #<msg_0
+	adc #$0
+	ldy #>msg_0
+	sta print_text+0
+	sty print_text+1
+	ldx msg_len ; optimized, look out for bugs
+	jsr printstring
+	lda x1
+	sta screen_x
+	lda #$4
+	sta screen_y
+	lda #>$8000
+	jsr SetScreenPosition
+	clc
+	lda #<msg_1
+	adc #$0
+	ldy #>msg_1
+	sta print_text+0
+	sty print_text+1
+	ldx msg_len ; optimized, look out for bugs
+	jsr printstring
+	lda x1
+	sta screen_x
+	lda #$5
+	sta screen_y
+	lda #>$8000
+	jsr SetScreenPosition
+	clc
+	lda #<msg_2
+	adc #$0
+	ldy #>msg_2
+	sta print_text+0
+	sty print_text+1
+	ldx msg_len ; optimized, look out for bugs
+	jsr printstring
+	lda x1
+	sta screen_x
+	lda #$6
+	sta screen_y
+	lda #>$8000
+	jsr SetScreenPosition
+	clc
+	lda #<msg_3
+	adc #$0
+	ldy #>msg_3
+	sta print_text+0
+	sty print_text+1
+	ldx msg_len ; optimized, look out for bugs
+	jsr printstring
+	lda x1
+	sta screen_x
+	lda #$7
+	sta screen_y
+	lda #>$8000
+	jsr SetScreenPosition
+	clc
+	lda #<msg_4
+	adc #$0
+	ldy #>msg_4
+	sta print_text+0
+	sty print_text+1
+	ldx msg_len ; optimized, look out for bugs
+	jsr printstring
+	rts
+	
+; //	Render the matrix effect
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : RenderMatrix
 	;    Procedure type : User-defined procedure
@@ -534,9 +674,9 @@ RenderMatrix
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta i
-RenderMatrix_forloop91
+RenderMatrix_forloop114
 	
-; // Look through 40/80 columns
+; // Loop through the 40/80 columns
 ; // Calculate actualy y screen position
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
@@ -548,15 +688,46 @@ RenderMatrix_forloop91
 	lsr
 	; Calling storevariable on generic assign expression
 	sta j
-	
-; // random character is located between 0 and 64
 	; Binary clause Simplified: LESS
 	; Compare with pure num / var optimization
 	cmp #$19;keep
-	bcs RenderMatrix_elsedoneblock119
-RenderMatrix_ConditionalTrueBlock117: ;Main true block ;keep 
+	bcs RenderMatrix_elsedoneblock162
+RenderMatrix_ConditionalTrueBlock160: ;Main true block ;keep 
+	
+; // random character is located between 0 and 64
+	; Binary clause Simplified: LESS
+	lda i
+	; Compare with pure num / var optimization
+	cmp x1;keep
+	bcs RenderMatrix_localfailed183
+	jmp RenderMatrix_ConditionalTrueBlock177
+RenderMatrix_localfailed183: ;keep
+	; ; logical OR, second chance
+	; Binary clause Simplified: GREATEREQUAL
+	lda i
+	; Compare with pure num / var optimization
+	cmp x2;keep
+	bcc RenderMatrix_localfailed182
+	jmp RenderMatrix_ConditionalTrueBlock177
+RenderMatrix_localfailed182: ;keep
+	; ; logical OR, second chance
+	; Binary clause Simplified: LESS
+	lda j
+	; Compare with pure num / var optimization
+	cmp y1;keep
+	bcs RenderMatrix_localfailed184
+	jmp RenderMatrix_ConditionalTrueBlock177
+RenderMatrix_localfailed184: ;keep
+	; ; logical OR, second chance
+	; Binary clause Simplified: GREATEREQUAL
+	lda j
+	; Compare with pure num / var optimization
+	cmp y2;keep
+	bcc RenderMatrix_elsedoneblock179
+RenderMatrix_ConditionalTrueBlock177: ;Main true block ;keep 
 	
 ; // Print random character
+; // This creates space for the message
 	; ----------
 	; AddressTable address, xoffset, yoffset
 	; yoffset is complex
@@ -567,9 +738,9 @@ RenderMatrix_ConditionalTrueBlock117: ;Main true block ;keep
 	ldy saddr+1,x   ; Address of table hi
 	clc
 	adc i
-	bcc RenderMatrix_dtnooverflow123
+	bcc RenderMatrix_dtnooverflow186
 	iny  ; overflow into high byte
-RenderMatrix_dtnooverflow123
+RenderMatrix_dtnooverflow186
 	sta sp
 	sty sp+1
 	; Right is PURE NUMERIC : Is word =0
@@ -581,7 +752,8 @@ RenderMatrix_dtnooverflow123
 	; Storing to a pointer
 	ldy #$0
 	sta (sp),y
-RenderMatrix_elsedoneblock119
+RenderMatrix_elsedoneblock179
+RenderMatrix_elsedoneblock162
 	
 ; // Fill the "tail" colors
 	lda i
@@ -613,8 +785,8 @@ RenderMatrix_elsedoneblock119
 	; Load Byte array
 	; Compare with pure num / var optimization
 	cmp #$f0;keep
-	bcc RenderMatrix_elsedoneblock127
-RenderMatrix_ConditionalTrueBlock125: ;Main true block ;keep 
+	bcc RenderMatrix_elsedoneblock190
+RenderMatrix_ConditionalTrueBlock188: ;Main true block ;keep 
 	
 ; // Reset values when ypos is outside of the screen
 	lda #$0
@@ -636,19 +808,19 @@ RenderMatrix_ConditionalTrueBlock125: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	ldx i ; optimized, look out for bugs
 	sta yadd,x
-RenderMatrix_elsedoneblock127
-RenderMatrix_forloopcounter93
-RenderMatrix_loopstart94
+RenderMatrix_elsedoneblock190
+RenderMatrix_forloopcounter116
+RenderMatrix_loopstart117
 	; Test Inc dec D
 	inc i
 	lda myscreenwidth
 	cmp i ;keep
-	beq RenderMatrix_loopdone134
-RenderMatrix_loopnotdone135
-	jmp RenderMatrix_forloop91
-RenderMatrix_loopdone134
-RenderMatrix_forloopend92
-RenderMatrix_loopend95
+	beq RenderMatrix_loopdone197
+RenderMatrix_loopnotdone198
+	jmp RenderMatrix_forloop114
+RenderMatrix_loopdone197
+RenderMatrix_forloopend115
+RenderMatrix_loopend118
 	rts
 block1
 	
@@ -658,16 +830,19 @@ block1
 	
 ; // Initialize tables	
 	jsr InitTables
-MainProgram_while136
-MainProgram_loopstart140
+MainProgram_while199
+MainProgram_loopstart203
 	; Binary clause Simplified: NOTEQUALS
 	lda #$1
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	beq MainProgram_elsedoneblock139
-MainProgram_ConditionalTrueBlock137: ;Main true block ;keep 
+	beq MainProgram_elsedoneblock202
+MainProgram_ConditionalTrueBlock200: ;Main true block ;keep 
 	
+; // Display the message(not working from here for some reason)
+; //displayMessage();
 ; // Loop effect
+	jsr displayMessage
 	jsr RenderMatrix
 	
 ; // Trigger NMI	    
@@ -675,15 +850,15 @@ MainProgram_ConditionalTrueBlock137: ;Main true block ;keep
 	jsr GetKey
 	; Compare with pure num / var optimization
 	cmp #$20;keep
-	bne MainProgram_elsedoneblock155
-MainProgram_ConditionalTrueBlock153: ;Main true block ;keep 
+	bne MainProgram_elsedoneblock218
+MainProgram_ConditionalTrueBlock216: ;Main true block ;keep 
 	
 ; // Exit if user pressed space
 ; // Clear screen
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainProgram_clearloop159
+MainProgram_clearloop222
 	dex
 	sta $0000+$8000,x
 	sta $00fa+$8000,x
@@ -693,15 +868,15 @@ MainProgram_clearloop159
 	sta $04e2+$8000,x
 	sta $05dc+$8000,x
 	sta $06d6+$8000,x
-	bne MainProgram_clearloop159
+	bne MainProgram_clearloop222
 	
 ; //call(^$fd16);	
 ; // RESET
 	jsr $fd49
-MainProgram_elsedoneblock155
-	jmp MainProgram_while136
-MainProgram_elsedoneblock139
-MainProgram_loopend141
+MainProgram_elsedoneblock218
+	jmp MainProgram_while199
+MainProgram_elsedoneblock202
+MainProgram_loopend204
 	; End of program
 	; Ending memory block at $410
 EndBlock410:

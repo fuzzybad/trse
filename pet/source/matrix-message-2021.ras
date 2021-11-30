@@ -17,8 +17,11 @@ var
 	const SCREEN_40: byte = 40;
 	const SCREEN_80: byte = 80;
 
-	i, j, x1, temp, speed: byte; 
+	i, j, temp, speed : byte; 	
 	
+	// Following are used to define message area 
+	x1, x2, y1, y2 : byte;
+
    	// The ypos array will contain the current pos for each column, ranging from 0-200. These values are divided by 8
    	// before being used as a y-coordinate
    	ypos : array[80] of byte;
@@ -32,13 +35,23 @@ var
   	sp:pointer;
 
 	// Used for keyboard input
-	key,numkeys : byte;
+	key, numkeys : byte;
 	
 	// Text for splash screen  	
 	titlemsg: string  = ("TRSE 'MATRIX' DEMO");
-	authormsg: string = ("40/80 VERSION FUZZYBAD");
-	promptmsg: string = ("USE ", 244, "0 OR ", 248, "0 COLUMN SCREEN?");
+	authormsg: string = ("40/80 MESSAGE VERSION FUZZYBAD");
 	exitmsg: string   = (211, 208, 193, 195, 197, " TO QUIT");
+
+	// Text for message area
+	msg_0: string  = ("WORLD OF COMMODORE 2021");
+	msg_1: string  = ("                       ");
+	msg_2: string  = ("   DECEMBER 4, 2021    ");
+	msg_3: string  = ("                       ");
+	msg_4: string  = ("TORONTO PET USERS GROUP");
+
+	// # of chars in the width
+	// @TODO: There must be some way to calculate string length..
+	msg_len: byte = 23;
 
 	// User selection for screen width 
 	myscreenwidth: byte = 0;
@@ -135,7 +148,6 @@ begin
 
 end;
 
-
 //	Small method that fills a color at a specific x/y value on screen.
 //	Only fills the value if the y is in a valid range 0..24
 //	If y is less than zero (>240), then we just cycle add with 25 
@@ -150,23 +162,64 @@ begin
 end;
 
 
-//	Renders the actual matrix effect
+//	Show the message
+procedure displayMessage();
+begin
+	x1 := (myscreenwidth - msg_len) / 2;
+	x2 := x1 + msg_len;
+
+	if(myscreenwidth = 40) then 
+	begin
+		y1 := 6;
+		y2 := 14;
+	end;
+	
+	if(myscreenwidth = 80) then 
+	begin
+		y1 := 3;
+		y2 := 8;	
+	end;
+
+	// @TODO Put strings into array and print using loop
+	moveto(x1,3,hi(screen_char_loc));
+   	printString(msg_0,0,msg_len);
+	moveto(x1,4,hi(screen_char_loc));
+   	printString(msg_1,0,msg_len);
+	moveto(x1,5,hi(screen_char_loc));
+   	printString(msg_2,0,msg_len);
+	moveto(x1,6,hi(screen_char_loc));
+   	printString(msg_3,0,msg_len);
+	moveto(x1,7,hi(screen_char_loc));
+   	printString(msg_4,0,msg_len);
+end;
+
+
+//	Render the matrix effect
 procedure RenderMatrix();
 begin
-	// Look through 40/80 columns
+	// Loop through the 40/80 columns
 	for i:=0 to myscreenwidth do 
 	begin
 		// Calculate actualy y screen position
 		j:=ypos[i]/8;
+		
 		// Print random character
-		if (j<screen_height) then begin
-			sp:=AddressTable(#saddr,i,j);
-			sp[0]:=random()/4; // random character is located between 0 and 64
+		if( j<screen_height ) then 
+		begin
+			// This creates space for the message
+			if( (i<x1 or i>=x2) or (j<y1 or j>=y2) ) then 			
+			begin
+				sp:=AddressTable(#saddr,i,j);
+				sp[0]:=random()/4; // random character is located between 0 and 64
+			end;
 		end;
+		
 		// Fill the "tail" colors
 		FillColor(i,j-8,$20);
+		
 		// increase ypos[i] with yadd[i]		
 		ypos[i]:=ypos[i]+yadd[i];
+		
 		// Reset values when ypos is outside of the screen
 		if (ypos[i]>=240) then
 		begin 
@@ -185,10 +238,15 @@ begin
 	// Initialize tables	
 	InitTables();
 
+	// Display the message (not working from here for some reason)
+	//displayMessage();
+
 	// Loop effect
 	while(true) do begin
-		RenderMatrix();
-		
+		displayMessage();
+
+		RenderMatrix();	
+			
 		// Exit if user pressed space
 		if(GetKey() = 32) then begin
 		    // Clear screen
@@ -197,7 +255,5 @@ begin
 			//call(^$fd16);	// RESET
 		    call(^$fd49);	// Trigger NMI	    
 		end;
-	end;	
+	end;
 end.
-
-// eof

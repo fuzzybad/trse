@@ -13,8 +13,8 @@
  */
 program Sines;
 var  
-	i,j,k: byte; 
-	zp,tp:pointer;
+	i, j, k, temp, speed, x1 : byte; 
+	zp, tp : pointer;
    
 	vals : array[8] of byte = ($20, $2E,  $A6, $A0, $A0, $A6, $2E, $20);
 	list : array[256] of byte;
@@ -23,69 +23,85 @@ var
 	key: byte;
 	
 	// Text for splash screen  	
-	titlemsg: string  = ("TRSE EXAMPLE 8 'SINES'");
-	authormsg: string = ("40/80 VERSION 9/2020");
-	promptmsg: string = ("USE ", 244, "0 OR ", 248, "0 COLUMN SCREEN?");
+	titlemsg: string  = ("TRSE 'SINES' DEMO");
+	authormsg: string = ("40/80 VERSION FUZZYBAD");
 	exitmsg: string   = (211, 208, 193, 195, 197, " TO QUIT");
 
 	// User selection for screen width 
 	myscreenwidth: byte = 0;
 
 
-/* 
-	Method to get a char from the keyboard buffer
-	TRSE procedures return accumulator value
-*/
-procedure getKey();
+//	Method to get a char from the keyboard buffer
+//	TRSE procedures return accumulator value
+procedure GetKey();
 begin
 	call(^$ffe4);	// getin
 end;
-	
 
-/* 
-	Method which shows title screen and checks screen width
-*/
+// Wait for user input
+procedure WaitForKeypress();
+begin
+	// Pause until key pressed
+	temp := 0;
+	while( temp = 0 ) do begin
+		temp := GetKey();
+	end;
+end;
+
+// Do timing delay 
+// @TODO: Find better way than delay loop
+procedure DoDelay();
+begin
+	if( speed > 0 ) then
+	begin
+		for i := 0 to speed do	
+		begin
+			wait(255);
+		end;
+	end;
+end;
+
+// Determine screen width to use
+procedure SetScreenWidth();
+begin
+	// Determine PET model by checking first byte of EDIT ROM at $E000
+	//	$A0 [160] = B1
+	//	$48 [72]  = B2
+	//	$36 [54]  = B4-40
+	//	$4B [75]  = B4-80	
+	if( peek(^$E000, 1) = 75 ) then	myscreenwidth := 80
+	else myscreenwidth := 40;
+
+	//centerX := myscreenwidth / 2 - 1;
+	clearscreen($20, SCREEN_CHAR_LOC);
+end;
+	
+//	Method which shows title screen and checks screen width
 procedure showTitle();
 begin
+	// Determine screen width and clear it
+	SetScreenWidth();
+	
 	// Set uppercase
 	poke(^59468, 0, 12);
 	
-	// Clear screen
-	clearscreen($20, screen_char_loc);
+	// Center the title text
+	x1 := myscreenwidth / 2 - length(titlemsg) / 2;
+	moveto(x1, 1, hi(SCREEN_CHAR_LOC));
+   	printString(titlemsg,0,length(titlemsg));
 
-	// Show the title text
-	moveto(9,1,hi(screen_char_loc));
-   	printString(titlemsg,0,22);
+	// Center the author text
+	x1 := myscreenwidth / 2 - length(authormsg) / 2;
+	moveto(x1, 3, hi(SCREEN_CHAR_LOC));
+   	printString(authormsg,0,length(authormsg));
 
-	moveto(10,2,hi(screen_char_loc));
-   	printString(authormsg,0,20);
-
-	// Ask user if they have 40 or 80 column screen
-	moveto(7,4,hi(screen_char_loc));
-    printString(promptmsg,0,27);    
-
-	// Show the quit instruction
-	moveto(14,11,hi(screen_char_loc));
+	// Center exit message
+	x1 := myscreenwidth / 2 - 13 / 2;
+	moveto(x1, 12, hi(SCREEN_CHAR_LOC));
    	printString(exitmsg,0,13);
 
-	while (myscreenwidth=0) do	begin
-		// 009E			No. of Chars. in Keyboard Buffer (Queue)
-		// 00E3 		Size of Keyboard Buffer
-		// 0270-027A  	Keyboard Buffer Queue (FIFO)
-		// Is there a value in the character buffer?
-		// NOTE: Doesn't work on early ROMS
-		//numkeys := peek(^$009E, 0);
-		
-		key := getKey();
-
-		// 52 is '4'
-		if(key = 52) then 
-	    	myscreenwidth := 40;
-
-		// 56 is '8'
-		if(key = 56) then 
-	    	myscreenwidth := 80;
-    end;
+	// Pause until user presses key
+	WaitForKeypress();
 end;
 
 procedure InitTabs();
@@ -128,7 +144,7 @@ begin
 		Render();
 		
 		// Exit if user pressed space
-		if(getKey() = 32) then begin
+		if(GetKey() = 32) then begin
 		    // Clear screen
 			clearscreen($20, screen_char_loc);
 
