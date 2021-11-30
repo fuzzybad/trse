@@ -33,6 +33,7 @@ var
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
 	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
 	full_screen   	: byte = 1;	// Flag for full-screen mode
+	rand				: byte = 0;	// Holds random value
 	char_arr 	  	: array[12] of byte;
 	p 			  	: pointer;
 	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp : byte;
@@ -97,36 +98,31 @@ begin
 	PrintDecimal(0, 2);
 	PrintDecimal(myZ, 2);
 end;
- 
-//	Method which shows title screen and checks screen width
-procedure ShowTitle();
+
+// Determine screen width to use
+procedure SetScreenWidth();
 begin
-	// Set uppercase
-	poke(^59468, 0, 12);
-	
-	// Clear screen
-	clearscreen($20, SCREEN_CHAR_LOC);
-
-	// Default to 40 columns
-	myscreenwidth := 40;
-	centerX := myscreenwidth / 2;
-
 	// Determine PET model by checking first byte of EDIT ROM at $E000
 	//	$A0 [160] = B1
 	//	$48 [72]  = B2
 	//	$36 [54]  = B4-40
-	//	$4B [75]  = B4-80
-	temp := peek(^$E000, 1);	
-	
-	// Set 80 columns
-	if( temp = 75 ) then
-	begin
-		if( myscreenwidth = 40 ) then myscreenwidth := 80
-		else myscreenwidth := 40;
-		centerX := myscreenwidth / 2 - 1;
-		clearscreen($20, SCREEN_CHAR_LOC);
-	end;
-	
+	//	$4B [75]  = B4-80	
+	if( peek(^$E000, 1) = 75 ) then	myscreenwidth := 80
+	else myscreenwidth := 40;
+
+	centerX := myscreenwidth / 2 - 1;
+	clearscreen($20, SCREEN_CHAR_LOC);
+end;
+
+//	Method which shows title screen and checks screen width
+procedure ShowTitle();
+begin
+	// Determine screen width and clear it
+	SetScreenWidth();
+
+	// Set uppercase
+	poke(^59468, 0, 12);
+
 	// Center the title text
 	x1 := myscreenwidth / 2 - length(titlemsg) / 2;
 	moveto(x1, 1, hi(SCREEN_CHAR_LOC));
@@ -366,7 +362,7 @@ begin
 	start_pos	:= stop_pos;
 	stop_pos		:= temp;
 
-	temp := Random();
+	rand := Random();
 
 	// Mutations every full cycle
 	if( dir = 1 ) then
@@ -383,7 +379,7 @@ begin
 		end;
 
 		// Randomly change center point
-		if( temp < 32 ) then
+		if( rand < 32 ) then
 		begin
 			temp := myscreenwidth / 5;
 			centerX := Random() & temp + (myscreenwidth - temp) / 2;
@@ -393,21 +389,21 @@ begin
 	end;
 
 	// Select char range
-	if( temp < 32 ) then
+	if( rand < 32 ) then
 	begin
-		if( temp < 8 ) then
+		if( rand < 8 ) then
 		begin
 			char_start_st := 76;
 			char_offset := 5;
 			InitData();
 		end
-		else if( temp < 16 ) then
+		else if( rand < 16 ) then
 		begin
 			char_start_st := 76;
 			char_offset   := 30;		
 			InitData();
 		end
-		else if( temp < 24 ) then
+		else if( rand < 24 ) then
 		begin
 			char_start_st := 116;
 			char_offset   := 12;		
@@ -422,14 +418,14 @@ begin
 	end;
 
 	// Toggle reverse chars
-	if( Random() < 64 )	then
+	if( rand < 64 )	then
 	begin
 		if( rev_enable = 1 ) then rev_enable := 0 
 		else rev_enable := 1;
 	end;
 
 	// Toggle pattern size
-	if( Random() < 16 ) then
+	if( rand < 16 ) then
 	begin
 		// Set pattern moving outward
 		dir := 1;
