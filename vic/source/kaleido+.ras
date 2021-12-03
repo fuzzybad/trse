@@ -334,26 +334,21 @@ begin
 		y1 := centerY - mainIndex;			// line 240
 		Plot();								// line 240
 
-		// Only plot these for 8-point pattern
-		if( pattern_type = 1 ) then
-		begin
-			// Lower right
-			x1 := centerX + mainIndex;			// line 250
-			y1 := centerY + mainIndex;			// line 250
-			Plot();								// line 250
-			// Upper left
-			// Check for negative/overflow flag
-			x1 := centerX - mainIndex;			// line 260
-			y1 := centerY - mainIndex;			// line 260
-			Plot();								// line 260
-			// Lower left
-			y1 := centerY + mainIndex;			// line 270
-			Plot();								// line 270
-			// Upper right
-			x1 := centerX + mainIndex; 			// line 280
-			y1 := centerY - mainIndex;			// line 280
-			Plot();								// line 280
-		end;
+		// Lower right
+		x1 := centerX + mainIndex;			// line 250
+		y1 := centerY + mainIndex;			// line 250
+		Plot();								// line 250
+		// Upper left
+		x1 := centerX - mainIndex;			// line 260
+		y1 := centerY - mainIndex;			// line 260
+		Plot();								// line 260
+		// Lower left
+		y1 := centerY + mainIndex;			// line 270
+		Plot();								// line 270
+		// Upper right
+		x1 := centerX + mainIndex; 			// line 280
+		y1 := centerY - mainIndex;			// line 280
+		Plot();								// line 280
 	end;
 
 	// Pattern mutations below
