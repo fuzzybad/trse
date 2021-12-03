@@ -33,6 +33,8 @@ var
 	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
 	full_screen   	: byte = 1;	// Flag for full-screen mode
 	curr_color		: byte = 1;	// Current color
+	curr_luma		: byte = 1;	// Current luminance
+	dir_luma		 	: byte = 16;	// Value to incremenet luminance
 	char_arr 	  	: array[12] of byte;
 	p 			  	: pointer;
 	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp : byte;
@@ -299,10 +301,13 @@ procedure MainLoop();
 begin
 	for mainIndex := start_pos to stop_pos step dir do	// line 200
 	begin		
-		// Update color
-		curr_color := Random() & 127;
-		// If black, pick another color..
-		while( curr_color = 0 ) do curr_color := Random() & 127;
+		// Iterate through luminance levels for curent color
+		curr_color := curr_color + dir_luma;
+		if(curr_color < 0 or curr_color > 127) then  
+		begin
+			dir_luma := -dir_luma;
+			curr_color := curr_color + dir_luma;	
+		end;
 		
 		// Map the data
 		// Right
@@ -320,26 +325,21 @@ begin
 		y1 := centerY - mainIndex;			// line 240
 		Plot();								// line 240
 
-		// Only plot these for 8-point pattern
-		if( pattern_type = 1 ) then
-		begin
-			// Lower right
-			x1 := centerX + mainIndex;			// line 250
-			y1 := centerY + mainIndex;			// line 250
-			Plot();								// line 250
-			// Upper left
-			// Check for negative/overflow flag
-			x1 := centerX - mainIndex;			// line 260
-			y1 := centerY - mainIndex;			// line 260
-			Plot();								// line 260
-			// Lower left
-			y1 := centerY + mainIndex;			// line 270
-			Plot();								// line 270
-			// Upper right
-			x1 := centerX + mainIndex; 			// line 280
-			y1 := centerY - mainIndex;			// line 280
-			Plot();								// line 280
-		end;
+		// Lower right
+		x1 := centerX + mainIndex;			// line 250
+		y1 := centerY + mainIndex;			// line 250
+		Plot();								// line 250
+		// Upper left
+		x1 := centerX - mainIndex;			// line 260
+		y1 := centerY - mainIndex;			// line 260
+		Plot();								// line 260
+		// Lower left
+		y1 := centerY + mainIndex;			// line 270
+		Plot();								// line 270
+		// Upper right
+		x1 := centerX + mainIndex; 			// line 280
+		y1 := centerY - mainIndex;			// line 280
+		Plot();								// line 280
 	end;
 
 	// Pattern mutations below
@@ -349,6 +349,15 @@ begin
 	temp			:= start_pos;
 	start_pos	:= stop_pos;
 	stop_pos		:= temp;
+
+	// Select new color
+	curr_luma := Random() & 15;
+	// If black, pick another color..
+	while( curr_luma = 0 ) do curr_luma := Random() & 15;
+	// Alternate color selection logic
+	//curr_luma := curr_luma + 1;
+	//if( curr_luma > 15 ) then curr_luma :=1;
+	curr_color := curr_luma;
 
 	temp := Random();
 
