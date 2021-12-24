@@ -27,8 +27,9 @@ var
 	stop_pos 	  	: byte = 12;
 	dir			  	: byte = 1;
 	char_start 	  	: byte;
-	char_start_st 	: byte = 65;
-	char_offset   	: byte = 62;
+	char_offset   	: byte;
+	char_start_st 	: byte = 65;	// Save state of char_start
+	char_offset_st	: byte = 62;	// Save state of char_offset
 	num_chars	  	: byte = 6;	// Number of chars in the array
 	speed 		  	: byte = 3;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
@@ -55,7 +56,6 @@ var
 	// PRESS ANY KEY
 	//promptmsg: cstring = (208, 210, 197, 211, 211, 32, 193, 206, 217, 32, 203, 197, 217);
 	promptmsg: cstring = ("PRESS ANY KEY");
-	outstr: cstring = (160, 224, 225, 226, 233, 244, 245, 246, 247, 248, 249);
 
 //	Method to get a char from the keyboard buffer
 //	TRSE procedures return accumulator value
@@ -122,6 +122,9 @@ begin
 	// Set 80-col screen
 	Go80Columns();
 
+	Clear80(32, 0);	// Init VDC screen mem
+	Clear80(3, 8);	// Init VDC color mem 
+
 	// Set uppercase
 	//poke(^59468, 0, 12);
 	
@@ -131,9 +134,9 @@ begin
 	
 	// Clear screen (40-col)
 	clearscreen($20, SCREEN_CHAR_LOC);
-	
 	// Set cyan color (40-col)
-	clearscreen(3, SCREEN_COL_LOC);
+	clearscreen(3, SCREEN_COL_LOC);	
+	
 
 	// Show message to switch to 80 columns on VIC screen
 	x1 := SCREEN_WIDTH / 2 - length(inst3) / 2;
@@ -194,12 +197,10 @@ begin
     Print80(#inst2, length(inst2));
 
 	// Center prompt to continue
-	// TRSE seems bugged at counting length of numeric strings
-	x1 := myscreenwidth / 2 - 13 / 2;
-	// Fill color for string
+	x1 := myscreenwidth / 2 - length(promptmsg) / 2;
 	MoveTo80(x1, 24, $08);
-//	Fill80(23, length(promptmsg)); // cyan blinking
-//	Fill80(71, length(promptmsg)); // cyan reverse
+	//	Fill80(23, length(promptmsg)); // cyan blinking
+	//	Fill80(71, length(promptmsg)); // cyan reverse
 	Fill80(87, length(promptmsg)); // cyan blinking reverse
 	// Display text
 	MoveTo80(x1, 24, 0);
@@ -214,7 +215,8 @@ begin
 	for i := 0 to num_chars do							// line 150
 	begin
 		// Populate char_arr 
-		char_start := char_start_st;
+		char_start	:= char_start_st;
+		char_offset	:= char_offset_st;
 		
 		// Option for reverse chars
 		if( rev_enable = 1 ) then
@@ -431,6 +433,9 @@ begin
 		x1 := centerX + mainIndex; 			// line 280
 		y1 := centerY - mainIndex;			// line 280
 		Plot();								// line 280
+		
+		// Check for user input	
+		CheckInputs();
 	end;
 end;
 
@@ -476,28 +481,30 @@ begin
 	// Select char range
 	if( temp < 32 ) then
 	begin
-		if( temp < 11 ) then
+		//if( temp < 11 ) then
+		//begin
+		//	char_start_st	:= 234;
+		//	char_offset_st	:= 22;
+		//end
+		//else if ( temp < 22 ) then
+
+		if ( temp < 16 ) then
 		begin
-			char_start_st := 234;
-			char_offset   := 22;
-		end
-		else if ( temp < 22 ) then
-		begin
-			char_start_st := 96;
-			char_offset   := 31;		
+			char_start_st	:= 96;
+			char_offset_st  	:= 31;		
 		end	else 
 		begin
-			char_start_st := 65;
-			char_offset   := 62;
+			char_start_st	:= 65;
+			char_offset_st	:= 62;
 		end;	
 	end;
 
 	// Toggle reverse chars
-	//if( Random() < 64 )	then
-	//begin
-	//	if( rev_enable = 1 ) then rev_enable := 0 
-	//	else rev_enable := 1;
-	//end;
+	if( Random() < 64 )	then
+	begin
+		if( rev_enable = 1 ) then rev_enable := 0 
+		else rev_enable := 1;
+	end;
 	
 	// Toggle pattern size
 	if( Random() < 128 ) then
@@ -548,9 +555,6 @@ begin
 
 		// Pattern modifications
 		DoMutations();
-
-		// Check for user input	
-		CheckInputs();
 		
 		// Get fresh array of chars
 		InitData();
