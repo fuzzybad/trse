@@ -21,18 +21,17 @@ start_pos	dc.b	$01
 stop_pos	dc.b	$14
 dir	dc.b	$01
 char_start	dc.b	0
-char_start_st	dc.b	$41
+char_start_st	dc.b	$40
 char_offset	dc.b	$3f
 num_chars	dc.b	$06
 speed	dc.b	$03
 rev_enable	dc.b	$00
 pattern_type	dc.b	$01
-full_screen	dc.b	$01
 curr_color	dc.b	$01
 curr_luma	dc.b	$01
 dir_luma	dc.b	$10
 char_arr	dc.b	 
-	org char_arr+12
+	org char_arr+20
 p	= $02
 plotIndex	dc.b	0
 plotIndexMax	dc.b	0
@@ -40,6 +39,7 @@ mainIndex	dc.b	0
 colSelect	dc.b	0
 i	dc.b	0
 temp	dc.b	0
+rando	dc.b	0
 x1	dc.b	0
 y1	dc.b	0
 x2	dc.b	0
@@ -595,9 +595,7 @@ CheckInputs
 	; Calling storevariable on generic assign expression
 	sta key
 	
-; // NMI	    
-; //call(^$fd16);	
-; // RESET		
+; // RESET(SYS 65526)
 	; Binary clause Simplified: EQUALS
 	; Compare with pure num / var optimization
 	cmp #$51;keep
@@ -615,7 +613,9 @@ CheckInputs_clearloop108
 	sta $01f4+$c00,x
 	sta $02ee+$c00,x
 	bne CheckInputs_clearloop108
-	jsr $fd49
+	
+; // @TODO Need SYS to reset 264 series
+	jsr $fff6
 CheckInputs_elsedoneblock104
 	; Binary clause Simplified: EQUALS
 	lda key
@@ -1254,8 +1254,6 @@ Plot_loopend225
 	; ***********  Defining procedure : MainLoop
 	;    Procedure type : User-defined procedure
 MainLoop
-	
-; // line 280
 	lda start_pos
 	; Calling storevariable on generic assign expression
 	sta mainIndex
@@ -1452,6 +1450,10 @@ MainLoop_elsedoneblock430
 	
 ; // line 280
 	jsr Plot
+	
+; // line 280
+; // Check user input
+	jsr CheckInputs
 MainLoop_forloopcounter415
 MainLoop_loopstart416
 	; 8 bit binop
@@ -1470,8 +1472,17 @@ MainLoop_loopnotdone435
 MainLoop_loopdone434
 MainLoop_forloopend414
 MainLoop_loopend417
+	rts
 	
-; // Pattern mutations below
+; // Various Pattern Mutations
+	; NodeProcedureDecl -1
+	; ***********  Defining procedure : DoMutations
+	;    Procedure type : User-defined procedure
+DoMutations
+	jsr Random
+	; Calling storevariable on generic assign expression
+	sta rando
+	
 ; // Reverse direction(1/2 cycle)
 	lda dir
 	; Unary operator: Negate 8-bit number
@@ -1498,14 +1509,14 @@ MainLoop_loopend417
 	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta curr_luma
-MainLoop_while436
-MainLoop_loopstart440
+DoMutations_while437
+DoMutations_loopstart441
 	; Binary clause Simplified: EQUALS
 	lda curr_luma
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	bne MainLoop_elsedoneblock439
-MainLoop_ConditionalTrueBlock437: ;Main true block ;keep 
+	bne DoMutations_elsedoneblock440
+DoMutations_ConditionalTrueBlock438: ;Main true block ;keep 
 	
 ; // If black, pick another color..
 	; 8 bit binop
@@ -1515,9 +1526,9 @@ MainLoop_ConditionalTrueBlock437: ;Main true block ;keep
 	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta curr_luma
-	jmp MainLoop_while436
-MainLoop_elsedoneblock439
-MainLoop_loopend441
+	jmp DoMutations_while437
+DoMutations_elsedoneblock440
+DoMutations_loopend442
 	
 ; // Alternate color selection logic
 ; //curr_luma := curr_luma + 1;
@@ -1525,21 +1536,18 @@ MainLoop_loopend441
 	lda curr_luma
 	; Calling storevariable on generic assign expression
 	sta curr_color
-	jsr Random
-	; Calling storevariable on generic assign expression
-	sta temp
 	; Binary clause Simplified: EQUALS
 	lda dir
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne MainLoop_elsedoneblock447
-MainLoop_ConditionalTrueBlock445: ;Main true block ;keep 
+	bne DoMutations_elsedoneblock448
+DoMutations_ConditionalTrueBlock446: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	lda pattern_type
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne MainLoop_elseblock470
-MainLoop_ConditionalTrueBlock469: ;Main true block ;keep 
+	bne DoMutations_elseblock471
+DoMutations_ConditionalTrueBlock470: ;Main true block ;keep 
 	
 ; // Mutations every full cycle
 ; // Toggle pattern type
@@ -1550,8 +1558,8 @@ MainLoop_ConditionalTrueBlock469: ;Main true block ;keep
 	lda #$c
 	; Calling storevariable on generic assign expression
 	sta num_chars
-	jmp MainLoop_elsedoneblock471
-MainLoop_elseblock470
+	jmp DoMutations_elsedoneblock472
+DoMutations_elseblock471
 	
 ; // 8-point pattern
 	lda #$1
@@ -1560,16 +1568,15 @@ MainLoop_elseblock470
 	lda #$6
 	; Calling storevariable on generic assign expression
 	sta num_chars
-MainLoop_elsedoneblock471
+DoMutations_elsedoneblock472
 	; Binary clause Simplified: LESS
-	lda temp
+	lda rando
 	; Compare with pure num / var optimization
-	cmp #$20;keep
-	bcs MainLoop_elsedoneblock479
-MainLoop_ConditionalTrueBlock477: ;Main true block ;keep 
+	cmp #$40;keep
+	bcs DoMutations_elsedoneblock480
+DoMutations_ConditionalTrueBlock478: ;Main true block ;keep 
 	
 ; // Randomly change center point
-; //centerX := Random() & 10 + 15;
 	lda #$8
 	; Calling storevariable on generic assign expression
 	sta temp
@@ -1584,15 +1591,15 @@ MainLoop_ConditionalTrueBlock477: ;Main true block ;keep
 	sbc temp
 	 ; end add / sub var with constant
 	lsr
-MainLoop_rightvarAddSub_var484 = $54
-	sta MainLoop_rightvarAddSub_var484
+DoMutations_rightvarAddSub_var485 = $54
+	sta DoMutations_rightvarAddSub_var485
 	; 8 bit binop
 	; Add/sub where right value is constant number
 	jsr Random
 	and temp
 	 ; end add / sub var with constant
 	clc
-	adc MainLoop_rightvarAddSub_var484
+	adc DoMutations_rightvarAddSub_var485
 	; Calling storevariable on generic assign expression
 	sta centerX
 	; 8 bit binop
@@ -1610,151 +1617,129 @@ MainLoop_rightvarAddSub_var484 = $54
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainLoop_clearloop485
+DoMutations_clearloop486
 	dex
 	sta $0000+$c00,x
 	sta $00fa+$c00,x
 	sta $01f4+$c00,x
 	sta $02ee+$c00,x
-	bne MainLoop_clearloop485
-MainLoop_elsedoneblock479
-MainLoop_elsedoneblock447
+	bne DoMutations_clearloop486
+DoMutations_elsedoneblock480
+DoMutations_elsedoneblock448
 	; Binary clause Simplified: LESS
-	lda temp
+	lda rando
 	; Compare with pure num / var optimization
-	cmp #$20;keep
-	bcs MainLoop_elsedoneblock489
-MainLoop_ConditionalTrueBlock487: ;Main true block ;keep 
+	cmp #$10;keep
+	bcs DoMutations_localfailed556
+	jmp DoMutations_ConditionalTrueBlock488
+DoMutations_localfailed556
+	jmp DoMutations_elsedoneblock490
+DoMutations_ConditionalTrueBlock488: ;Main true block ;keep 
 	; Binary clause Simplified: LESS
-	lda temp
+	lda rando
 	; Compare with pure num / var optimization
-	cmp #$8;keep
-	bcs MainLoop_elseblock550
-MainLoop_ConditionalTrueBlock549: ;Main true block ;keep 
+	cmp #$4;keep
+	bcs DoMutations_elseblock560
+DoMutations_ConditionalTrueBlock559: ;Main true block ;keep 
 	
-; // Select char range
+; // One in 16 chance of mutation
+; // Select new char range
 	lda #$4c
 	; Calling storevariable on generic assign expression
 	sta char_start_st
+	
+; // Balls and lines pattern
 	lda #$5
 	; Calling storevariable on generic assign expression
 	sta char_offset
 	jsr InitData
-	jmp MainLoop_elsedoneblock551
-MainLoop_elseblock550
+	jmp DoMutations_elsedoneblock561
+DoMutations_elseblock560
 	; Binary clause Simplified: LESS
-	lda temp
+	lda rando
 	; Compare with pure num / var optimization
-	cmp #$10;keep
-	bcs MainLoop_elseblock582
-MainLoop_ConditionalTrueBlock581: ;Main true block ;keep 
-	lda #$4c
+	cmp #$8;keep
+	bcs DoMutations_elseblock592
+DoMutations_ConditionalTrueBlock591: ;Main true block ;keep 
+	lda #$5f
 	; Calling storevariable on generic assign expression
 	sta char_start_st
-	lda #$1e
+	
+; // Triangles
+	lda #$b
 	; Calling storevariable on generic assign expression
 	sta char_offset
 	jsr InitData
-	jmp MainLoop_elsedoneblock583
-MainLoop_elseblock582
+	jmp DoMutations_elsedoneblock593
+DoMutations_elseblock592
 	; Binary clause Simplified: LESS
-	lda temp
+	lda rando
 	; Compare with pure num / var optimization
-	cmp #$18;keep
-	bcs MainLoop_elseblock598
-MainLoop_ConditionalTrueBlock597: ;Main true block ;keep 
+	cmp #$c;keep
+	bcs DoMutations_elseblock608
+DoMutations_ConditionalTrueBlock607: ;Main true block ;keep 
 	lda #$74
 	; Calling storevariable on generic assign expression
 	sta char_start_st
-	lda #$c
+	
+; // Angles
+	lda #$b
 	; Calling storevariable on generic assign expression
 	sta char_offset
 	jsr InitData
-	jmp MainLoop_elsedoneblock599
-MainLoop_elseblock598
-	lda #$41
+	jmp DoMutations_elsedoneblock609
+DoMutations_elseblock608
+	lda #$40
 	; Calling storevariable on generic assign expression
 	sta char_start_st
+	
+; // Graphics Chars
 	lda #$3f
 	; Calling storevariable on generic assign expression
 	sta char_offset
 	jsr InitData
-MainLoop_elsedoneblock599
-MainLoop_elsedoneblock583
-MainLoop_elsedoneblock551
-MainLoop_elsedoneblock489
-	; Binary clause Simplified: LESS
-	jsr Random
-	; Compare with pure num / var optimization
-	cmp #$40;keep
-	bcs MainLoop_elsedoneblock607
-MainLoop_ConditionalTrueBlock605: ;Main true block ;keep 
+DoMutations_elsedoneblock609
+DoMutations_elsedoneblock593
+DoMutations_elsedoneblock561
 	; Binary clause Simplified: EQUALS
 	lda rev_enable
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne MainLoop_elseblock620
-MainLoop_ConditionalTrueBlock619: ;Main true block ;keep 
+	bne DoMutations_elseblock616
+DoMutations_ConditionalTrueBlock615: ;Main true block ;keep 
 	
 ; // Toggle reverse chars
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta rev_enable
-	jmp MainLoop_elsedoneblock621
-MainLoop_elseblock620
+	jmp DoMutations_elsedoneblock617
+DoMutations_elseblock616
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta rev_enable
-MainLoop_elsedoneblock621
-MainLoop_elsedoneblock607
-	; Binary clause Simplified: LESS
-	jsr Random
-	; Compare with pure num / var optimization
-	cmp #$10;keep
-	bcs MainLoop_elsedoneblock629
-MainLoop_ConditionalTrueBlock627: ;Main true block ;keep 
+DoMutations_elsedoneblock617
 	
-; // Toggle pattern size
-; // Set pattern moving outward
+; // Adjust pattern size		
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta dir
+	
+; // Set pattern moving outward
 	; Calling storevariable on generic assign expression
 	sta start_pos
-	; Binary clause Simplified: EQUALS
-	lda full_screen
-	; Compare with pure num / var optimization
-	cmp #$0;keep
-	bne MainLoop_elseblock643
-MainLoop_ConditionalTrueBlock642: ;Main true block ;keep 
-	
-; // Toggle the flag
-	lda #$1
-	; Calling storevariable on generic assign expression
-	sta full_screen
-	lda #$14
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	jsr Random
+	and #$c
+	 ; end add / sub var with constant
+	clc
+	adc #$8
+	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta stop_pos
-	jmp MainLoop_elsedoneblock644
-MainLoop_elseblock643
-	lda #$0
-	; Calling storevariable on generic assign expression
-	sta full_screen
-	lda #$c
-	; Calling storevariable on generic assign expression
-	sta stop_pos
-MainLoop_elsedoneblock644
-	; Clear screen with offset
-	lda #$20
-	ldx #$fa
-MainLoop_clearloop649
-	dex
-	sta $0000+$c00,x
-	sta $00fa+$c00,x
-	sta $01f4+$c00,x
-	sta $02ee+$c00,x
-	bne MainLoop_clearloop649
-MainLoop_elsedoneblock629
+DoMutations_elsedoneblock490
 	rts
 block1
 	
@@ -1762,7 +1747,7 @@ block1
 ; //PrintXYZ(temp, 0, 0);
 ; //WaitForKeypress();
 ; //call(^$fd49);	
-; // Trigger NMI	
+; // Trigger NMI
 ; // Show the title and check number of columns
 	jsr ShowTitle
 	
@@ -1773,31 +1758,31 @@ block1
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-MainProgram_clearloop650
+MainProgram_clearloop622
 	dex
 	sta $0000+$c00,x
 	sta $00fa+$c00,x
 	sta $01f4+$c00,x
 	sta $02ee+$c00,x
-	bne MainProgram_clearloop650
-MainProgram_while651
-MainProgram_loopstart655
+	bne MainProgram_clearloop622
+MainProgram_while623
+MainProgram_loopstart627
 	; Binary clause Simplified: NOTEQUALS
 	lda #$1
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	beq MainProgram_elsedoneblock654
-MainProgram_ConditionalTrueBlock652: ;Main true block ;keep 
+	beq MainProgram_elsedoneblock626
+MainProgram_ConditionalTrueBlock624: ;Main true block ;keep 
 	jsr MainLoop
 	
-; // Check for user input	
-	jsr CheckInputs
+; // Do Pattern Mutations
+	jsr DoMutations
 	
 ; // Get fresh array of chars
 	jsr InitData
-	jmp MainProgram_while651
-MainProgram_elsedoneblock654
-MainProgram_loopend656
+	jmp MainProgram_while623
+MainProgram_elsedoneblock626
+MainProgram_loopend628
 	; End of program
 	; Ending memory block at $1010
 EndBlock1010:
