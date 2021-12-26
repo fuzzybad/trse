@@ -25,17 +25,16 @@ var
 	stop_pos 	  	: byte = 20;
 	dir			  	: byte = 1;
 	char_start 	  	: byte;
-	char_start_st 	: byte = 65;
+	char_start_st 	: byte = 64;	// Graphics chars
 	char_offset   	: byte = 63;
 	num_chars	  	: byte = 6;	// Number of chars in the array
 	speed 		  	: byte = 3;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
 	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
-	full_screen   	: byte = 1;	// Flag for full-screen mode
 	curr_color		: byte = 1;	// Current color
-	char_arr 	  	: array[12] of byte;
+	char_arr 	  	: array[20] of byte;
 	p 			  	: pointer;
-	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp : byte;
+	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando : byte;
 	x1, y1, x2, y2	: signed byte;
 
 	// Used for keyboard input
@@ -176,8 +175,7 @@ begin
 	// Q - Quit
 	if(key = 81) then begin
 		clearscreen($20, SCREEN_CHAR_LOC);
-		call(^$fd49);	// NMI	    
-		//call(^$fd16);	// RESET		
+		call(^$FCE2);	// RESET	 (SYS 64738)
 	end;
 	
 	// 0-9 Adjust speed 
@@ -335,8 +333,11 @@ begin
 		x1 := centerX + mainIndex; 			// line 280
 		y1 := centerY - mainIndex;			// line 280
 		Plot();								// line 280
+				
+		// Check user input	
+		CheckInputs();
 	end;
-
+	
 	// Pattern mutations below
 
 	// Reverse direction (1/2 cycle)
@@ -345,7 +346,7 @@ begin
 	start_pos	:= stop_pos;
 	stop_pos		:= temp;
 
-	temp := Random();
+	rando := Random();
 
 	// Mutations every full cycle
 	if( dir = 1 ) then
@@ -362,71 +363,54 @@ begin
 		end;
 
 		// Randomly change center point
-		if( temp < 32 ) then
+		if( rando < 64 ) then
 		begin
-			//centerX := Random() & 10 + 15;
 			temp := SCREEN_WIDTH / 5;
 			centerX := Random() & temp + (SCREEN_WIDTH - temp) / 2;
-			centerY := Random() & 5 + 10;			
+			centerY := Random() & 5 + 10;
 			clearscreen($20, SCREEN_CHAR_LOC);
 		end;
 	end;
 
-	// Select char range
-	if( temp < 32 ) then
+	// One in 16 chance of mutation
+	if( rando < 16 ) then
 	begin
-		if( temp < 8 ) then
+		// Select new char range
+		if( rando < 4 ) then
 		begin
-			char_start_st := 76;
+			char_start_st := 76;			// Balls and lines pattern
 			char_offset := 5;
 			InitData();
 		end
-		else if( temp < 16 ) then
+		else if( rando < 8 ) then
 		begin
-			char_start_st := 76;
-			char_offset   := 30;		
+			char_start_st := 95;			// Triangles
+			char_offset   := 11;	
 			InitData();
 		end
-		else if( temp < 24 ) then
+		else if( rando < 12 ) then
 		begin
-			char_start_st := 116;
-			char_offset   := 12;		
+			char_start_st := 116;		// Angles
+			char_offset   := 11;	
 			InitData();
 		end
 		else
 		begin
-			char_start_st := 65;
+			char_start_st := 64;			// Graphics Chars
 			char_offset   := 63;
 			InitData();
 		end;
-	end;
-
-	// Toggle reverse chars
-	if( Random() < 64 )	then
-	begin
+		
+		// Toggle reverse chars
 		if( rev_enable = 1 ) then rev_enable := 0 
 		else rev_enable := 1;
-	end;
-	
-	// Toggle pattern size
-	if( Random() < 16 ) then
-	begin
-		// Set pattern moving outward
-		dir := 1;
-		start_pos := 1;
 
-		// Toggle the flag
-		if( full_screen = 0 ) then 
-		begin
-			full_screen	:= 1;
-			stop_pos		:= SCREEN_WIDTH / 2;
-		end
-		else begin
-			full_screen	:= 0;
-			stop_pos		:= SCREEN_HEIGHT / 2;
-		end;
+		// Adjust pattern size		
+		dir := 1;	// Set pattern moving outward
+		start_pos := 1;
+		stop_pos := Random() & 12 + 8;
 		
-		clearscreen($20, SCREEN_CHAR_LOC);
+		//clearscreen($20, SCREEN_CHAR_LOC);
 	end;
 
 	// Debug
@@ -447,9 +431,6 @@ begin
 	
 	while (true) do begin
 		MainLoop();
-
-		// Check for user input	
-		CheckInputs();
 		
 		// Get fresh array of chars
 		InitData();
