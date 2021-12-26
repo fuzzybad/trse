@@ -24,22 +24,22 @@ stop_pos	dc.b	$0c
 dir	dc.b	$01
 char_start	dc.b	0
 char_offset	dc.b	0
-char_start_st	dc.b	$41
-char_offset_st	dc.b	$3e
+char_start_st	dc.b	$40
+char_offset_st	dc.b	$3f
 num_chars	dc.b	$06
 speed	dc.b	$03
 rev_enable	dc.b	$00
 pattern_type	dc.b	$01
-full_screen	dc.b	$01
 curr_color	dc.b	$01
 char_arr	dc.b	 
-	org char_arr+12
+	org char_arr+20
 plotIndex	dc.b	0
 plotIndexMax	dc.b	0
 mainIndex	dc.b	0
 colSelect	dc.b	0
 i	dc.b	0
 temp	dc.b	0
+rando	dc.b	0
 x1	dc.b	0
 y1	dc.b	0
 x2	dc.b	0
@@ -407,6 +407,7 @@ WaitForKeypress_loopend14
 	
 ; // Do timing delay 
 ; // @TODO: Find better way than delay loop
+; // wait() doesn't seem to work on C128
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : DoDelay
 	;    Procedure type : User-defined procedure
@@ -1061,10 +1062,6 @@ CheckInputs
 	sta key
 	
 ; // Reboot
-; //call(^$fffc); 
-; // RESET
-; //call(^$fffe); 
-; // NMI
 	; Binary clause Simplified: EQUALS
 	; Compare with pure num / var optimization
 	cmp #$51;keep
@@ -1082,7 +1079,8 @@ CheckInputs_elsedoneblock140
 CheckInputs_ConditionalTrueBlock144: ;Main true block ;keep 
 	
 ; // 0-9 Adjust speed 
-	lda #$9
+; // NOTE: higher values of 'speed' are slower
+	lda #$12
 	; Calling storevariable on generic assign expression
 	sta speed
 CheckInputs_elsedoneblock146
@@ -1094,7 +1092,7 @@ CheckInputs_elsedoneblock146
 CheckInputs_ConditionalTrueBlock150: ;Main true block ;keep 
 	
 ; //(slowest)
-	lda #$8
+	lda #$10
 	; Calling storevariable on generic assign expression
 	sta speed
 CheckInputs_elsedoneblock152
@@ -1104,7 +1102,7 @@ CheckInputs_elsedoneblock152
 	cmp #$32;keep
 	bne CheckInputs_elsedoneblock158
 CheckInputs_ConditionalTrueBlock156: ;Main true block ;keep 
-	lda #$7
+	lda #$e
 	; Calling storevariable on generic assign expression
 	sta speed
 CheckInputs_elsedoneblock158
@@ -1114,7 +1112,7 @@ CheckInputs_elsedoneblock158
 	cmp #$33;keep
 	bne CheckInputs_elsedoneblock164
 CheckInputs_ConditionalTrueBlock162: ;Main true block ;keep 
-	lda #$6
+	lda #$c
 	; Calling storevariable on generic assign expression
 	sta speed
 CheckInputs_elsedoneblock164
@@ -1124,7 +1122,7 @@ CheckInputs_elsedoneblock164
 	cmp #$34;keep
 	bne CheckInputs_elsedoneblock170
 CheckInputs_ConditionalTrueBlock168: ;Main true block ;keep 
-	lda #$5
+	lda #$a
 	; Calling storevariable on generic assign expression
 	sta speed
 CheckInputs_elsedoneblock170
@@ -1134,7 +1132,7 @@ CheckInputs_elsedoneblock170
 	cmp #$35;keep
 	bne CheckInputs_elsedoneblock176
 CheckInputs_ConditionalTrueBlock174: ;Main true block ;keep 
-	lda #$4
+	lda #$8
 	; Calling storevariable on generic assign expression
 	sta speed
 CheckInputs_elsedoneblock176
@@ -1144,7 +1142,7 @@ CheckInputs_elsedoneblock176
 	cmp #$36;keep
 	bne CheckInputs_elsedoneblock182
 CheckInputs_ConditionalTrueBlock180: ;Main true block ;keep 
-	lda #$3
+	lda #$6
 	; Calling storevariable on generic assign expression
 	sta speed
 CheckInputs_elsedoneblock182
@@ -1154,7 +1152,7 @@ CheckInputs_elsedoneblock182
 	cmp #$37;keep
 	bne CheckInputs_elsedoneblock188
 CheckInputs_ConditionalTrueBlock186: ;Main true block ;keep 
-	lda #$2
+	lda #$4
 	; Calling storevariable on generic assign expression
 	sta speed
 CheckInputs_elsedoneblock188
@@ -1164,7 +1162,7 @@ CheckInputs_elsedoneblock188
 	cmp #$38;keep
 	bne CheckInputs_elsedoneblock194
 CheckInputs_ConditionalTrueBlock192: ;Main true block ;keep 
-	lda #$1
+	lda #$2
 	; Calling storevariable on generic assign expression
 	sta speed
 CheckInputs_elsedoneblock194
@@ -1181,6 +1179,8 @@ CheckInputs_elsedoneblock200
 	rts
 	
 ; //(fastest)
+; //PrintXYZ(speed, key, 0);
+; //WaitForKeypress();
 ; // Poke value into an address
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : PokeAddr
@@ -1230,9 +1230,6 @@ PokeAddr_ConditionalTrueBlock223: ;Main true block ;keep
 	rts
 PokeAddr_elsedoneblock225
 	
-; // Alternately, select char from string by index 
-; //temp := outstr[0];
-; //Fill80(temp, 2);
 ; // Debug
 ; //PrintXYZ(pokeaddr_x, pokeaddr_y, pokeaddr_v);
 ; //WaitForKeypress();
@@ -1363,8 +1360,6 @@ Plot
 Plot_ConditionalTrueBlock246: ;Main true block ;keep 
 	
 ; // line 900
-; //PokeAddr(x1, y1, outstr[0]);					
-; // line 900
 	rts
 Plot_elsedoneblock248
 	
@@ -1458,8 +1453,6 @@ Plot_ConditionalTrueBlock358: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta pokeaddr_v
 	jsr PokeAddr
-	
-; //PokeAddr(x2, y2, outstr[plotIndex]);
 	; 8 bit binop
 	; Add/sub where right value is constant number
 	lda x1
@@ -1494,7 +1487,6 @@ Plot_localfailed429
 	jmp Plot_elseblock409
 Plot_ConditionalTrueBlock408: ;Main true block ;keep 
 	
-; //PokeAddr(x2, y2, outstr[plotIndex]);
 ; // line 950
 	lda x1
 	; Calling storevariable on generic assign expression
@@ -1521,8 +1513,6 @@ Plot_ConditionalTrueBlock408: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta pokeaddr_v
 	jsr PokeAddr
-	
-; //PokeAddr(x2, y2, outstr[plotIndex]);
 	; 8 bit binop
 	; Add/sub where right value is constant number
 	lda y1
@@ -1547,13 +1537,9 @@ Plot_ConditionalTrueBlock408: ;Main true block ;keep
 	jsr PokeAddr
 	jmp Plot_elsedoneblock410
 Plot_elseblock409
-	
-; //PokeAddr(x2, y2, outstr[plotIndex]);
 	lda y1
 	; Calling storevariable on generic assign expression
 	sta y2
-	
-; //PokeAddr(x2, y2, outstr[plotIndex]);
 	; Binary clause Simplified: LESS
 	lda x1
 	; Compare with pure num / var optimization
@@ -1587,7 +1573,6 @@ Plot_ConditionalTrueBlock433: ;Main true block ;keep
 	jmp Plot_elsedoneblock435
 Plot_elseblock434
 	
-; //PokeAddr(x2, y2, outstr[plotIndex]);
 ; // Fills right side diagonal
 	; 8 bit binop
 	; Add/sub where right value is constant number
@@ -1614,8 +1599,6 @@ Plot_elsedoneblock435
 	lda x1
 	; Calling storevariable on generic assign expression
 	sta x2
-	
-; //PokeAddr(x2, y2, outstr[plotIndex]);
 	; Binary clause Simplified: LESS
 	lda y1
 	; Compare with pure num / var optimization
@@ -1650,7 +1633,6 @@ Plot_ConditionalTrueBlock441: ;Main true block ;keep
 	jmp Plot_elsedoneblock443
 Plot_elseblock442
 	
-; //PokeAddr(x2, y2, outstr[plotIndex]);
 ; // Fills bottom corners
 	; 8 bit binop
 	; Add/sub where right value is constant number
@@ -1885,7 +1867,7 @@ MainLoop_loopend471
 	jsr Plot
 	
 ; // line 280
-; // Check for user input	
+; // Check user input	
 	jsr CheckInputs
 MainLoop_forloopcounter453
 MainLoop_loopstart454
@@ -1912,6 +1894,9 @@ MainLoop_loopend455
 	; ***********  Defining procedure : DoMutations
 	;    Procedure type : User-defined procedure
 DoMutations
+	jsr Random
+	; Calling storevariable on generic assign expression
+	sta rando
 	
 ; // Reverse direction(1/2 cycle)
 	lda dir
@@ -1930,24 +1915,18 @@ DoMutations
 	lda temp
 	; Calling storevariable on generic assign expression
 	sta stop_pos
-	jsr Random
-	; Calling storevariable on generic assign expression
-	sta temp
 	; Binary clause Simplified: EQUALS
 	lda dir
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne DoMutations_localfailed538
-	jmp DoMutations_ConditionalTrueBlock478
-DoMutations_localfailed538
-	jmp DoMutations_elsedoneblock480
+	bne DoMutations_elsedoneblock480
 DoMutations_ConditionalTrueBlock478: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	lda pattern_type
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne DoMutations_elseblock542
-DoMutations_ConditionalTrueBlock541: ;Main true block ;keep 
+	bne DoMutations_elseblock507
+DoMutations_ConditionalTrueBlock506: ;Main true block ;keep 
 	
 ; // Mutations every full cycle
 ; // Toggle pattern type
@@ -1961,8 +1940,8 @@ DoMutations_ConditionalTrueBlock541: ;Main true block ;keep
 	lsr
 	; Calling storevariable on generic assign expression
 	sta num_chars
-	jmp DoMutations_elsedoneblock543
-DoMutations_elseblock542
+	jmp DoMutations_elsedoneblock508
+DoMutations_elseblock507
 	
 ; // 8-point pattern
 	lda #$1
@@ -1975,77 +1954,70 @@ DoMutations_elseblock542
 	lsr
 	; Calling storevariable on generic assign expression
 	sta num_chars
-DoMutations_elsedoneblock543
-	; Binary clause Simplified: LESS
-	lda temp
-	; Compare with pure num / var optimization
-	cmp #$80;keep
-	; Signed compare
-	bpl DoMutations_elsedoneblock551
-DoMutations_ConditionalTrueBlock549: ;Main true block ;keep 
+DoMutations_elsedoneblock508
 	
-; // Randomly change center point
-; // Determines width & height of area where pattern originates
+; //centerX := Random();
+; //while( centerX < 15 or centerX > 65 ) do centerX := Random();
+; //centerY := Random();
+; //while( centerY < 6 or centerY > 18 ) do centerY := Random();
+	; Binary clause Simplified: LESS
+	lda rando
+	; Compare with pure num / var optimization
+	cmp #$40;keep
+	; Signed compare
+	bpl DoMutations_elsedoneblock516
+DoMutations_ConditionalTrueBlock514: ;Main true block ;keep 
+	
+; // 1 in 4 chance to change center point
+	lda #$8
+	; Calling storevariable on generic assign expression
+	sta temp
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	lda #$28
+	sec
+	sbc temp
+	 ; end add / sub var with constant
+	lsr
+DoMutations_rightvarAddSub_var520 = $54
+	sta DoMutations_rightvarAddSub_var520
+	; 8 bit binop
+	; Add/sub where right value is constant number
 	jsr Random
+	and temp
+	 ; end add / sub var with constant
+	clc
+	adc DoMutations_rightvarAddSub_var520
 	; Calling storevariable on generic assign expression
 	sta centerX
-DoMutations_while572
-DoMutations_loopstart576
-	; Binary clause Simplified: LESS
-	lda centerX
-	; Compare with pure num / var optimization
-	cmp #$f;keep
-	bcs DoMutations_localfailed579
-	jmp DoMutations_ConditionalTrueBlock573
-DoMutations_localfailed579: ;keep
-	; ; logical OR, second chance
-	; Binary clause Simplified: GREATEREQUAL
-	lda centerX
-	; Compare with pure num / var optimization
-	cmp #$42;keep
-	bcc DoMutations_elsedoneblock575
-DoMutations_ConditionalTrueBlock573: ;Main true block ;keep 
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	; 8 bit binop
+	; Add/sub where right value is constant number
 	jsr Random
-	; Calling storevariable on generic assign expression
-	sta centerX
-	jmp DoMutations_while572
-DoMutations_elsedoneblock575
-DoMutations_loopend577
-	jsr Random
+	and #$5
+	 ; end add / sub var with constant
+	clc
+	adc #$a
+	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta centerY
-DoMutations_while581
-DoMutations_loopstart585
+DoMutations_elsedoneblock516
+	
+; //clearscreen($20, SCREEN_CHAR_LOC);
 	; Binary clause Simplified: LESS
-	lda centerY
-	; Compare with pure num / var optimization
-	cmp #$6;keep
-	bcs DoMutations_localfailed588
-	jmp DoMutations_ConditionalTrueBlock582
-DoMutations_localfailed588: ;keep
-	; ; logical OR, second chance
-	; Binary clause Simplified: GREATEREQUAL
-	lda centerY
-	; Compare with pure num / var optimization
-	cmp #$13;keep
-	bcc DoMutations_elsedoneblock584
-DoMutations_ConditionalTrueBlock582: ;Main true block ;keep 
-	jsr Random
-	; Calling storevariable on generic assign expression
-	sta centerY
-	jmp DoMutations_while581
-DoMutations_elsedoneblock584
-DoMutations_loopend586
-DoMutations_elsedoneblock551
-	; Binary clause Simplified: LESS
-	lda temp
+	lda rando
 	; Compare with pure num / var optimization
 	cmp #$4;keep
 	; Signed compare
-	bpl DoMutations_elsedoneblock593
-DoMutations_ConditionalTrueBlock591: ;Main true block ;keep 
+	bpl DoMutations_elsedoneblock524
+DoMutations_ConditionalTrueBlock522: ;Main true block ;keep 
 	
-; // Clear screen once in a while
+; // 1 in 64 chance to clear screen
 	lda #$20
 	; Calling storevariable on generic assign expression
 	sta myChar
@@ -2055,111 +2027,126 @@ DoMutations_ConditionalTrueBlock591: ;Main true block ;keep
 	sta myLoc
 	sty myLoc+1
 	jsr Clear80
-DoMutations_elsedoneblock593
+DoMutations_elsedoneblock524
 DoMutations_elsedoneblock480
 	; Binary clause Simplified: LESS
-	lda temp
-	; Compare with pure num / var optimization
-	cmp #$20;keep
-	; Signed compare
-	bpl DoMutations_elsedoneblock599
-DoMutations_ConditionalTrueBlock597: ;Main true block ;keep 
-	; Binary clause Simplified: LESS
-	lda temp
+	lda rando
 	; Compare with pure num / var optimization
 	cmp #$10;keep
 	; Signed compare
-	bpl DoMutations_elseblock612
-DoMutations_ConditionalTrueBlock611: ;Main true block ;keep 
-	
-; // Select char range
-; //if( temp < 11 ) then
-; //begin
-; //	char_start_st	:= 234;
-; //	char_offset_st	:= 22;
-; //end
-; //else if( temp < 22 ) then
-	lda #$60
-	; Calling storevariable on generic assign expression
-	sta char_start_st
-	lda #$1f
-	; Calling storevariable on generic assign expression
-	sta char_offset_st
-	jmp DoMutations_elsedoneblock613
-DoMutations_elseblock612
-	lda #$41
-	; Calling storevariable on generic assign expression
-	sta char_start_st
-	lda #$3e
-	; Calling storevariable on generic assign expression
-	sta char_offset_st
-DoMutations_elsedoneblock613
-DoMutations_elsedoneblock599
+	bpl DoMutations_localfailed596
+	jmp DoMutations_ConditionalTrueBlock528
+DoMutations_localfailed596
+	jmp DoMutations_elsedoneblock530
+DoMutations_ConditionalTrueBlock528: ;Main true block ;keep 
 	; Binary clause Simplified: LESS
-	jsr Random
+	lda rando
 	; Compare with pure num / var optimization
-	cmp #$40;keep
-	bcs DoMutations_elsedoneblock621
-DoMutations_ConditionalTrueBlock619: ;Main true block ;keep 
+	cmp #$4;keep
+	; Signed compare
+	bpl DoMutations_elseblock600
+DoMutations_ConditionalTrueBlock599: ;Main true block ;keep 
+	
+; // One in 16 chance of mutation
+; // Select new char range
+	lda #$4c
+	; Calling storevariable on generic assign expression
+	sta char_start_st
+	
+; // Balls and lines pattern
+	lda #$5
+	; Calling storevariable on generic assign expression
+	sta char_offset_st
+	jsr InitData
+	jmp DoMutations_elsedoneblock601
+DoMutations_elseblock600
+	; Binary clause Simplified: LESS
+	lda rando
+	; Compare with pure num / var optimization
+	cmp #$8;keep
+	; Signed compare
+	bpl DoMutations_elseblock632
+DoMutations_ConditionalTrueBlock631: ;Main true block ;keep 
+	lda #$5f
+	; Calling storevariable on generic assign expression
+	sta char_start_st
+	
+; // Triangles
+	lda #$b
+	; Calling storevariable on generic assign expression
+	sta char_offset_st
+	jsr InitData
+	jmp DoMutations_elsedoneblock633
+DoMutations_elseblock632
+	; Binary clause Simplified: LESS
+	lda rando
+	; Compare with pure num / var optimization
+	cmp #$c;keep
+	; Signed compare
+	bpl DoMutations_elseblock648
+DoMutations_ConditionalTrueBlock647: ;Main true block ;keep 
+	lda #$74
+	; Calling storevariable on generic assign expression
+	sta char_start_st
+	
+; // Angles
+	lda #$b
+	; Calling storevariable on generic assign expression
+	sta char_offset_st
+	jsr InitData
+	jmp DoMutations_elsedoneblock649
+DoMutations_elseblock648
+	lda #$40
+	; Calling storevariable on generic assign expression
+	sta char_start_st
+	
+; // Graphics Chars
+	lda #$3f
+	; Calling storevariable on generic assign expression
+	sta char_offset_st
+	jsr InitData
+DoMutations_elsedoneblock649
+DoMutations_elsedoneblock633
+DoMutations_elsedoneblock601
 	; Binary clause Simplified: EQUALS
 	lda rev_enable
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne DoMutations_elseblock634
-DoMutations_ConditionalTrueBlock633: ;Main true block ;keep 
+	bne DoMutations_elseblock656
+DoMutations_ConditionalTrueBlock655: ;Main true block ;keep 
 	
 ; // Toggle reverse chars
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta rev_enable
-	jmp DoMutations_elsedoneblock635
-DoMutations_elseblock634
+	jmp DoMutations_elsedoneblock657
+DoMutations_elseblock656
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta rev_enable
-DoMutations_elsedoneblock635
-DoMutations_elsedoneblock621
+DoMutations_elsedoneblock657
 	
-; //clearscreen($20, SCREEN_CHAR_LOC);
-; //		Clear80(32, 0); 
-	; Binary clause Simplified: LESS
-	jsr Random
-	; Compare with pure num / var optimization
-	cmp #$80;keep
-	bcs DoMutations_elsedoneblock643
-DoMutations_ConditionalTrueBlock641: ;Main true block ;keep 
-	
-; // Toggle pattern size
-; // Set pattern moving outward
+; // Adjust pattern size		
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta dir
+	
+; // Set pattern moving outward
 	; Calling storevariable on generic assign expression
 	sta start_pos
-	; Binary clause Simplified: EQUALS
-	lda full_screen
-	; Compare with pure num / var optimization
-	cmp #$0;keep
-	bne DoMutations_elseblock656
-DoMutations_ConditionalTrueBlock655: ;Main true block ;keep 
-	
-; // Toggle the flag
-	lda #$1
-	; Calling storevariable on generic assign expression
-	sta full_screen
-	lda #$18
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	jsr Random
+	and #$c
+	 ; end add / sub var with constant
+	clc
+	adc #$8
+	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta stop_pos
-	jmp DoMutations_elsedoneblock657
-DoMutations_elseblock656
-	lda #$0
-	; Calling storevariable on generic assign expression
-	sta full_screen
-	lda #$c
-	; Calling storevariable on generic assign expression
-	sta stop_pos
-DoMutations_elsedoneblock657
-DoMutations_elsedoneblock643
+DoMutations_elsedoneblock530
 	rts
 block1
 	
@@ -2167,7 +2154,7 @@ block1
 ; //PrintXYZ(temp, 0, 0);
 ; //WaitForKeypress();
 ; //call(^$fd49);	
-; // Trigger NMI	
+; // Trigger NMI
 ; // Show the title and check number of columns
 	jsr ShowTitle
 	
@@ -2214,7 +2201,7 @@ MainProgram_ConditionalTrueBlock663: ;Main true block ;keep
 ; // Init VDC color mem 
 	jsr MainLoop
 	
-; // Pattern modifications
+; // Pattern mutations
 	jsr DoMutations
 	
 ; // Get fresh array of chars

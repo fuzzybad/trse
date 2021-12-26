@@ -27,18 +27,17 @@ var
 	stop_pos 	  	: byte = 12;
 	dir			  	: byte = 1;
 	char_start 	  	: byte;
-	char_offset   	: byte;
-	char_start_st 	: byte = 65;	// Save state of char_start
-	char_offset_st	: byte = 62;	// Save state of char_offset
+	char_offset 		: byte;
+	char_start_st  	: byte = 64;	// Graphics chars
+	char_offset_st 	: byte = 63;
 	num_chars	  	: byte = 6;	// Number of chars in the array
 	speed 		  	: byte = 3;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
 	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
-	full_screen   	: byte = 1;	// Flag for full-screen mode
 	curr_color		: byte = 1;	// Current color
-	char_arr 	  	: array[12] of byte;
+	char_arr 	  	: array[20] of byte;
 	p 			  	: pointer;
-	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp : signed byte;
+	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando : signed byte;
 	tempint			: integer;
 	x1, y1, x2, y2	: signed byte;
 
@@ -74,8 +73,26 @@ begin
 	end;
 end;
 
+// Debug up to 3 numeric vars
+procedure PrintXYZ( myX:signed byte, myY:signed byte, myZ:signed byte );
+begin
+	// Erase & print values
+	moveto(1, 5, hi(SCREEN_CHAR_LOC));
+	PrintDecimal(0, 2);
+	PrintDecimal(myX, 2);
+
+	moveto(1, 6, hi(SCREEN_CHAR_LOC));
+	PrintDecimal(0, 2);
+	PrintDecimal(myY, 2);
+
+	moveto(1, 7, hi(SCREEN_CHAR_LOC));
+	PrintDecimal(0, 2);
+	PrintDecimal(myZ, 2);
+end;
+ 
 // Do timing delay 
 // @TODO: Find better way than delay loop
+// wait() doesn't seem to work on C128
 procedure DoDelay();
 begin
 	if( speed > 0 ) then
@@ -99,23 +116,6 @@ begin
 	end;
 end;
 
-// Debug up to 3 numeric vars
-procedure PrintXYZ( myX:signed byte, myY:signed byte, myZ:signed byte );
-begin
-	// Erase & print values
-	moveto(1, 5, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myX, 2);
-
-	moveto(1, 6, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myY, 2);
-
-	moveto(1, 7, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myZ, 2);
-end;
- 
 //	Method which shows title screen and checks screen width
 procedure ShowTitle();
 begin
@@ -221,8 +221,8 @@ begin
 		// Option for reverse chars
 		if( rev_enable = 1 ) then
 		begin
-			if( Random() > 127 ) then				// line 165
-				char_start := char_start + 128;		// line 165
+			if( Random() > 127 ) then					// line 165
+				char_start := char_start + 128;			// line 165
 		end;
 		
 		char_arr[i] := Random() & char_offset + char_start;
@@ -237,21 +237,23 @@ begin
 	// Q - Quit
 	if(key = 81) then begin
 		call(^65341); // Reboot
-		//call(^$fffc); // RESET
-		//call(^$fffe); // NMI
 	end;
 	
 	// 0-9 Adjust speed 
-	if(key = 48) then speed := 9; // (slowest)
-	if(key = 49) then speed := 8;
-	if(key = 50) then speed := 7;
-	if(key = 51) then speed := 6;
-	if(key = 52) then speed := 5;
-	if(key = 53) then speed := 4;
-	if(key = 54) then speed := 3;
-	if(key = 55) then speed := 2;
-	if(key = 56) then speed := 1;
+	// NOTE: higher values of 'speed' are slower
+	if(key = 48) then speed := 18; // (slowest)
+	if(key = 49) then speed := 16;
+	if(key = 50) then speed := 14;
+	if(key = 51) then speed := 12;
+	if(key = 52) then speed := 10;
+	if(key = 53) then speed := 8;
+	if(key = 54) then speed := 6;
+	if(key = 55) then speed := 4;
+	if(key = 56) then speed := 2;
 	if(key = 57) then speed := 0; // (fastest)
+	
+	//PrintXYZ(speed, key, 0);
+	//WaitForKeypress();
 end;
 
 
@@ -292,10 +294,6 @@ begin
 		MoveTo80(pokeaddr_x, pokeaddr_y, $00);
 		Fill80(pokeaddr_v, 2);
 
-		// Alternately, select char from string by index 
-		//temp := outstr[0];
-		//Fill80(temp, 2);
-
 		// Debug
 		//PrintXYZ(pokeaddr_x, pokeaddr_y, pokeaddr_v);
 		//WaitForKeypress();
@@ -308,16 +306,11 @@ end;
 //////////////////////////
 procedure Plot();
 begin
-	// Debug
-	//PrintXYZ(x2, y2, 0);
-	//WaitForKeypress();
-
 	// Call timing delay
 	DoDelay();
 
 	// Map points in the four indexes
 	PokeAddr(x1, y1, char_arr[0]);				// line 900
-	//PokeAddr(x1, y1, outstr[0]);					// line 900
 
 	if( mainIndex = 1 ) then return;				// line 910
 	
@@ -340,53 +333,45 @@ begin
 			y2 := y1;
 			// Fills right of vertical
 			PokeAddr(x2, y2, char_arr[plotIndex]);
-			//PokeAddr(x2, y2, outstr[plotIndex]);
 			x2 := x1 - plotIndex;
 			// Fills left of vertical
 			PokeAddr(x2, y2, char_arr[plotIndex]);
-			//PokeAddr(x2, y2, outstr[plotIndex]);
 		end 
-		else if( y1 = centerY ) then			// line 950
+		else if( y1 = centerY ) then				// line 950
 		begin
 			x2 := x1;
 			y2 := y1 + plotIndex;
 			// Fills below horizontal
 			PokeAddr(x2, y2, char_arr[plotIndex]);
-			//PokeAddr(x2, y2, outstr[plotIndex]);
 			y2 := y1 - plotIndex;
 			// Fills above horizontal
 			PokeAddr(x2, y2, char_arr[plotIndex]);
-			//PokeAddr(x2, y2, outstr[plotIndex]);
 		end
 		else begin
-			y2 := y1;						// line 970
+			y2 := y1;							// line 970
 			if( x1 < centerX ) then				// line 970
 			begin
 				// Fills left side diagonal
 				x2 := x1 + plotIndex;
 				PokeAddr(x2, y2, char_arr[plotIndex]);
-				//PokeAddr(x2, y2, outstr[plotIndex]);
 			end else begin
 				// Fills right side diagonal
-				x2 := x1 - plotIndex;		// line 980
+				x2 := x1 - plotIndex;			// line 980
 				PokeAddr(x2, y2, char_arr[plotIndex]);
-				//PokeAddr(x2, y2, outstr[plotIndex]);
 			end;
 			
-			x2 := x1;						// line 990
+			x2 := x1;							// line 990
 			
-			if( y1 < centerY ) then			// line 990
+			if( y1 < centerY ) then				// line 990
 			begin
 				// Fills top corners
 				y2 := y1 + plotIndex;
 				PokeAddr(x2, y2, char_arr[plotIndex]);					
-				//PokeAddr(x2, y2, outstr[plotIndex]);
 			end
 			else begin
 				// Fills bottom corners
-				y2 := y1 - plotIndex;		// line 1000
+				y2 := y1 - plotIndex;			// line 1000
 				PokeAddr(x2, y2, char_arr[plotIndex]);
-				//PokeAddr(x2, y2, outstr[plotIndex]);
 			end;
 		end;
 	end; // for
@@ -434,7 +419,7 @@ begin
 		y1 := centerY - mainIndex;			// line 280
 		Plot();								// line 280
 		
-		// Check for user input	
+		// Check user input	
 		CheckInputs();
 	end;
 end;
@@ -442,13 +427,13 @@ end;
 // Various Pattern Mutations
 procedure DoMutations();
 begin
+	rando := Random();
+	
 	// Reverse direction (1/2 cycle)
 	dir			:= -dir;
 	temp			:= start_pos;
 	start_pos	:= stop_pos;
-	stop_pos		:= temp;
-
-	temp := Random();
+	stop_pos		:= temp;	
 
 	// Mutations every full cycle
 	if( dir = 1 ) then
@@ -464,74 +449,70 @@ begin
 			num_chars := myscreenheight / 4;
 		end;
 
-		// Randomly change center point
-		if( temp < 128 ) then
+		// 1 in 4 chance to change center point
+		if( rando < 64 ) then
 		begin
-			// Determines width & height of area where pattern originates
-			centerX := Random();
-			while( centerX < 15 or centerX > 65 ) do centerX := Random();
-			centerY := Random();
-			while( centerY < 6 or centerY > 18 ) do centerY := Random();
-		end;
-
-		// Clear screen once in a while
-		if( temp < 4 ) then	Clear80(32, 0);
-	end;
-
-	// Select char range
-	if( temp < 32 ) then
-	begin
-		//if( temp < 11 ) then
-		//begin
-		//	char_start_st	:= 234;
-		//	char_offset_st	:= 22;
-		//end
-		//else if ( temp < 22 ) then
-
-		if ( temp < 16 ) then
-		begin
-			char_start_st	:= 96;
-			char_offset_st  	:= 31;		
-		end	else 
-		begin
-			char_start_st	:= 65;
-			char_offset_st	:= 62;
-		end;	
-	end;
-
-	// Toggle reverse chars
-	if( Random() < 64 )	then
-	begin
-		if( rev_enable = 1 ) then rev_enable := 0 
-		else rev_enable := 1;
-	end;
-	
-	// Toggle pattern size
-	if( Random() < 128 ) then
-	begin
-		// Set pattern moving outward
-		dir := 1;
-		start_pos := 1;
-
-		// Toggle the flag
-		if( full_screen = 0 ) then 
-		begin
-			full_screen	:= 1;
-			stop_pos		:= 24;
-		end
-		else begin
-			full_screen	:= 0;
-			stop_pos		:= 12;
+			temp := SCREEN_WIDTH / 5;
+			centerX := Random() & temp + (SCREEN_WIDTH - temp) / 2;
+			centerY := Random() & 5 + 10;
+						
+			//centerX := Random();
+			//while( centerX < 15 or centerX > 65 ) do centerX := Random();
+			//centerY := Random();
+			//while( centerY < 6 or centerY > 18 ) do centerY := Random();
 		end;
 		
-		//clearscreen($20, SCREEN_CHAR_LOC);
-//		Clear80(32, 0); 
+		// 1 in 64 chance to clear screen
+		if( rando < 4 ) then
+		begin
+			Clear80(32, 0);
+			//clearscreen($20, SCREEN_CHAR_LOC);
+		end;
+	end;
+
+	// One in 16 chance of mutation
+	if( rando < 16 ) then
+	begin
+		// Select new char range
+		if( rando < 4 ) then
+		begin
+			char_start_st	:= 76;			// Balls and lines pattern
+			char_offset_st	:= 5;
+			InitData();
+		end
+		else if( rando < 8 ) then
+		begin
+			char_start_st	:= 95;			// Triangles
+			char_offset_st	:= 11;	
+			InitData();
+		end
+		else if( rando < 12 ) then
+		begin
+			char_start_st	:= 116;			// Angles
+			char_offset_st	:= 11;	
+			InitData();
+		end
+		else
+		begin
+			char_start_st	:= 64;			// Graphics Chars
+			char_offset_st	:= 63;
+			InitData();
+		end;
+		
+		// Toggle reverse chars
+		if( rev_enable = 1 ) then rev_enable := 0 
+		else rev_enable := 1;
+		
+		// Adjust pattern size		
+		dir := 1;	// Set pattern moving outward
+		start_pos := 1;
+		stop_pos := Random() & 12 + 8;
 	end;
 
 	// Debug
 	//PrintXYZ(temp, 0, 0);
 	//WaitForKeypress();
-	//call(^$fd49);	// Trigger NMI	
+	//call(^$fd49);	// Trigger NMI
 end;
 
 
@@ -552,8 +533,8 @@ begin
 	
 	while (true) do begin
 		MainLoop();
-
-		// Pattern modifications
+		
+		// Pattern mutations
 		DoMutations();
 		
 		// Get fresh array of chars
