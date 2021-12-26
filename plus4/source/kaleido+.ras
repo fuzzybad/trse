@@ -25,8 +25,9 @@ var
 	stop_pos 	  	: byte = 20;
 	dir			  	: byte = 1;
 	char_start 	  	: byte;
+	char_offset		: byte;
 	char_start_st 	: byte = 64;	// Graphics chars
-	char_offset   	: byte = 63;
+	char_offset_st  	: byte = 63;
 	num_chars	  	: byte = 6;	// Number of chars in the array
 	speed 		  	: byte = 3;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
@@ -157,6 +158,7 @@ begin
 	begin
 		// Populate char_arr 
 		char_start := char_start_st;
+		char_offset := char_offset_st;
 		
 		// Option for reverse chars
 		if( rev_enable = 1 ) then
@@ -396,26 +398,26 @@ begin
 		// Select new char range
 		if( rando < 4 ) then
 		begin
-			char_start_st := 76;			// Balls and lines pattern
-			char_offset := 5;
+			char_start_st	:= 76;			// Balls and lines pattern
+			char_offset_st	:= 5;
 			InitData();
 		end
 		else if( rando < 8 ) then
 		begin
-			char_start_st := 95;			// Triangles
-			char_offset   := 11;	
+			char_start_st	:= 95;			// Triangles
+			char_offset_st	:= 11;	
 			InitData();
 		end
 		else if( rando < 12 ) then
 		begin
-			char_start_st := 116;		// Angles
-			char_offset   := 11;	
+			char_start_st	:= 116;			// Angles
+			char_offset_st	:= 11;	
 			InitData();
 		end
 		else
 		begin
-			char_start_st := 64;			// Graphics Chars
-			char_offset   := 63;
+			char_start_st	:= 64;			// Graphics Chars
+			char_offset_st	:= 63;
 			InitData();
 		end;
 		

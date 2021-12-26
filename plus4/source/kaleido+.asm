@@ -21,8 +21,9 @@ start_pos	dc.b	$01
 stop_pos	dc.b	$14
 dir	dc.b	$01
 char_start	dc.b	0
+char_offset	dc.b	0
 char_start_st	dc.b	$40
-char_offset	dc.b	$3f
+char_offset_st	dc.b	$3f
 num_chars	dc.b	$06
 speed	dc.b	$03
 rev_enable	dc.b	$00
@@ -536,6 +537,9 @@ InitData_forloop56
 	lda char_start_st
 	; Calling storevariable on generic assign expression
 	sta char_start
+	lda char_offset_st
+	; Calling storevariable on generic assign expression
+	sta char_offset
 	
 ; // line 165
 	; Binary clause Simplified: EQUALS
@@ -1651,7 +1655,7 @@ DoMutations_ConditionalTrueBlock559: ;Main true block ;keep
 ; // Balls and lines pattern
 	lda #$5
 	; Calling storevariable on generic assign expression
-	sta char_offset
+	sta char_offset_st
 	jsr InitData
 	jmp DoMutations_elsedoneblock561
 DoMutations_elseblock560
@@ -1668,7 +1672,7 @@ DoMutations_ConditionalTrueBlock591: ;Main true block ;keep
 ; // Triangles
 	lda #$b
 	; Calling storevariable on generic assign expression
-	sta char_offset
+	sta char_offset_st
 	jsr InitData
 	jmp DoMutations_elsedoneblock593
 DoMutations_elseblock592
@@ -1685,7 +1689,7 @@ DoMutations_ConditionalTrueBlock607: ;Main true block ;keep
 ; // Angles
 	lda #$b
 	; Calling storevariable on generic assign expression
-	sta char_offset
+	sta char_offset_st
 	jsr InitData
 	jmp DoMutations_elsedoneblock609
 DoMutations_elseblock608
@@ -1696,7 +1700,7 @@ DoMutations_elseblock608
 ; // Graphics Chars
 	lda #$3f
 	; Calling storevariable on generic assign expression
-	sta char_offset
+	sta char_offset_st
 	jsr InitData
 DoMutations_elsedoneblock609
 DoMutations_elsedoneblock593
