@@ -25,17 +25,17 @@ var
 	stop_pos 	  	: byte = 20;
 	dir			  	: byte = 1;
 	char_start 	  	: byte;
+	char_offset		: byte;
 	char_start_st 	: byte = 64;	// Graphics chars 
-	char_offset   	: byte = 63;
+	char_offset_st  	: byte = 63;
 	myscreenwidth 	: byte = SCREEN_WIDTH;
 	num_chars	  	: byte = 6;	// Number of chars in the array
 	speed 		  	: byte = 3;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
 	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
-	rand				: byte = 0;	// Holds random value
 	char_arr 	  	: array[20] of byte;
 	p 			  	: pointer;
-	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp : byte;
+	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando : byte;
 	x1, y1, x2, y2	: signed byte;
 
 	// Used for keyboard input
@@ -175,6 +175,7 @@ begin
 		// Populate char_arr with 50/50 split between these ranges:
 		// 65-128 and 193-256
 		char_start := char_start_st;
+		char_offset := char_offset_st;
 		
 		// Option for reverse chars
 		if( rev_enable = 1 ) then
@@ -357,16 +358,18 @@ begin
 		// Check user input	
 		CheckInputs();
 	end;
+end;
 
-	// Pattern mutations below
+// Various Pattern Mutations
+procedure DoMutations();
+begin
+	rando := Random();
 
 	// Reverse direction (1/2 cycle)
 	dir			:= -dir;
 	temp			:= start_pos;
 	start_pos	:= stop_pos;
 	stop_pos		:= temp;
-
-	rand := Random();
 
 	// Mutations every full cycle
 	if( dir = 1 ) then
@@ -383,7 +386,7 @@ begin
 		end;
 
 		// Randomly change center point
-		if( rand < 64 ) then
+		if( rando < 64 ) then
 		begin
 			temp := myscreenwidth / 5;
 			centerX := Random() & temp + (myscreenwidth - temp) / 2;
@@ -393,31 +396,31 @@ begin
 	end;
 
 	// One in 16 chance of mutation
-	if( rand < 16 ) then
+	if( rando < 16 ) then
 	begin
 		// Select new char range
-		if( rand < 4 ) then
+		if( rando < 4 ) then
 		begin
-			char_start_st := 76;			// Balls and lines pattern
-			char_offset := 5;
+			char_start_st	:= 76;			// Balls and lines pattern
+			char_offset_st	:= 5;
 			InitData();
 		end
-		else if( rand < 8 ) then
+		else if( rando < 8 ) then
 		begin
-			char_start_st := 95;			// Triangles
-			char_offset   := 11;	
+			char_start_st	:= 95;			// Triangles
+			char_offset_st	:= 11;	
 			InitData();
 		end
-		else if( rand < 12 ) then
+		else if( rando < 12 ) then
 		begin
-			char_start_st := 116;		// Angles
-			char_offset   := 11;	
+			char_start_st	:= 116;			// Angles
+			char_offset_st	:= 11;	
 			InitData();
 		end
 		else
 		begin
-			char_start_st := 64;			// Graphics Chars
-			char_offset   := 63;
+			char_start_st	:= 64;			// Graphics Chars
+			char_offset_st	:= 63;
 			InitData();
 		end;
 		
@@ -452,6 +455,9 @@ begin
 	while (true) do begin
 		MainLoop();
 
+		// Do Pattern Mutations
+		DoMutations();
+		
 		// Get fresh array of chars
 		InitData();
 	end;
