@@ -25,8 +25,9 @@ var
 	stop_pos 	  	: byte = 20;
 	dir			  	: byte = 1;
 	char_start 	  	: byte;
+	char_offset		: byte;
 	char_start_st 	: byte = 64;	// Graphics chars
-	char_offset   	: byte = 63;
+	char_offset_st  	: byte = 63;
 	num_chars	  	: byte = 6;	// Number of chars in the array
 	speed 		  	: byte = 3;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
@@ -155,6 +156,7 @@ begin
 	begin
 		// Populate char_arr 
 		char_start := char_start_st;
+		char_offset := char_offset_st;
 		
 		// Option for reverse chars
 		if( rev_enable = 1 ) then
@@ -207,8 +209,6 @@ begin
 	// Pointer value to color RAM
 	p := SCREEN_COL_LOC + SCREEN_WIDTH * pokeaddr_y + pokeaddr_x;
 	poke(p, 0, curr_color);
-
-
 end;
 
 
@@ -337,16 +337,18 @@ begin
 		// Check user input	
 		CheckInputs();
 	end;
-	
-	// Pattern mutations below
+end;
+
+// Various Pattern Mutations
+procedure DoMutations();
+begin
+	rando := Random();
 
 	// Reverse direction (1/2 cycle)
 	dir			:= -dir;
 	temp			:= start_pos;
 	start_pos	:= stop_pos;
 	stop_pos		:= temp;
-
-	rando := Random();
 
 	// Mutations every full cycle
 	if( dir = 1 ) then
@@ -378,26 +380,26 @@ begin
 		// Select new char range
 		if( rando < 4 ) then
 		begin
-			char_start_st := 76;			// Balls and lines pattern
-			char_offset := 5;
+			char_start_st	:= 76;			// Balls and lines pattern
+			char_offset_st	:= 5;
 			InitData();
 		end
 		else if( rando < 8 ) then
 		begin
-			char_start_st := 95;			// Triangles
-			char_offset   := 11;	
+			char_start_st	:= 95;			// Triangles
+			char_offset_st	:= 11;	
 			InitData();
 		end
 		else if( rando < 12 ) then
 		begin
-			char_start_st := 116;		// Angles
-			char_offset   := 11;	
+			char_start_st	:= 116;		// Angles
+			char_offset_st	:= 11;	
 			InitData();
 		end
 		else
 		begin
-			char_start_st := 64;			// Graphics Chars
-			char_offset   := 63;
+			char_start_st	:= 64;			// Graphics Chars
+			char_offset_st	:= 63;
 			InitData();
 		end;
 		
@@ -409,8 +411,6 @@ begin
 		dir := 1;	// Set pattern moving outward
 		start_pos := 1;
 		stop_pos := Random() & 12 + 8;
-		
-		//clearscreen($20, SCREEN_CHAR_LOC);
 	end;
 
 	// Debug
@@ -431,6 +431,9 @@ begin
 	
 	while (true) do begin
 		MainLoop();
+		
+		// Do Pattern Mutations
+		DoMutations();
 		
 		// Get fresh array of chars
 		InitData();
