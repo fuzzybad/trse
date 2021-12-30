@@ -37,6 +37,36 @@ var
 	p 			  	: pointer;
 	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando : byte;
 	x1, y1, x2, y2	: signed byte;
+	// COlor arrays
+	cArr1			: array[] of byte = (1, 15, 12, 11, 11, 12, 15, 1); // grays
+	cArr2			: array[] of byte = (1, 3, 14, 6, 14, 3, 1); // cool colors
+	cArr3			: array[] of byte = (7, 8, 2, 10, 2, 8, 7 ); // warm colors
+	cArr4			: array[] of byte = (2, 8, 7, 5, 6, 4, 6, 5, 7, 8, 2); // rainbow
+	cArr5			: array[] of byte = (5, 13, 1, 13, 5); // Greens
+	//cArr5			: array[] of byte = (14, 10, 1, 10, 14); // trans rights
+	colorIdx			: byte = 0;
+	cArrPtr			: pointer;
+	cArrLen			: byte = 0;
+	cycleCtr			: byte = 0;
+	
+/*	
+	0	$00	black
+	1	$01	white
+	2	$02	red
+	3	$03	cyan
+	4	$04	purple
+	5	$05	green
+	6	$06	blue
+	7	$07	yellow
+	8	$08	orange
+	9	$09	brown
+	10	$0A	pink
+	11	$0B	dark grey
+	12	$0C	grey
+	13	$0D	light green
+	14	$0E	light blue
+	15	$0F	light grey
+*/
 
 	// Used for keyboard input
 	key: byte;
@@ -101,6 +131,10 @@ end;
 //	Method which shows title screen and checks screen width
 procedure ShowTitle();
 begin
+	// Set palette
+	cArrPtr := #cArr1;
+	cArrLen := length(cArr1);
+
 	// Set uppercase
 	poke(^59468, 0, 12);
 	
@@ -298,9 +332,13 @@ begin
 	for mainIndex := start_pos to stop_pos step dir do	// line 200
 	begin		
 		// Update color
-		curr_color := Random() & 15;
+		curr_color := cArrPtr[colorIdx];
+		colorIdx := colorIdx + 1;
+		if( colorIdx >= cArrLen ) then colorIdx := 0;
+		
+		//curr_color := Random() & 15;
 		// If black, pick another color..
-		while( curr_color = 0 ) do curr_color := Random() & 15;
+		//while( curr_color = 0 ) do curr_color := Random() & 15;
 		
 		// Map the data
 		// Right
@@ -342,6 +380,7 @@ end;
 // Various Pattern Mutations
 procedure DoMutations();
 begin
+	cycleCtr := cycleCtr + 1;
 	rando := Random();
 
 	// Reverse direction (1/2 cycle)
@@ -392,7 +431,7 @@ begin
 		end
 		else if( rando < 12 ) then
 		begin
-			char_start_st	:= 116;		// Angles
+			char_start_st	:= 116;			// Angles
 			char_offset_st	:= 11;	
 			InitData();
 		end
@@ -410,7 +449,37 @@ begin
 		// Adjust pattern size		
 		dir := 1;	// Set pattern moving outward
 		start_pos := 1;
-		stop_pos := Random() & 12 + 8;
+		stop_pos := Random() & 8 + 12;
+	end;
+
+	// Update color palette	
+	if( cycleCtr >= 4 ) then
+	begin
+		rando := Random();
+		
+		if( rando < 51 ) then begin
+			cArrPtr := #cArr1;
+			cArrLen := length(cArr1);
+		end
+		else if( rando < 102 ) then begin
+			cArrPtr := #cArr2;
+			cArrLen := length(cArr2);	
+		end
+		else if (rando < 153 ) then begin
+			cArrPtr := #cArr3;
+			cArrLen := length(cArr3);
+		end
+		else if (rando < 204 ) then begin
+			cArrPtr := #cArr4;
+			cArrLen := length(cArr4);
+		end
+		else begin
+			cArrPtr := #cArr5;
+			cArrLen := length(cArr5);
+		end;
+		
+		cycleCtr := 0;
+		//clearscreen($20, SCREEN_CHAR_LOC);
 	end;
 
 	// Debug
