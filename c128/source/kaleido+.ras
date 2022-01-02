@@ -93,65 +93,9 @@ var
 	// VDC Character Attributes (color) $0800-$0FFF
 	// VDC Character Definitions $2000-$3FFF
 	
-	
-//	Method to get a char from the keyboard buffer
-//	TRSE procedures return accumulator value
-procedure GetKey();
-begin
-	call(^$ffe4);	// getin
-end;
+// Include common functions
+@include "functions.ras"
 
-// Wait for user input
-procedure WaitForKeypress();
-begin
-	// Pause until key pressed
-	temp := 0;
-	while( temp = 0 ) do begin
-		temp := GetKey();
-	end;
-end;
-
-// Do timing delay 
-// @TODO: Find better way than delay loop
-procedure DoDelay();
-begin
-	if( speed > 0 ) then
-	begin
-		for i := 0 to speed do	
-		begin
-			wait(255);
-		end;
-	end;
-end;
-
-// Debug up to 3 numeric vars
-procedure PrintXYZ( myX:integer, myY:signed byte, myZ:signed byte );
-begin
-	// Erase & print values
-	moveto(1, 5, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 4);
-	PrintDecimal(myX, 4);
-
-	moveto(1, 6, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myY, 2);
-
-	moveto(1, 7, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myZ, 2);
-end;
-
-// Clear 80-col screen
-//	Clear80(32, $00); // fill screen with spaces
-//	Clear80(8, $08); // fill screen color
-procedure Clear80( myChar:byte, myLoc:integer );
-begin
-	for i := 0 to 25 do
-	begin
-		MoveTo80(0, i, myLoc);
-		Fill80(myChar, 80); // space char
-	end;
-end;
  
 //	Method which shows title screen and checks screen width
 procedure ShowTitle();
@@ -291,87 +235,6 @@ begin
    	
 	WaitForKeypress();
 end;
-
-// Fill char array
-procedure InitData();
-begin	
-	for i := 0 to num_chars do							// line 150
-	begin
-		// Populate char_arr 
-		char_start := char_start_st;
-		char_offset := char_offset_st;
-		
-		// Option for reverse chars
-		if( rev_enable = 1 ) then
-		begin
-			if( Random() > 127 ) then				// line 165
-				char_start := char_start + 128;		// line 165
-		end;
-		
-		char_arr[i] := Random() & char_offset + char_start;
-	end;
-end; 
-
-// Check for any user inputs
-procedure CheckInputs();
-begin	
-	key := GetKey();
-
-	// Q - Quit
-	if(key = 81) then begin
-		clearscreen($20, SCREEN_CHAR_LOC);
-		call(^65341);	// RESET
-	end;
-	
-	// 0-9 Adjust speed 
-	if(key = 48) then speed := 9; // (slowest)
-	if(key = 49) then speed := 8;
-	if(key = 50) then speed := 7;
-	if(key = 51) then speed := 6;
-	if(key = 52) then speed := 5;
-	if(key = 53) then speed := 4;
-	if(key = 54) then speed := 3;
-	if(key = 55) then speed := 2;
-	if(key = 56) then speed := 1;
-	if(key = 57) then speed := 0; // (fastest)
-end;
-
-// TRSE apparently doesn't allow poking pointer values from within a conditional
-// So as a workaround, this procedure executes the poke 
-procedure DoPoke(mypoint:pointer, myval:byte);
-begin
-	poke(mypoint, 0, myval);
-end;
-
-// Poke value into an address
-procedure PokeAddr(pokeaddr_x:byte, pokeaddr_y:byte, pokeaddr_v:byte);
-begin
-	if( pokeaddr_x > myscreenwidth - 1 ) then return;
-	if( pokeaddr_x < 0) then return;
-	if( pokeaddr_y > myscreenheight - 1 ) then return;
-	if( pokeaddr_y < 0) then return;
-
-	// VIC screen plot
-
-	// Pointer value to screen RAM
-	p := SCREEN_CHAR_LOC + 40 * pokeaddr_y + (pokeaddr_x / 2);
-	poke(p, 0, pokeaddr_v);
-
-	// Pointer value to color RAM
-	p := SCREEN_COL_LOC + 40 * pokeaddr_y + (pokeaddr_x / 2);
-	poke(p, 0, curr_color);
-
- 	// VDC screen plot
-
-	// Fill color for string
-	MoveTo80(pokeaddr_x, pokeaddr_y, $08);
-	Fill80(curr_color, 2);
-	
-	// Display text
-	MoveTo80(pokeaddr_x, pokeaddr_y, $00);
-	Fill80(pokeaddr_v, 2);
-end;
-
 
 //////////////////////////
 // Plot chars on screen
