@@ -304,6 +304,7 @@ initrandom256_RandomSkip4
 ; // Used for keyboard input
 ; // Text for splash screen  	
 ; // PRESS ANY KEY
+; // Include common functions
 ; //	Get a char from keyboard buffer
 ; //	TRSE procedures return accumulator value
 	; NodeProcedureDecl -1
@@ -532,6 +533,208 @@ PokeAddr_wordAdd69
 	sta (p),y
 	rts
 	
+; // Fill char array
+	; NodeProcedureDecl -1
+	; ***********  Defining procedure : InitData
+	;    Procedure type : User-defined procedure
+InitData
+	lda #$0
+	; Calling storevariable on generic assign expression
+	sta i
+InitData_forloop76
+	
+; // line 150
+; // Populate char_arr 
+	lda char_start_st
+	; Calling storevariable on generic assign expression
+	sta char_start
+	lda char_offset_st
+	; Calling storevariable on generic assign expression
+	sta char_offset
+	
+; // line 165
+	; Binary clause Simplified: EQUALS
+	lda rev_enable
+	; Compare with pure num / var optimization
+	cmp #$1;keep
+	bne InitData_elsedoneblock104
+InitData_ConditionalTrueBlock102: ;Main true block ;keep 
+	; Binary clause Simplified: GREATEREQUAL
+	jsr Random
+	; Compare with pure num / var optimization
+	cmp #$80;keep
+	bcc InitData_elsedoneblock116
+InitData_ConditionalTrueBlock114: ;Main true block ;keep 
+	
+; // Option for reverse chars
+; // line 165
+	; Optimizer: a = a +/- b
+	lda char_start
+	clc
+	adc #$80
+	sta char_start
+InitData_elsedoneblock116
+InitData_elsedoneblock104
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	jsr Random
+	and char_offset
+	 ; end add / sub var with constant
+	clc
+	adc char_start
+	 ; end add / sub var with constant
+	; Calling storevariable on generic assign expression
+	ldx i ; optimized, look out for bugs
+	sta char_arr,x
+InitData_forloopcounter78
+InitData_loopstart79
+	; Compare is onpage
+	; Test Inc dec D
+	inc i
+	lda num_chars
+	cmp i ;keep
+	bne InitData_forloop76
+InitData_loopdone119: ;keep
+InitData_forloopend77
+InitData_loopend80
+	rts
+	
+; // Check for any user inputs
+	; NodeProcedureDecl -1
+	; ***********  Defining procedure : CheckInputs
+	;    Procedure type : User-defined procedure
+CheckInputs
+	jsr GetKey
+	; Calling storevariable on generic assign expression
+	sta key
+	
+; // RESET (SYS64802)
+	; Binary clause Simplified: EQUALS
+	; Compare with pure num / var optimization
+	cmp #$51;keep
+	bne CheckInputs_elsedoneblock124
+CheckInputs_ConditionalTrueBlock122: ;Main true block ;keep 
+	
+; // Q - Quit
+	; Clear screen with offset
+	lda #$20
+	ldx #$fe
+CheckInputs_clearloop128
+	dex
+	sta $0000+$1e00,x
+	sta $00fd+$1e00,x
+	bne CheckInputs_clearloop128
+	jsr $fd22
+CheckInputs_elsedoneblock124
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$30;keep
+	bne CheckInputs_elsedoneblock132
+CheckInputs_ConditionalTrueBlock130: ;Main true block ;keep 
+	
+; // 0-9 Adjust speed 
+	lda #$9
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock132
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$31;keep
+	bne CheckInputs_elsedoneblock138
+CheckInputs_ConditionalTrueBlock136: ;Main true block ;keep 
+	
+; // (slowest)
+	lda #$8
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock138
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$32;keep
+	bne CheckInputs_elsedoneblock144
+CheckInputs_ConditionalTrueBlock142: ;Main true block ;keep 
+	lda #$7
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock144
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$33;keep
+	bne CheckInputs_elsedoneblock150
+CheckInputs_ConditionalTrueBlock148: ;Main true block ;keep 
+	lda #$6
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock150
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$34;keep
+	bne CheckInputs_elsedoneblock156
+CheckInputs_ConditionalTrueBlock154: ;Main true block ;keep 
+	lda #$5
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock156
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$35;keep
+	bne CheckInputs_elsedoneblock162
+CheckInputs_ConditionalTrueBlock160: ;Main true block ;keep 
+	lda #$4
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock162
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$36;keep
+	bne CheckInputs_elsedoneblock168
+CheckInputs_ConditionalTrueBlock166: ;Main true block ;keep 
+	lda #$3
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock168
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$37;keep
+	bne CheckInputs_elsedoneblock174
+CheckInputs_ConditionalTrueBlock172: ;Main true block ;keep 
+	lda #$2
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock174
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$38;keep
+	bne CheckInputs_elsedoneblock180
+CheckInputs_ConditionalTrueBlock178: ;Main true block ;keep 
+	lda #$1
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock180
+	; Binary clause Simplified: EQUALS
+	lda key
+	; Compare with pure num / var optimization
+	cmp #$39;keep
+	bne CheckInputs_elsedoneblock186
+CheckInputs_ConditionalTrueBlock184: ;Main true block ;keep 
+	lda #$0
+	; Calling storevariable on generic assign expression
+	sta speed
+CheckInputs_elsedoneblock186
+	rts
+	
+; // (fastest)
 ; //	Method which shows title screen and checks screen width
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : ShowTitle
@@ -564,34 +767,34 @@ ShowTitle
 	; Clear screen with offset
 	lda #$20
 	ldx #$fe
-ShowTitle_clearloop76
+ShowTitle_clearloop190
 	dex
 	sta $0000+$1e00,x
 	sta $00fd+$1e00,x
-	bne ShowTitle_clearloop76
+	bne ShowTitle_clearloop190
 	
 ; // Set default colormemory
 	; Clear screen with offset
 	lda #$3
 	ldx #$fe
-ShowTitle_clearloop77
+ShowTitle_clearloop191
 	dex
 	sta $0000+$9600,x
 	sta $00fd+$9600,x
-	bne ShowTitle_clearloop77
+	bne ShowTitle_clearloop191
 	
 ; // Center the title text
 	; 8 bit binop
 	; Add/sub right value is variable/expression
 	lda #6
-ShowTitle_rightvarAddSub_var78 = $88
-	sta ShowTitle_rightvarAddSub_var78
+ShowTitle_rightvarAddSub_var192 = $88
+	sta ShowTitle_rightvarAddSub_var192
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
 	lda myscreenwidth
 	lsr
 	sec
-	sbc ShowTitle_rightvarAddSub_var78
+	sbc ShowTitle_rightvarAddSub_var192
 	; Calling storevariable on generic assign expression
 	sta x1
 	sta screen_x
@@ -612,14 +815,14 @@ ShowTitle_rightvarAddSub_var78 = $88
 	; 8 bit binop
 	; Add/sub right value is variable/expression
 	lda #8
-ShowTitle_rightvarAddSub_var81 = $88
-	sta ShowTitle_rightvarAddSub_var81
+ShowTitle_rightvarAddSub_var195 = $88
+	sta ShowTitle_rightvarAddSub_var195
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
 	lda myscreenwidth
 	lsr
 	sec
-	sbc ShowTitle_rightvarAddSub_var81
+	sbc ShowTitle_rightvarAddSub_var195
 	; Calling storevariable on generic assign expression
 	sta x1
 	sta screen_x
@@ -638,14 +841,14 @@ ShowTitle_rightvarAddSub_var81 = $88
 	; 8 bit binop
 	; Add/sub right value is variable/expression
 	lda #7
-ShowTitle_rightvarAddSub_var84 = $88
-	sta ShowTitle_rightvarAddSub_var84
+ShowTitle_rightvarAddSub_var198 = $88
+	sta ShowTitle_rightvarAddSub_var198
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
 	lda myscreenwidth
 	lsr
 	sec
-	sbc ShowTitle_rightvarAddSub_var84
+	sbc ShowTitle_rightvarAddSub_var198
 	; Calling storevariable on generic assign expression
 	sta x1
 	sta screen_x
@@ -664,14 +867,14 @@ ShowTitle_rightvarAddSub_var84 = $88
 	; 8 bit binop
 	; Add/sub right value is variable/expression
 	lda #9
-ShowTitle_rightvarAddSub_var87 = $88
-	sta ShowTitle_rightvarAddSub_var87
+ShowTitle_rightvarAddSub_var201 = $88
+	sta ShowTitle_rightvarAddSub_var201
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
 	lda myscreenwidth
 	lsr
 	sec
-	sbc ShowTitle_rightvarAddSub_var87
+	sbc ShowTitle_rightvarAddSub_var201
 	; Calling storevariable on generic assign expression
 	sta x1
 	sta screen_x
@@ -690,14 +893,14 @@ ShowTitle_rightvarAddSub_var87 = $88
 	; 8 bit binop
 	; Add/sub right value is variable/expression
 	lda #10
-ShowTitle_rightvarAddSub_var90 = $88
-	sta ShowTitle_rightvarAddSub_var90
+ShowTitle_rightvarAddSub_var204 = $88
+	sta ShowTitle_rightvarAddSub_var204
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
 	lda myscreenwidth
 	lsr
 	sec
-	sbc ShowTitle_rightvarAddSub_var90
+	sbc ShowTitle_rightvarAddSub_var204
 	; Calling storevariable on generic assign expression
 	sta x1
 	sta screen_x
@@ -751,14 +954,14 @@ ShowTitle_rightvarAddSub_var90 = $88
 	; 8 bit binop
 	; Add/sub right value is variable/expression
 	lda #6
-ShowTitle_rightvarAddSub_var97 = $88
-	sta ShowTitle_rightvarAddSub_var97
+ShowTitle_rightvarAddSub_var211 = $88
+	sta ShowTitle_rightvarAddSub_var211
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
 	lda myscreenwidth
 	lsr
 	sec
-	sbc ShowTitle_rightvarAddSub_var97
+	sbc ShowTitle_rightvarAddSub_var211
 	; Calling storevariable on generic assign expression
 	sta x1
 	sta screen_x
@@ -809,208 +1012,6 @@ ShowTitle_rightvarAddSub_var97 = $88
 ; //	PokeAddr(0, i, i);		
 ; //end;
 ; //WaitForKeypress();
-; // Fill char array
-	; NodeProcedureDecl -1
-	; ***********  Defining procedure : InitData
-	;    Procedure type : User-defined procedure
-InitData
-	lda #$0
-	; Calling storevariable on generic assign expression
-	sta i
-InitData_forloop101
-	
-; // line 150
-; // Populate char_arr 
-	lda char_start_st
-	; Calling storevariable on generic assign expression
-	sta char_start
-	lda char_offset_st
-	; Calling storevariable on generic assign expression
-	sta char_offset
-	
-; // line 165
-	; Binary clause Simplified: EQUALS
-	lda rev_enable
-	; Compare with pure num / var optimization
-	cmp #$1;keep
-	bne InitData_elsedoneblock129
-InitData_ConditionalTrueBlock127: ;Main true block ;keep 
-	; Binary clause Simplified: GREATEREQUAL
-	jsr Random
-	; Compare with pure num / var optimization
-	cmp #$80;keep
-	bcc InitData_elsedoneblock141
-InitData_ConditionalTrueBlock139: ;Main true block ;keep 
-	
-; // Option for reverse chars
-; // line 165
-	; Optimizer: a = a +/- b
-	lda char_start
-	clc
-	adc #$80
-	sta char_start
-InitData_elsedoneblock141
-InitData_elsedoneblock129
-	; 8 bit binop
-	; Add/sub where right value is constant number
-	; 8 bit binop
-	; Add/sub where right value is constant number
-	jsr Random
-	and char_offset
-	 ; end add / sub var with constant
-	clc
-	adc char_start
-	 ; end add / sub var with constant
-	; Calling storevariable on generic assign expression
-	ldx i ; optimized, look out for bugs
-	sta char_arr,x
-InitData_forloopcounter103
-InitData_loopstart104
-	; Compare is onpage
-	; Test Inc dec D
-	inc i
-	lda num_chars
-	cmp i ;keep
-	bne InitData_forloop101
-InitData_loopdone144: ;keep
-InitData_forloopend102
-InitData_loopend105
-	rts
-	
-; // Check for any user inputs
-	; NodeProcedureDecl -1
-	; ***********  Defining procedure : CheckInputs
-	;    Procedure type : User-defined procedure
-CheckInputs
-	jsr GetKey
-	; Calling storevariable on generic assign expression
-	sta key
-	
-; // RESET(SYS64802)
-	; Binary clause Simplified: EQUALS
-	; Compare with pure num / var optimization
-	cmp #$51;keep
-	bne CheckInputs_elsedoneblock149
-CheckInputs_ConditionalTrueBlock147: ;Main true block ;keep 
-	
-; // Q - Quit
-	; Clear screen with offset
-	lda #$20
-	ldx #$fe
-CheckInputs_clearloop153
-	dex
-	sta $0000+$1e00,x
-	sta $00fd+$1e00,x
-	bne CheckInputs_clearloop153
-	jsr $fd22
-CheckInputs_elsedoneblock149
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$30;keep
-	bne CheckInputs_elsedoneblock157
-CheckInputs_ConditionalTrueBlock155: ;Main true block ;keep 
-	
-; // 0-9 Adjust speed 
-	lda #$9
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock157
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$31;keep
-	bne CheckInputs_elsedoneblock163
-CheckInputs_ConditionalTrueBlock161: ;Main true block ;keep 
-	
-; //(slowest)
-	lda #$8
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock163
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$32;keep
-	bne CheckInputs_elsedoneblock169
-CheckInputs_ConditionalTrueBlock167: ;Main true block ;keep 
-	lda #$7
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock169
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$33;keep
-	bne CheckInputs_elsedoneblock175
-CheckInputs_ConditionalTrueBlock173: ;Main true block ;keep 
-	lda #$6
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock175
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$34;keep
-	bne CheckInputs_elsedoneblock181
-CheckInputs_ConditionalTrueBlock179: ;Main true block ;keep 
-	lda #$5
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock181
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$35;keep
-	bne CheckInputs_elsedoneblock187
-CheckInputs_ConditionalTrueBlock185: ;Main true block ;keep 
-	lda #$4
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock187
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$36;keep
-	bne CheckInputs_elsedoneblock193
-CheckInputs_ConditionalTrueBlock191: ;Main true block ;keep 
-	lda #$3
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock193
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$37;keep
-	bne CheckInputs_elsedoneblock199
-CheckInputs_ConditionalTrueBlock197: ;Main true block ;keep 
-	lda #$2
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock199
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$38;keep
-	bne CheckInputs_elsedoneblock205
-CheckInputs_ConditionalTrueBlock203: ;Main true block ;keep 
-	lda #$1
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock205
-	; Binary clause Simplified: EQUALS
-	lda key
-	; Compare with pure num / var optimization
-	cmp #$39;keep
-	bne CheckInputs_elsedoneblock211
-CheckInputs_ConditionalTrueBlock209: ;Main true block ;keep 
-	lda #$0
-	; Calling storevariable on generic assign expression
-	sta speed
-CheckInputs_elsedoneblock211
-	rts
-	
-; //(fastest)
 ; //
 ; //
 ; //
