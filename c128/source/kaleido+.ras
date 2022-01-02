@@ -21,26 +21,54 @@ var
 	// Main program vars
 	myscreenheight	: byte = 24;
 	myscreenwidth	: byte = 80;
-	centerX 	  		: byte = 40;
-	centerY 	  		: byte = 12;
+	centerX 	  		: byte = 12;
+	centerY 	  		: byte = 20;
 	start_pos 	  	: byte = 1;
-	stop_pos 	  	: byte = 12;
+	stop_pos 	  	: byte = 20;
 	dir			  	: byte = 1;
 	char_start 	  	: byte;
-	char_offset 		: byte;
-	char_start_st  	: byte = 64;	// Graphics chars
-	char_offset_st 	: byte = 63;
+	char_offset		: byte;
+	char_start_st 	: byte = 64;	// Graphics chars
+	char_offset_st  	: byte = 63;
 	num_chars	  	: byte = 6;	// Number of chars in the array
-	speed 		  	: byte = 3;	// Recommended values 0-9
+	speed 		  	: byte = 0;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
 	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
 	curr_color		: byte = 1;	// Current color
 	char_arr 	  	: array[20] of byte;
 	p 			  	: pointer;
-	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando : signed byte;
-	tempint			: integer;
+	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando : byte;
 	x1, y1, x2, y2	: signed byte;
-
+	// Color arrays
+	cArr1			: array[] of byte = (1, 15, 12, 11, 11, 12, 15, 1); // Grays
+	cArr2			: array[] of byte = (5, 13, 1, 13, 5); // Greens
+	cArr3			: array[] of byte = (1, 3, 14, 6, 14, 3, 1); // Cool colors
+	cArr4			: array[] of byte = (7, 8, 2, 10, 2, 8, 7 ); // Warm colors
+	cArr5			: array[] of byte = (2, 8, 7, 5, 6, 4, 6, 5, 7, 8, 2); // Rainbow
+	//cArr5			: array[] of byte = (14, 10, 1, 10, 14); // Trans rights
+	colorIdx			: byte = 0;
+	cArrPtr			: pointer;
+	cArrLen			: byte = 0;
+	cycleCtr			: byte = 0;
+	
+/*	
+	0	$00	black
+	1	$01	white
+	2	$02	red
+	3	$03	cyan
+	4	$04	purple
+	5	$05	green
+	6	$06	blue
+	7	$07	yellow
+	8	$08	orange
+	9	$09	brown
+	10	$0A	pink
+	11	$0B	dark grey
+	12	$0C	grey
+	13	$0D	light green
+	14	$0E	light blue
+	15	$0F	light grey
+*/
 	// Used for keyboard input
 	key: byte;
 	
@@ -51,11 +79,21 @@ var
 	authormsg3: 	cstring = ("RUGG AND FELDMAN, 1979");
 	inst1: 		cstring = ("0-9 - ADJUST SPEED");
 	inst2: 		cstring = ("Q   - QUIT");
-	inst3:		cstring = ("PLEASE SWITCH TO 80 COLUMN SCREEN");
+	inst3:		cstring = ("SUPPORTS 40 AND 80 COL");
 	// PRESS ANY KEY
 	//promptmsg: cstring = (208, 210, 197, 211, 211, 32, 193, 206, 217, 32, 203, 197, 217);
 	promptmsg: cstring = ("PRESS ANY KEY");
-
+	
+	
+	// NOTES:
+	//	
+	// $D600 is VDC Address Register
+	// $D601 is VDC Data Register
+	// VDC Character Display area (screen) $0000-$07FF
+	// VDC Character Attributes (color) $0800-$0FFF
+	// VDC Character Definitions $2000-$3FFF
+	
+	
 //	Method to get a char from the keyboard buffer
 //	TRSE procedures return accumulator value
 procedure GetKey();
@@ -73,26 +111,8 @@ begin
 	end;
 end;
 
-// Debug up to 3 numeric vars
-procedure PrintXYZ( myX:signed byte, myY:signed byte, myZ:signed byte );
-begin
-	// Erase & print values
-	moveto(1, 5, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myX, 2);
-
-	moveto(1, 6, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myY, 2);
-
-	moveto(1, 7, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myZ, 2);
-end;
- 
 // Do timing delay 
 // @TODO: Find better way than delay loop
-// wait() doesn't seem to work on C128
 procedure DoDelay();
 begin
 	if( speed > 0 ) then
@@ -102,6 +122,23 @@ begin
 			wait(255);
 		end;
 	end;
+end;
+
+// Debug up to 3 numeric vars
+procedure PrintXYZ( myX:integer, myY:signed byte, myZ:signed byte );
+begin
+	// Erase & print values
+	moveto(1, 5, hi(SCREEN_CHAR_LOC));
+	PrintDecimal(0, 4);
+	PrintDecimal(myX, 4);
+
+	moveto(1, 6, hi(SCREEN_CHAR_LOC));
+	PrintDecimal(0, 2);
+	PrintDecimal(myY, 2);
+
+	moveto(1, 7, hi(SCREEN_CHAR_LOC));
+	PrintDecimal(0, 2);
+	PrintDecimal(myZ, 2);
 end;
 
 // Clear 80-col screen
@@ -115,96 +152,142 @@ begin
 		Fill80(myChar, 80); // space char
 	end;
 end;
-
+ 
 //	Method which shows title screen and checks screen width
 procedure ShowTitle();
 begin
+	// Set palette
+	cArrPtr := #cArr1;
+	cArrLen := length(cArr1);
+	
+	// Set uppercase
+	poke(^59468, 0, 12);
+
 	// Set 80-col screen
 	Go80Columns();
-
 	Clear80(32, 0);	// Init VDC screen mem
 	Clear80(3, 8);	// Init VDC color mem 
-
-	// Set uppercase
-	//poke(^59468, 0, 12);
 	
-	// Set background/border colors (40-col)
+	// Set background/border colors
 	poke(SCREEN_BG_COL, 0, BLACK);
 	poke(SCREEN_FG_COL, 0, BLACK);
 	
-	// Clear screen (40-col)
+	// Clear screen
 	clearscreen($20, SCREEN_CHAR_LOC);
-	// Set cyan color (40-col)
-	clearscreen(3, SCREEN_COL_LOC);	
 	
-
-	// Show message to switch to 80 columns on VIC screen
-	x1 := SCREEN_WIDTH / 2 - length(inst3) / 2;
-	MoveTo(x1, 8, hi(SCREEN_CHAR_LOC));
-   	PrintString(#inst3, 0, length(inst3));
+	// Set cyan color
+	clearscreen(3, SCREEN_COL_LOC);
 	
-	// VDC text matrix is at $0000
-	// VDC color matrix is at $0800
-
-	// Center the title text on VDC screen 
+	myscreenwidth := 40;
+	
+	// Center the title text
 	x1 := myscreenwidth / 2 - length(titlemsg) / 2;
-	// Fill color for string
-	MoveTo80(x1, 1, $08);
-	Fill80(13, length(titlemsg)); // yellow
-	// Display text	
-	MoveTo80(x1, 1, $00);
-	Print80(#titlemsg, length(titlemsg));
+	moveto(x1, 1, hi(SCREEN_CHAR_LOC));
+   	printString(titlemsg, 0, length(titlemsg));
 
 	// Center the author message
 	x1 := myscreenwidth / 2 - length(authormsg1) / 2;
+	moveto(x1, 3, hi(SCREEN_CHAR_LOC));
+   	printString(authormsg1, 0, length(authormsg1));
+
+	x1 := myscreenwidth / 2 - length(authormsg2) / 2;
+	moveto(x1, 6, hi(SCREEN_CHAR_LOC));
+   	printString(authormsg2, 0, length(authormsg2));
+
+	x1 := myscreenwidth / 2 - length(authormsg3) / 2;
+	moveto(x1, 8, hi(SCREEN_CHAR_LOC));
+   	printString(authormsg3, 0, length(authormsg3));
+
+	// Display Controls
+	x1 := 11;
+	moveto(x1, 12, hi(SCREEN_CHAR_LOC));
+    printString(inst1, 0, length(inst1));
+
+	moveto(x1, 14, hi(SCREEN_CHAR_LOC));
+    printString(inst2, 0, length(inst2));
+
+	// Show 40/80 message 
+	x1 := SCREEN_WIDTH / 2 - length(inst3) / 2;
+	MoveTo(x1, 18, hi(SCREEN_CHAR_LOC));
+   	PrintString(#inst3, 0, length(inst3));
+
+	// Center prompt to continue
+	// TRSE seems bugged at counting length of numeric strings
+	x1 := myscreenwidth / 2 - 13 / 2;
+	moveto(x1, 20, hi(SCREEN_CHAR_LOC));
+   	printString(promptmsg, 0, length(promptmsg));
+   	
+	// VDC text matrix is at $0000
+	// VDC color matrix is at $0800
+	myscreenwidth := 80;
+
+	// Center the title text on VDC screen 
+	x1 := myscreenwidth / 2 - length(titlemsg) / 2;
+	// Display text	
+	MoveTo80(x1, 1, $00);
+	Print80(#titlemsg, length(titlemsg));
 	// Fill color for string
-	MoveTo80(x1, 3, $08);
-	Fill80(5, length(authormsg1)); // green
+	MoveTo80(x1, 1, $08);
+	Fill80(13, length(titlemsg)); // yellow
+
+	// Center the author message
+	x1 := myscreenwidth / 2 - length(authormsg1) / 2;
 	// Display text	
 	MoveTo80(x1, 3, 0);
    	Print80(#authormsg1, length(authormsg1));
+	// Fill color for string
+	MoveTo80(x1, 3, $08);
+	Fill80(5, length(authormsg1)); // green
 
 	x1 := myscreenwidth / 2 - length(authormsg2) / 2;
-	// Fill color for string
-	MoveTo80(x1, 6, $08);
-	Fill80(7, length(authormsg2)); // cyan
 	// Display text	
 	MoveTo80(x1, 6, 0);
    	Print80(#authormsg2, length(authormsg2));
+	// Fill color for string
+	MoveTo80(x1, 6, $08);
+	Fill80(7, length(authormsg2)); // cyan
 
 	x1 := myscreenwidth / 2 - length(authormsg3) / 2;
-	// Fill color for string
-	MoveTo80(x1, 8, $08);
-	Fill80(7, length(authormsg3)); // cyan
 	// Display text	
 	MoveTo80(x1, 8, 0);
    	Print80(#authormsg3, length(authormsg3));
+	// Fill color for string
+	MoveTo80(x1, 8, $08);
+	Fill80(7, length(authormsg3)); // cyan
 
 	// Display Controls
 	x1 := 31;
-	// Fill color for string
-	MoveTo80(x1, 12, $08);
-	Fill80(15, length(inst1)); // white
 	// Display text	
 	MoveTo80(x1, 12, 0);
     Print80(#inst1, length(inst1));
-
 	// Fill color for string
-	MoveTo80(x1, 14, $08);
-	Fill80(15, length(inst2)); // white
+	MoveTo80(x1, 12, $08);
+	Fill80(15, length(inst1)); // white
+
 	// Display text	
 	MoveTo80(x1, 14, 0);
     Print80(#inst2, length(inst2));
+	// Fill color for string
+	MoveTo80(x1, 14, $08);
+	Fill80(15, length(inst2)); // white
+
+	// Center 40/80 message 
+	x1 := myscreenwidth / 2 - length(inst3) / 2;
+	MoveTo80(x1, 18, 0);
+   	Print80(#inst3, length(inst3));
+	// Fill color for string
+	MoveTo80(x1, 14, $08);
+	Fill80(15, length(inst2)); // white
 
 	// Center prompt to continue
 	x1 := myscreenwidth / 2 - length(promptmsg) / 2;
-	MoveTo80(x1, 24, $08);
-	//	Fill80(23, length(promptmsg)); // cyan blinking
-	//	Fill80(71, length(promptmsg)); // cyan reverse
-	Fill80(87, length(promptmsg)); // cyan blinking reverse
 	// Display text
 	MoveTo80(x1, 24, 0);
    	Print80(#promptmsg, length(promptmsg));
+	//	Fill80(23, length(promptmsg)); // cyan blinking
+	//	Fill80(71, length(promptmsg)); // cyan reverse
+	MoveTo80(x1, 24, $08);
+	Fill80(87, length(promptmsg)); // cyan blinking reverse
    	
 	WaitForKeypress();
 end;
@@ -215,14 +298,14 @@ begin
 	for i := 0 to num_chars do							// line 150
 	begin
 		// Populate char_arr 
-		char_start	:= char_start_st;
-		char_offset	:= char_offset_st;
+		char_start := char_start_st;
+		char_offset := char_offset_st;
 		
 		// Option for reverse chars
 		if( rev_enable = 1 ) then
 		begin
-			if( Random() > 127 ) then					// line 165
-				char_start := char_start + 128;			// line 165
+			if( Random() > 127 ) then				// line 165
+				char_start := char_start + 128;		// line 165
 		end;
 		
 		char_arr[i] := Random() & char_offset + char_start;
@@ -236,68 +319,57 @@ begin
 
 	// Q - Quit
 	if(key = 81) then begin
-		call(^65341); // Reboot
+		clearscreen($20, SCREEN_CHAR_LOC);
+		call(^65341);	// RESET
 	end;
 	
 	// 0-9 Adjust speed 
-	// NOTE: higher values of 'speed' are slower
-	if(key = 48) then speed := 18; // (slowest)
-	if(key = 49) then speed := 16;
-	if(key = 50) then speed := 14;
-	if(key = 51) then speed := 12;
-	if(key = 52) then speed := 10;
-	if(key = 53) then speed := 8;
-	if(key = 54) then speed := 6;
-	if(key = 55) then speed := 4;
-	if(key = 56) then speed := 2;
+	if(key = 48) then speed := 9; // (slowest)
+	if(key = 49) then speed := 8;
+	if(key = 50) then speed := 7;
+	if(key = 51) then speed := 6;
+	if(key = 52) then speed := 5;
+	if(key = 53) then speed := 4;
+	if(key = 54) then speed := 3;
+	if(key = 55) then speed := 2;
+	if(key = 56) then speed := 1;
 	if(key = 57) then speed := 0; // (fastest)
-	
-	//PrintXYZ(speed, key, 0);
-	//WaitForKeypress();
 end;
 
+// TRSE apparently doesn't allow poking pointer values from within a conditional
+// So as a workaround, this procedure executes the poke 
+procedure DoPoke(mypoint:pointer, myval:byte);
+begin
+	poke(mypoint, 0, myval);
+end;
 
 // Poke value into an address
 procedure PokeAddr(pokeaddr_x:byte, pokeaddr_y:byte, pokeaddr_v:byte);
 begin
-	if( pokeaddr_x > myscreenwidth -2) then return;
+	if( pokeaddr_x > myscreenwidth - 1 ) then return;
 	if( pokeaddr_x < 0) then return;
-	if( pokeaddr_y > myscreenheight ) then return;
+	if( pokeaddr_y > myscreenheight - 1 ) then return;
 	if( pokeaddr_y < 0) then return;
 
-	if( myscreenwidth = 40 ) then
-	begin
-		// VIC screen plot
-		
-		// Pointer value to screen RAM
-		//p := SCREEN_CHAR_LOC + SCREEN_WIDTH * pokeaddr_y + pokeaddr_x;
-		//poke(p, 0, pokeaddr_v);
-	
-		// Pointer value to color RAM
-		//p := SCREEN_COL_LOC + SCREEN_WIDTH * pokeaddr_y + pokeaddr_x;
-		//poke(p, 0, curr_color);
-	end else
-	begin
-		// VDC screen plot
-		
-		// $D600 is VDC Address Register
-		// $D601 is VDC Data Register
-		// VDC Character Display area (screen) $0000-$07FF
-		// VDC Character Attributes (color) $0800-$0FFF
-		// VDC Character Definitions $2000-$3FFF
-	
-		// Fill color for string
-		MoveTo80(pokeaddr_x, pokeaddr_y, $08);
-		Fill80(curr_color, 2);
-		
-		// Display text
-		MoveTo80(pokeaddr_x, pokeaddr_y, $00);
-		Fill80(pokeaddr_v, 2);
+	// VIC screen plot
 
-		// Debug
-		//PrintXYZ(pokeaddr_x, pokeaddr_y, pokeaddr_v);
-		//WaitForKeypress();
-	end;
+	// Pointer value to screen RAM
+	p := SCREEN_CHAR_LOC + 40 * pokeaddr_y + (pokeaddr_x / 2);
+	poke(p, 0, pokeaddr_v);
+
+	// Pointer value to color RAM
+	p := SCREEN_COL_LOC + 40 * pokeaddr_y + (pokeaddr_x / 2);
+	poke(p, 0, curr_color);
+
+ 	// VDC screen plot
+
+	// Fill color for string
+	MoveTo80(pokeaddr_x, pokeaddr_y, $08);
+	Fill80(curr_color, 2);
+	
+	// Display text
+	MoveTo80(pokeaddr_x, pokeaddr_y, $00);
+	Fill80(pokeaddr_v, 2);
 end;
 
 
@@ -306,10 +378,14 @@ end;
 //////////////////////////
 procedure Plot();
 begin
+	// Debug
+	//PrintXYZ(x2, y2, 0);
+	//WaitForKeypress();
+
 	// Call timing delay
 	DoDelay();
 
-	// Map points in the four indexes
+	// Map chars in the up/down/across indexes
 	PokeAddr(x1, y1, char_arr[0]);				// line 900
 
 	if( mainIndex = 1 ) then return;				// line 910
@@ -337,7 +413,7 @@ begin
 			// Fills left of vertical
 			PokeAddr(x2, y2, char_arr[plotIndex]);
 		end 
-		else if( y1 = centerY ) then				// line 950
+		else if( y1 = centerY ) then			// line 950
 		begin
 			x2 := x1;
 			y2 := y1 + plotIndex;
@@ -348,21 +424,21 @@ begin
 			PokeAddr(x2, y2, char_arr[plotIndex]);
 		end
 		else begin
-			y2 := y1;							// line 970
-			if( x1 < centerX ) then				// line 970
+			y2 := y1;						// line 970
+			if( x1 < centerX ) then			// line 970
 			begin
 				// Fills left side diagonal
 				x2 := x1 + plotIndex;
 				PokeAddr(x2, y2, char_arr[plotIndex]);
 			end else begin
 				// Fills right side diagonal
-				x2 := x1 - plotIndex;			// line 980
+				x2 := x1 - plotIndex;		// line 980
 				PokeAddr(x2, y2, char_arr[plotIndex]);
 			end;
 			
-			x2 := x1;							// line 990
+			x2 := x1;						// line 990
 			
-			if( y1 < centerY ) then				// line 990
+			if( y1 < centerY ) then			// line 990
 			begin
 				// Fills top corners
 				y2 := y1 + plotIndex;
@@ -370,12 +446,13 @@ begin
 			end
 			else begin
 				// Fills bottom corners
-				y2 := y1 - plotIndex;			// line 1000
+				y2 := y1 - plotIndex;		// line 1000
 				PokeAddr(x2, y2, char_arr[plotIndex]);
 			end;
 		end;
 	end; // for
-end;
+end;											// End Plot
+
 
 // Update the display
 procedure MainLoop();
@@ -383,10 +460,10 @@ begin
 	for mainIndex := start_pos to stop_pos step dir do	// line 200
 	begin		
 		// Update color
-		curr_color := Random() & 15;
-		// If black, pick another color..
-		while( curr_color = 0 ) do curr_color := Random() & 15;
-		
+		curr_color := cArrPtr[colorIdx];
+		colorIdx := colorIdx + 1;
+		if( colorIdx >= cArrLen ) then colorIdx := 0;
+	
 		// Map the data
 		// Right
 		x1 := centerX + mainIndex;			// line 210
@@ -427,13 +504,14 @@ end;
 // Various Pattern Mutations
 procedure DoMutations();
 begin
+	cycleCtr := cycleCtr + 1;
 	rando := Random();
-	
+
 	// Reverse direction (1/2 cycle)
 	dir			:= -dir;
 	temp			:= start_pos;
 	start_pos	:= stop_pos;
-	stop_pos		:= temp;	
+	stop_pos		:= temp;
 
 	// Mutations every full cycle
 	if( dir = 1 ) then
@@ -449,24 +527,15 @@ begin
 			num_chars := myscreenheight / 4;
 		end;
 
-		// 1 in 4 chance to change center point
+		// Randomly change center point
 		if( rando < 64 ) then
 		begin
-			temp := SCREEN_WIDTH / 5;
-			centerX := Random() & temp + (SCREEN_WIDTH - temp) / 2;
+			temp := myscreenwidth / 5;
+			centerX := Random() & temp + (myscreenwidth - temp) / 2;
 			centerY := Random() & 5 + 10;
-						
-			//centerX := Random();
-			//while( centerX < 15 or centerX > 65 ) do centerX := Random();
-			//centerY := Random();
-			//while( centerY < 6 or centerY > 18 ) do centerY := Random();
-		end;
-		
-		// 1 in 64 chance to clear screen
-		if( rando < 4 ) then
-		begin
+			
+			clearscreen($20, SCREEN_CHAR_LOC);
 			Clear80(32, 0);
-			//clearscreen($20, SCREEN_CHAR_LOC);
 		end;
 	end;
 
@@ -502,39 +571,60 @@ begin
 		// Toggle reverse chars
 		if( rev_enable = 1 ) then rev_enable := 0 
 		else rev_enable := 1;
-		
+
 		// Adjust pattern size		
 		dir := 1;	// Set pattern moving outward
 		start_pos := 1;
-		stop_pos := Random() & 12 + 8;
+		stop_pos := Random() & 8 + 12;
 	end;
 
-	// Debug
-	//PrintXYZ(temp, 0, 0);
-	//WaitForKeypress();
-	//call(^$fd49);	// Trigger NMI
-end;
-
+	// Update color palette	
+	if( cycleCtr >= 4 ) then
+	begin
+		rando := Random();
+		
+		if( rando < 51 ) then begin
+			cArrPtr := #cArr1;
+			cArrLen := length(cArr1);
+		end
+		else if( rando < 102 ) then begin
+			cArrPtr := #cArr2;
+			cArrLen := length(cArr2);	
+		end
+		else if (rando < 153 ) then begin
+			cArrPtr := #cArr3;
+			cArrLen := length(cArr3);
+		end
+		else if (rando < 204 ) then begin
+			cArrPtr := #cArr4;
+			cArrLen := length(cArr4);
+		end
+		else begin
+			cArrPtr := #cArr5;
+			cArrLen := length(cArr5);
+		end;
+		
+		cycleCtr := 0;
+		//clearscreen($20, SCREEN_CHAR_LOC);
+	end;	
+end;											// End DoMutations
 
 begin
 	// Show the title and check number of columns
 	ShowTitle();	
 
-	// Set 2 mhz mode
-	Set2MhzMode();
-	//poke(^53296, 0, 1);  	//	2Mhz (works in both 64 and 128 mode) POKE 53296,1
-	//poke(^53296, 0, 0);	//	1Mhz (works in both 64 and 128 mode) POKE 53296,0
-	
 	// Init char array	
 	InitData();
 
+	// Clear screen
+	clearscreen($20, SCREEN_CHAR_LOC);
 	Clear80(32, 0);	// Init VDC screen mem
 	Clear80(3, 8);	// Init VDC color mem 
 	
 	while (true) do begin
 		MainLoop();
 		
-		// Pattern mutations
+		// Do Pattern Mutations
 		DoMutations();
 		
 		// Get fresh array of chars

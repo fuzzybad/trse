@@ -17,22 +17,23 @@ Kaleido
 	jmp block1
 myscreenheight	dc.b	$18
 myscreenwidth	dc.b	$50
-centerX	dc.b	$28
-centerY	dc.b	$0c
+centerX	dc.b	$0c
+centerY	dc.b	$14
 start_pos	dc.b	$01
-stop_pos	dc.b	$0c
+stop_pos	dc.b	$14
 dir	dc.b	$01
 char_start	dc.b	0
 char_offset	dc.b	0
 char_start_st	dc.b	$40
 char_offset_st	dc.b	$3f
 num_chars	dc.b	$06
-speed	dc.b	$03
+speed	dc.b	$00
 rev_enable	dc.b	$00
 pattern_type	dc.b	$01
 curr_color	dc.b	$01
 char_arr	dc.b	 
 	org char_arr+20
+p	= $02
 plotIndex	dc.b	0
 plotIndexMax	dc.b	0
 mainIndex	dc.b	0
@@ -44,6 +45,16 @@ x1	dc.b	0
 y1	dc.b	0
 x2	dc.b	0
 y2	dc.b	0
+cArr1	dc.b $01, $0f, $0c, $0b, $0b, $0c, $0f, $01
+cArr2	dc.b $05, $0d, $01, $0d, $05
+cArr3	dc.b $01, $03, $0e, $06, $0e, $03, $01
+cArr4	dc.b $07, $08, $02, $0a, $02, $08, $07
+cArr5	dc.b $02, $08, $07, $05, $06, $04, $06, $05
+	dc.b $07, $08, $02
+colorIdx	dc.b	$00
+cArrPtr	= $04
+cArrLen	dc.b	$00
+cycleCtr	dc.b	$00
 key	dc.b	0
 titlemsg	
 	dc.b	$0b, $01, $0c, $05, $09, $04, $0f, $13, $03
@@ -69,10 +80,9 @@ inst2
 	dc.b	$11, $20, $20, $20, $2d, $20, $11, $15, $09
 	dc.b	$14, 0
 inst3	
-	dc.b	$10, $0c, $05, $01, $13, $05, $20, $13, $17
-	dc.b	$09, $14, $03, $08, $20, $14, $0f, $20, $38
-	dc.b	$30, $20, $03, $0f, $0c, $15, $0d, $0e, $20
-	dc.b	$13, $03, $12, $05, $05, $0e, 0
+	dc.b	$13, $15, $10, $10, $0f, $12, $14, $13, $20
+	dc.b	$34, $30, $20, $01, $0e, $04, $20, $38, $30
+	dc.b	$20, $03, $0f, $0c, 0
 promptmsg	
 	dc.b	$10, $12, $05, $13, $13, $20, $01, $0e, $19
 	dc.b	$20, $0b, $05, $19, 0
@@ -108,6 +118,33 @@ skip16
 	bne divloop16
 	rts
 	; NodeProcedureDecl -1
+	; ***********  Defining procedure : init16x8mul
+	;    Procedure type : Built-in function
+	;    Requires initialization : no
+mul16x8_num1Hi = $4c
+mul16x8_num1 = $4e
+mul16x8_num2 = $50
+mul16x8_procedure
+	lda #$00
+	ldy #$00
+	beq mul16x8_enterLoop
+mul16x8_doAdd
+	clc
+	adc mul16x8_num1
+	tax
+	tya
+	adc mul16x8_num1Hi
+	tay
+	txa
+mul16x8_loop
+	asl mul16x8_num1
+	rol mul16x8_num1Hi
+mul16x8_enterLoop
+	lsr mul16x8_num2
+	bcs mul16x8_doAdd
+	bne mul16x8_loop
+	rts
+	; NodeProcedureDecl -1
 	; ***********  Defining procedure : init8x8div
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
@@ -131,6 +168,37 @@ div8x8_loop2
 	rol div8x8_d
 	lda div8x8_d
 div8x8_def_end
+	rts
+	; NodeProcedureDecl -1
+	; ***********  Defining procedure : initeightbitmul
+	;    Procedure type : Built-in function
+	;    Requires initialization : no
+multiplier = $4c
+multiplier_a = $4e
+multiply_eightbit
+	cpx #$00
+	beq mul_end
+	dex
+	stx $4e
+	lsr
+	sta multiplier
+	lda #$00
+	ldx #$08
+mul_loop
+	bcc mul_skip
+mul_mod
+	adc multiplier_a
+mul_skip
+	ror
+	ror multiplier
+	dex
+	bne mul_loop
+	ldx multiplier
+	rts
+mul_end
+	txa
+	rts
+initeightbitmul_multiply_eightbit2
 	rts
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initgetkey
@@ -221,7 +289,7 @@ key_cont:
 	; ***********  Defining procedure : initmoveto
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
-	jmp initmoveto_moveto2
+	jmp initmoveto_moveto3
 screenmemory =  $fe
 colormemory =  $fb
 screen_x = $4c
@@ -250,13 +318,13 @@ sydone
 sxdone
 	sta screenmemory
 	rts
-initmoveto_moveto2
+initmoveto_moveto3
 	rts
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : initmoveto80
 	;    Procedure type : Built-in function
 	;    Requires initialization : no
-	jmp initmoveto80_moveto803
+	jmp initmoveto80_moveto804
 screenmemory80 =  $fe
 screen_x_80 .byte 0 
 screen_y_80 .byte 0 
@@ -286,19 +354,19 @@ sydone80
 	inc screenmemory80+1
 sxdone80
 	sta screenmemory80
-initmoveto80_moveto803
+initmoveto80_moveto804
 	lda #18
 	sta $D600
-initmoveto80_a_moveto804
+initmoveto80_a_moveto805
 	bit $D600
-	bpl initmoveto80_a_moveto804
+	bpl initmoveto80_a_moveto805
 	lda screenmemory80+1
 	sta $D601
 	lda #19
 	sta $D600
-initmoveto80_b_moveto805
+initmoveto80_b_moveto806
 	bit $D600
-	bpl initmoveto80_b_moveto805
+	bpl initmoveto80_b_moveto806
 	lda screenmemory80
 	sta $D601
 	rts
@@ -357,17 +425,49 @@ printstring_done
 Random
 	lda #$01
 	asl
-	bcc initrandom256_RandomSkip6
+	bcc initrandom256_RandomSkip7
 	eor #$4d
-initrandom256_RandomSkip6
+initrandom256_RandomSkip7
 	eor $dc04
 	sta Random+1
 	rts
 	
+; // Color arrays
+; // Grays
+; // Greens
+; // Cool colors
+; // Warm colors
+; // Rainbow
+; //cArr5			: array[] of byte =(14, 10, 1, 10, 14); 
+; // Trans rights	
+; //	0	$00	black
+; //	1	$01	white
+; //	2	$02	red
+; //	3	$03	cyan
+; //	4	$04	purple
+; //	5	$05	green
+; //	6	$06	blue
+; //	7	$07	yellow
+; //	8	$08	orange
+; //	9	$09	brown
+; //	10	$0A	pink
+; //	11	$0B	dark grey
+; //	12	$0C	grey
+; //	13	$0D	light green
+; //	14	$0E	light blue
+; //	15	$0F	light grey
+; //
 ; // Used for keyboard input
 ; // Text for splash screen  	
 ; // PRESS ANY KEY
 ; //promptmsg: cstring =(208, 210, 197, 211, 211, 32, 193, 206, 217, 32, 203, 197, 217);
+; // NOTES:
+; //	
+; // $D600 is VDC Address Register
+; // $D601 is VDC Data Register
+; // VDC Character Display area(screen) $0000-$07FF
+; // VDC Character Attributes(color) $0800-$0FFF
+; // VDC Character Definitions $2000-$3FFF
 ; //	Method to get a char from the keyboard buffer
 ; //	TRSE procedures return accumulator value
 	; NodeProcedureDecl -1
@@ -388,26 +488,24 @@ WaitForKeypress
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta temp
-WaitForKeypress_while9
-WaitForKeypress_loopstart13
+WaitForKeypress_while10
+WaitForKeypress_loopstart14
 	; Binary clause Simplified: EQUALS
 	lda temp
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	; Signed compare
-	bne WaitForKeypress_elsedoneblock12
-WaitForKeypress_ConditionalTrueBlock10: ;Main true block ;keep 
+	bne WaitForKeypress_elsedoneblock13
+WaitForKeypress_ConditionalTrueBlock11: ;Main true block ;keep 
 	jsr GetKey
 	; Calling storevariable on generic assign expression
 	sta temp
-	jmp WaitForKeypress_while9
-WaitForKeypress_elsedoneblock12
-WaitForKeypress_loopend14
+	jmp WaitForKeypress_while10
+WaitForKeypress_elsedoneblock13
+WaitForKeypress_loopend15
 	rts
 	
 ; // Do timing delay 
 ; // @TODO: Find better way than delay loop
-; // wait() doesn't seem to work on C128
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : DoDelay
 	;    Procedure type : User-defined procedure
@@ -417,28 +515,28 @@ DoDelay
 	lda speed
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bcc DoDelay_elsedoneblock21
-DoDelay_ConditionalTrueBlock19: ;Main true block ;keep 
+	bcc DoDelay_elsedoneblock22
+DoDelay_ConditionalTrueBlock20: ;Main true block ;keep 
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta i
-DoDelay_forloop32
+DoDelay_forloop33
 	; Wait
 	ldx #$ff ; optimized, look out for bugs
 	dex
 	bne *-1
-DoDelay_forloopcounter34
-DoDelay_loopstart35
+DoDelay_forloopcounter35
+DoDelay_loopstart36
 	; Compare is onpage
 	; Test Inc dec D
 	inc i
 	lda speed
 	cmp i ;keep
-	bne DoDelay_forloop32
-DoDelay_loopdone39: ;keep
-DoDelay_forloopend33
-DoDelay_loopend36
-DoDelay_elsedoneblock21
+	bne DoDelay_forloop33
+DoDelay_loopdone40: ;keep
+DoDelay_forloopend34
+DoDelay_loopend37
+DoDelay_elsedoneblock22
 	rts
 	
 ; // Clear 80-col screen
@@ -451,14 +549,14 @@ DoDelay_elsedoneblock21
 	;    Procedure type : User-defined procedure
 myChar	dc.b	0
 myLoc	dc.w	0
-Clear80_block40
+Clear80_block41
 Clear80
 	
 ; // space char
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta i
-Clear80_forloop41
+Clear80_forloop42
 	lda #$0
 	sta screen_x_80
 	lda i
@@ -472,26 +570,26 @@ Clear80_forloop41
 	ldx #$50 ; optimized, look out for bugs
 	lda #31
 	sta $D600
-Clear80_fill80_text50
+Clear80_fill80_text51
 	bit $D600
-	bpl Clear80_fill80_text50
+	bpl Clear80_fill80_text51
 	sty $D601
 	dex
-Clear80_fill80_loop51
+Clear80_fill80_loop52
 	sty $D601
 	dex
-	bne Clear80_fill80_loop51
-Clear80_forloopcounter43
-Clear80_loopstart44
+	bne Clear80_fill80_loop52
+Clear80_forloopcounter44
+Clear80_loopstart45
 	; Compare is onpage
 	; Test Inc dec D
 	inc i
 	lda #$19
 	cmp i ;keep
-	bne Clear80_forloop41
-Clear80_loopdone52: ;keep
-Clear80_forloopend42
-Clear80_loopend45
+	bne Clear80_forloop42
+Clear80_loopdone53: ;keep
+Clear80_forloopend43
+Clear80_loopend46
 	rts
 	
 ; //	Method which shows title screen and checks screen width
@@ -499,6 +597,21 @@ Clear80_loopend45
 	; ***********  Defining procedure : ShowTitle
 	;    Procedure type : User-defined procedure
 ShowTitle
+	
+; // Set palette
+	lda #<cArr1
+	ldx #>cArr1
+	sta cArrPtr
+	stx cArrPtr+1
+	lda #$8
+	; Calling storevariable on generic assign expression
+	sta cArrLen
+	
+; // Set uppercase
+	; Poke
+	; Optimization: shift is zero
+	lda #$c
+	sta $e84c
 	
 ; // Set 80-col screen
 	; Go 80 columns
@@ -526,9 +639,7 @@ ShowTitle
 	jsr Clear80
 	
 ; // Init VDC color mem 
-; // Set uppercase
-; //poke(^59468, 0, 12);
-; // Set background/border colors(40-col)
+; // Set background/border colors
 	; Poke
 	; Optimization: shift is zero
 	lda #$0
@@ -537,115 +648,91 @@ ShowTitle
 	; Optimization: shift is zero
 	sta $d021
 	
-; // Clear screen(40-col)
+; // Clear screen
 	; Clear screen with offset
 	lda #$20
 	ldx #$fa
-ShowTitle_clearloop54
+ShowTitle_clearloop55
 	dex
 	sta $0000+$400,x
 	sta $00fa+$400,x
 	sta $01f4+$400,x
 	sta $02ee+$400,x
-	bne ShowTitle_clearloop54
+	bne ShowTitle_clearloop55
 	
-; // Set cyan color(40-col)
+; // Set cyan color
 	; Clear screen with offset
 	lda #$3
 	ldx #$fa
-ShowTitle_clearloop55
+ShowTitle_clearloop56
 	dex
 	sta $0000+$d800,x
 	sta $00fa+$d800,x
 	sta $01f4+$d800,x
 	sta $02ee+$d800,x
-	bne ShowTitle_clearloop55
-	
-; // Show message to switch to 80 columns on VIC screen
-	lda #$4
+	bne ShowTitle_clearloop56
+	lda #$28
 	; Calling storevariable on generic assign expression
-	sta x1
-	sta screen_x
-	lda #$8
-	sta screen_y
-	lda #>$400
-	jsr SetScreenPosition
-	clc
-	lda #<inst3
-	adc #$0
-	ldy #>inst3
-	sta print_text+0
-	sty print_text+1
-	ldx #$21 ; optimized, look out for bugs
-	jsr printstring
+	sta myscreenwidth
 	
-; // VDC text matrix is at $0000
-; // VDC color matrix is at $0800
-; // Center the title text on VDC screen 
+; // Center the title text
 	; 8 bit binop
 	; Add/sub right value is variable/expression
 	lda #6
-ShowTitle_rightvarAddSub_var58 = $54
-	sta ShowTitle_rightvarAddSub_var58
+ShowTitle_rightvarAddSub_var57 = $54
+	sta ShowTitle_rightvarAddSub_var57
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
 	lda myscreenwidth
 	lsr
 	sec
-	sbc ShowTitle_rightvarAddSub_var58
+	sbc ShowTitle_rightvarAddSub_var57
 	; Calling storevariable on generic assign expression
 	sta x1
-	
-; // Fill color for string
-	sta screen_x_80
+	sta screen_x
 	lda #$1
-	sta screen_y_80
-	lda #$8
-	jsr SetScreenPosition80
-	; Fill80
-	ldy #$d ; optimized, look out for bugs
+	sta screen_y
+	lda #>$400
+	jsr SetScreenPosition
+	clc
+	lda #<titlemsg
+	adc #$0
+	ldy #>titlemsg
+	sta print_text+0
+	sty print_text+1
 	ldx #$d ; optimized, look out for bugs
-	lda #31
-	sta $D600
-ShowTitle_fill80_text59
-	bit $D600
-	bpl ShowTitle_fill80_text59
-	sty $D601
-	dex
-ShowTitle_fill80_loop60
-	sty $D601
-	dex
-	bne ShowTitle_fill80_loop60
-	
-; // yellow
-; // Display text	
-	lda x1
-	sta screen_x_80
-	lda #$1
-	sta screen_y_80
-	lda #$0
-	jsr SetScreenPosition80
-	; Print80
-	ldx #0
-	ldy #31
-	sty $D600
-ShowTitle_print80_text61
-	bit $D600
-	bpl ShowTitle_print80_text61
-	lda titlemsg,x
-	sta $D601
-	inx
-ShowTitle_print80_loop62
-	lda titlemsg,x
-	sta $D601
-	inx
-	cpx #$d
-	bne ShowTitle_print80_loop62
+	jsr printstring
 	
 ; // Center the author message
 	; 8 bit binop
 	; Add/sub right value is variable/expression
 	lda #16
+ShowTitle_rightvarAddSub_var60 = $54
+	sta ShowTitle_rightvarAddSub_var60
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc ShowTitle_rightvarAddSub_var60
+	; Calling storevariable on generic assign expression
+	sta x1
+	sta screen_x
+	lda #$3
+	sta screen_y
+	lda #>$400
+	jsr SetScreenPosition
+	clc
+	lda #<authormsg1
+	adc #$0
+	ldy #>authormsg1
+	sta print_text+0
+	sty print_text+1
+	ldx #$21 ; optimized, look out for bugs
+	jsr printstring
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #9
 ShowTitle_rightvarAddSub_var63 = $54
 	sta ShowTitle_rightvarAddSub_var63
 	; Right is PURE NUMERIC : Is word =0
@@ -656,8 +743,232 @@ ShowTitle_rightvarAddSub_var63 = $54
 	sbc ShowTitle_rightvarAddSub_var63
 	; Calling storevariable on generic assign expression
 	sta x1
+	sta screen_x
+	lda #$6
+	sta screen_y
+	lda #>$400
+	jsr SetScreenPosition
+	clc
+	lda #<authormsg2
+	adc #$0
+	ldy #>authormsg2
+	sta print_text+0
+	sty print_text+1
+	ldx #$13 ; optimized, look out for bugs
+	jsr printstring
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #11
+ShowTitle_rightvarAddSub_var66 = $54
+	sta ShowTitle_rightvarAddSub_var66
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc ShowTitle_rightvarAddSub_var66
+	; Calling storevariable on generic assign expression
+	sta x1
+	sta screen_x
+	lda #$8
+	sta screen_y
+	lda #>$400
+	jsr SetScreenPosition
+	clc
+	lda #<authormsg3
+	adc #$0
+	ldy #>authormsg3
+	sta print_text+0
+	sty print_text+1
+	ldx #$16 ; optimized, look out for bugs
+	jsr printstring
+	
+; // Display Controls
+	lda #$b
+	; Calling storevariable on generic assign expression
+	sta x1
+	sta screen_x
+	lda #$c
+	sta screen_y
+	lda #>$400
+	jsr SetScreenPosition
+	clc
+	lda #<inst1
+	adc #$0
+	ldy #>inst1
+	sta print_text+0
+	sty print_text+1
+	ldx #$12 ; optimized, look out for bugs
+	jsr printstring
+	lda x1
+	sta screen_x
+	lda #$e
+	sta screen_y
+	lda #>$400
+	jsr SetScreenPosition
+	clc
+	lda #<inst2
+	adc #$0
+	ldy #>inst2
+	sta print_text+0
+	sty print_text+1
+	ldx #$a ; optimized, look out for bugs
+	jsr printstring
+	
+; // Show 40/80 message 
+	lda #$9
+	; Calling storevariable on generic assign expression
+	sta x1
+	sta screen_x
+	lda #$12
+	sta screen_y
+	lda #>$400
+	jsr SetScreenPosition
+	clc
+	lda #<inst3
+	adc #$0
+	ldy #>inst3
+	sta print_text+0
+	sty print_text+1
+	ldx #$16 ; optimized, look out for bugs
+	jsr printstring
+	
+; // Center prompt to continue
+; // TRSE seems bugged at counting length of numeric strings
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #6
+ShowTitle_rightvarAddSub_var75 = $54
+	sta ShowTitle_rightvarAddSub_var75
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc ShowTitle_rightvarAddSub_var75
+	; Calling storevariable on generic assign expression
+	sta x1
+	sta screen_x
+	lda #$14
+	sta screen_y
+	lda #>$400
+	jsr SetScreenPosition
+	clc
+	lda #<promptmsg
+	adc #$0
+	ldy #>promptmsg
+	sta print_text+0
+	sty print_text+1
+	ldx #$d ; optimized, look out for bugs
+	jsr printstring
+	
+; // VDC text matrix is at $0000
+; // VDC color matrix is at $0800
+	lda #$50
+	; Calling storevariable on generic assign expression
+	sta myscreenwidth
+	
+; // Center the title text on VDC screen 
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #6
+ShowTitle_rightvarAddSub_var78 = $54
+	sta ShowTitle_rightvarAddSub_var78
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc ShowTitle_rightvarAddSub_var78
+	; Calling storevariable on generic assign expression
+	sta x1
+	
+; // Display text	
+	sta screen_x_80
+	lda #$1
+	sta screen_y_80
+	lda #$0
+	jsr SetScreenPosition80
+	; Print80
+	ldx #0
+	ldy #31
+	sty $D600
+ShowTitle_print80_text79
+	bit $D600
+	bpl ShowTitle_print80_text79
+	lda titlemsg,x
+	sta $D601
+	inx
+ShowTitle_print80_loop80
+	lda titlemsg,x
+	sta $D601
+	inx
+	cpx #$d
+	bne ShowTitle_print80_loop80
 	
 ; // Fill color for string
+	lda x1
+	sta screen_x_80
+	lda #$1
+	sta screen_y_80
+	lda #$8
+	jsr SetScreenPosition80
+	; Fill80
+	ldy #$d ; optimized, look out for bugs
+	ldx #$d ; optimized, look out for bugs
+	lda #31
+	sta $D600
+ShowTitle_fill80_text81
+	bit $D600
+	bpl ShowTitle_fill80_text81
+	sty $D601
+	dex
+ShowTitle_fill80_loop82
+	sty $D601
+	dex
+	bne ShowTitle_fill80_loop82
+	
+; // yellow
+; // Center the author message
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #16
+ShowTitle_rightvarAddSub_var83 = $54
+	sta ShowTitle_rightvarAddSub_var83
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc ShowTitle_rightvarAddSub_var83
+	; Calling storevariable on generic assign expression
+	sta x1
+	
+; // Display text	
+	sta screen_x_80
+	lda #$3
+	sta screen_y_80
+	lda #$0
+	jsr SetScreenPosition80
+	; Print80
+	ldx #0
+	ldy #31
+	sty $D600
+ShowTitle_print80_text84
+	bit $D600
+	bpl ShowTitle_print80_text84
+	lda authormsg1,x
+	sta $D601
+	inx
+ShowTitle_print80_loop85
+	lda authormsg1,x
+	sta $D601
+	inx
+	cpx #$21
+	bne ShowTitle_print80_loop85
+	
+; // Fill color for string
+	lda x1
 	sta screen_x_80
 	lda #$3
 	sta screen_y_80
@@ -668,21 +979,34 @@ ShowTitle_rightvarAddSub_var63 = $54
 	ldx #$21 ; optimized, look out for bugs
 	lda #31
 	sta $D600
-ShowTitle_fill80_text64
+ShowTitle_fill80_text86
 	bit $D600
-	bpl ShowTitle_fill80_text64
+	bpl ShowTitle_fill80_text86
 	sty $D601
 	dex
-ShowTitle_fill80_loop65
+ShowTitle_fill80_loop87
 	sty $D601
 	dex
-	bne ShowTitle_fill80_loop65
+	bne ShowTitle_fill80_loop87
 	
 ; // green
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #9
+ShowTitle_rightvarAddSub_var88 = $54
+	sta ShowTitle_rightvarAddSub_var88
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc ShowTitle_rightvarAddSub_var88
+	; Calling storevariable on generic assign expression
+	sta x1
+	
 ; // Display text	
-	lda x1
 	sta screen_x_80
-	lda #$3
+	lda #$6
 	sta screen_y_80
 	lda #$0
 	jsr SetScreenPosition80
@@ -690,33 +1014,21 @@ ShowTitle_fill80_loop65
 	ldx #0
 	ldy #31
 	sty $D600
-ShowTitle_print80_text66
+ShowTitle_print80_text89
 	bit $D600
-	bpl ShowTitle_print80_text66
-	lda authormsg1,x
+	bpl ShowTitle_print80_text89
+	lda authormsg2,x
 	sta $D601
 	inx
-ShowTitle_print80_loop67
-	lda authormsg1,x
+ShowTitle_print80_loop90
+	lda authormsg2,x
 	sta $D601
 	inx
-	cpx #$21
-	bne ShowTitle_print80_loop67
-	; 8 bit binop
-	; Add/sub right value is variable/expression
-	lda #9
-ShowTitle_rightvarAddSub_var68 = $54
-	sta ShowTitle_rightvarAddSub_var68
-	; Right is PURE NUMERIC : Is word =0
-	; 8 bit mul of power 2
-	lda myscreenwidth
-	lsr
-	sec
-	sbc ShowTitle_rightvarAddSub_var68
-	; Calling storevariable on generic assign expression
-	sta x1
+	cpx #$13
+	bne ShowTitle_print80_loop90
 	
 ; // Fill color for string
+	lda x1
 	sta screen_x_80
 	lda #$6
 	sta screen_y_80
@@ -727,21 +1039,34 @@ ShowTitle_rightvarAddSub_var68 = $54
 	ldx #$13 ; optimized, look out for bugs
 	lda #31
 	sta $D600
-ShowTitle_fill80_text69
+ShowTitle_fill80_text91
 	bit $D600
-	bpl ShowTitle_fill80_text69
+	bpl ShowTitle_fill80_text91
 	sty $D601
 	dex
-ShowTitle_fill80_loop70
+ShowTitle_fill80_loop92
 	sty $D601
 	dex
-	bne ShowTitle_fill80_loop70
+	bne ShowTitle_fill80_loop92
 	
 ; // cyan
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #11
+ShowTitle_rightvarAddSub_var93 = $54
+	sta ShowTitle_rightvarAddSub_var93
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc ShowTitle_rightvarAddSub_var93
+	; Calling storevariable on generic assign expression
+	sta x1
+	
 ; // Display text	
-	lda x1
 	sta screen_x_80
-	lda #$6
+	lda #$8
 	sta screen_y_80
 	lda #$0
 	jsr SetScreenPosition80
@@ -749,33 +1074,21 @@ ShowTitle_fill80_loop70
 	ldx #0
 	ldy #31
 	sty $D600
-ShowTitle_print80_text71
+ShowTitle_print80_text94
 	bit $D600
-	bpl ShowTitle_print80_text71
-	lda authormsg2,x
+	bpl ShowTitle_print80_text94
+	lda authormsg3,x
 	sta $D601
 	inx
-ShowTitle_print80_loop72
-	lda authormsg2,x
+ShowTitle_print80_loop95
+	lda authormsg3,x
 	sta $D601
 	inx
-	cpx #$13
-	bne ShowTitle_print80_loop72
-	; 8 bit binop
-	; Add/sub right value is variable/expression
-	lda #11
-ShowTitle_rightvarAddSub_var73 = $54
-	sta ShowTitle_rightvarAddSub_var73
-	; Right is PURE NUMERIC : Is word =0
-	; 8 bit mul of power 2
-	lda myscreenwidth
-	lsr
-	sec
-	sbc ShowTitle_rightvarAddSub_var73
-	; Calling storevariable on generic assign expression
-	sta x1
+	cpx #$16
+	bne ShowTitle_print80_loop95
 	
 ; // Fill color for string
+	lda x1
 	sta screen_x_80
 	lda #$8
 	sta screen_y_80
@@ -785,21 +1098,25 @@ ShowTitle_rightvarAddSub_var73 = $54
 	ldx #$16 ; optimized, look out for bugs
 	lda #31
 	sta $D600
-ShowTitle_fill80_text74
+ShowTitle_fill80_text96
 	bit $D600
-	bpl ShowTitle_fill80_text74
+	bpl ShowTitle_fill80_text96
 	sty $D601
 	dex
-ShowTitle_fill80_loop75
+ShowTitle_fill80_loop97
 	sty $D601
 	dex
-	bne ShowTitle_fill80_loop75
+	bne ShowTitle_fill80_loop97
 	
 ; // cyan
+; // Display Controls
+	lda #$1f
+	; Calling storevariable on generic assign expression
+	sta x1
+	
 ; // Display text	
-	lda x1
 	sta screen_x_80
-	lda #$8
+	lda #$c
 	sta screen_y_80
 	lda #$0
 	jsr SetScreenPosition80
@@ -807,25 +1124,21 @@ ShowTitle_fill80_loop75
 	ldx #0
 	ldy #31
 	sty $D600
-ShowTitle_print80_text76
+ShowTitle_print80_text98
 	bit $D600
-	bpl ShowTitle_print80_text76
-	lda authormsg3,x
+	bpl ShowTitle_print80_text98
+	lda inst1,x
 	sta $D601
 	inx
-ShowTitle_print80_loop77
-	lda authormsg3,x
+ShowTitle_print80_loop99
+	lda inst1,x
 	sta $D601
 	inx
-	cpx #$16
-	bne ShowTitle_print80_loop77
-	
-; // Display Controls
-	lda #$1f
-	; Calling storevariable on generic assign expression
-	sta x1
+	cpx #$12
+	bne ShowTitle_print80_loop99
 	
 ; // Fill color for string
+	lda x1
 	sta screen_x_80
 	lda #$c
 	sta screen_y_80
@@ -836,21 +1149,21 @@ ShowTitle_print80_loop77
 	ldx #$12 ; optimized, look out for bugs
 	lda #31
 	sta $D600
-ShowTitle_fill80_text78
+ShowTitle_fill80_text100
 	bit $D600
-	bpl ShowTitle_fill80_text78
+	bpl ShowTitle_fill80_text100
 	sty $D601
 	dex
-ShowTitle_fill80_loop79
+ShowTitle_fill80_loop101
 	sty $D601
 	dex
-	bne ShowTitle_fill80_loop79
+	bne ShowTitle_fill80_loop101
 	
 ; // white
 ; // Display text	
 	lda x1
 	sta screen_x_80
-	lda #$c
+	lda #$e
 	sta screen_y_80
 	lda #$0
 	jsr SetScreenPosition80
@@ -858,18 +1171,18 @@ ShowTitle_fill80_loop79
 	ldx #0
 	ldy #31
 	sty $D600
-ShowTitle_print80_text80
+ShowTitle_print80_text102
 	bit $D600
-	bpl ShowTitle_print80_text80
-	lda inst1,x
+	bpl ShowTitle_print80_text102
+	lda inst2,x
 	sta $D601
 	inx
-ShowTitle_print80_loop81
-	lda inst1,x
+ShowTitle_print80_loop103
+	lda inst2,x
 	sta $D601
 	inx
-	cpx #$12
-	bne ShowTitle_print80_loop81
+	cpx #$a
+	bne ShowTitle_print80_loop103
 	
 ; // Fill color for string
 	lda x1
@@ -883,83 +1196,92 @@ ShowTitle_print80_loop81
 	ldx #$a ; optimized, look out for bugs
 	lda #31
 	sta $D600
-ShowTitle_fill80_text82
+ShowTitle_fill80_text104
 	bit $D600
-	bpl ShowTitle_fill80_text82
+	bpl ShowTitle_fill80_text104
 	sty $D601
 	dex
-ShowTitle_fill80_loop83
+ShowTitle_fill80_loop105
 	sty $D601
 	dex
-	bne ShowTitle_fill80_loop83
+	bne ShowTitle_fill80_loop105
 	
 ; // white
-; // Display text	
-	lda x1
-	sta screen_x_80
-	lda #$e
-	sta screen_y_80
-	lda #$0
-	jsr SetScreenPosition80
-	; Print80
-	ldx #0
-	ldy #31
-	sty $D600
-ShowTitle_print80_text84
-	bit $D600
-	bpl ShowTitle_print80_text84
-	lda inst2,x
-	sta $D601
-	inx
-ShowTitle_print80_loop85
-	lda inst2,x
-	sta $D601
-	inx
-	cpx #$a
-	bne ShowTitle_print80_loop85
-	
-; // Center prompt to continue
+; // Center 40/80 message 
 	; 8 bit binop
 	; Add/sub right value is variable/expression
-	lda #6
-ShowTitle_rightvarAddSub_var86 = $54
-	sta ShowTitle_rightvarAddSub_var86
+	lda #11
+ShowTitle_rightvarAddSub_var106 = $54
+	sta ShowTitle_rightvarAddSub_var106
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
 	lda myscreenwidth
 	lsr
 	sec
-	sbc ShowTitle_rightvarAddSub_var86
+	sbc ShowTitle_rightvarAddSub_var106
 	; Calling storevariable on generic assign expression
 	sta x1
 	sta screen_x_80
-	lda #$18
+	lda #$12
+	sta screen_y_80
+	lda #$0
+	jsr SetScreenPosition80
+	; Print80
+	ldx #0
+	ldy #31
+	sty $D600
+ShowTitle_print80_text107
+	bit $D600
+	bpl ShowTitle_print80_text107
+	lda inst3,x
+	sta $D601
+	inx
+ShowTitle_print80_loop108
+	lda inst3,x
+	sta $D601
+	inx
+	cpx #$16
+	bne ShowTitle_print80_loop108
+	
+; // Fill color for string
+	lda x1
+	sta screen_x_80
+	lda #$e
 	sta screen_y_80
 	lda #$8
 	jsr SetScreenPosition80
-	
-; //	Fill80(23, length(promptmsg)); 
-; // cyan blinking
-; //	Fill80(71, length(promptmsg)); 
-; // cyan reverse
 	; Fill80
-	ldy #$57 ; optimized, look out for bugs
-	ldx #$d ; optimized, look out for bugs
+	ldy #$f ; optimized, look out for bugs
+	ldx #$a ; optimized, look out for bugs
 	lda #31
 	sta $D600
-ShowTitle_fill80_text87
+ShowTitle_fill80_text109
 	bit $D600
-	bpl ShowTitle_fill80_text87
+	bpl ShowTitle_fill80_text109
 	sty $D601
 	dex
-ShowTitle_fill80_loop88
+ShowTitle_fill80_loop110
 	sty $D601
 	dex
-	bne ShowTitle_fill80_loop88
+	bne ShowTitle_fill80_loop110
 	
-; // cyan blinking reverse
+; // white
+; // Center prompt to continue
+	; 8 bit binop
+	; Add/sub right value is variable/expression
+	lda #6
+ShowTitle_rightvarAddSub_var111 = $54
+	sta ShowTitle_rightvarAddSub_var111
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit mul of power 2
+	lda myscreenwidth
+	lsr
+	sec
+	sbc ShowTitle_rightvarAddSub_var111
+	; Calling storevariable on generic assign expression
+	sta x1
+	
 ; // Display text
-	lda x1
 	sta screen_x_80
 	lda #$18
 	sta screen_y_80
@@ -969,18 +1291,45 @@ ShowTitle_fill80_loop88
 	ldx #0
 	ldy #31
 	sty $D600
-ShowTitle_print80_text89
+ShowTitle_print80_text112
 	bit $D600
-	bpl ShowTitle_print80_text89
+	bpl ShowTitle_print80_text112
 	lda promptmsg,x
 	sta $D601
 	inx
-ShowTitle_print80_loop90
+ShowTitle_print80_loop113
 	lda promptmsg,x
 	sta $D601
 	inx
 	cpx #$d
-	bne ShowTitle_print80_loop90
+	bne ShowTitle_print80_loop113
+	
+; //	Fill80(23, length(promptmsg)); 
+; // cyan blinking
+; //	Fill80(71, length(promptmsg)); 
+; // cyan reverse
+	lda x1
+	sta screen_x_80
+	lda #$18
+	sta screen_y_80
+	lda #$8
+	jsr SetScreenPosition80
+	; Fill80
+	ldy #$57 ; optimized, look out for bugs
+	ldx #$d ; optimized, look out for bugs
+	lda #31
+	sta $D600
+ShowTitle_fill80_text114
+	bit $D600
+	bpl ShowTitle_fill80_text114
+	sty $D601
+	dex
+ShowTitle_fill80_loop115
+	sty $D601
+	dex
+	bne ShowTitle_fill80_loop115
+	
+; // cyan blinking reverse
 	jsr WaitForKeypress
 	rts
 	
@@ -992,7 +1341,7 @@ InitData
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta i
-InitData_forloop92
+InitData_forloop117
 	
 ; // line 150
 ; // Populate char_arr 
@@ -1008,14 +1357,14 @@ InitData_forloop92
 	lda rev_enable
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne InitData_elsedoneblock120
-InitData_ConditionalTrueBlock118: ;Main true block ;keep 
+	bne InitData_elsedoneblock145
+InitData_ConditionalTrueBlock143: ;Main true block ;keep 
 	; Binary clause Simplified: GREATEREQUAL
 	jsr Random
 	; Compare with pure num / var optimization
 	cmp #$80;keep
-	bcc InitData_elsedoneblock132
-InitData_ConditionalTrueBlock130: ;Main true block ;keep 
+	bcc InitData_elsedoneblock157
+InitData_ConditionalTrueBlock155: ;Main true block ;keep 
 	
 ; // Option for reverse chars
 ; // line 165
@@ -1024,8 +1373,8 @@ InitData_ConditionalTrueBlock130: ;Main true block ;keep
 	clc
 	adc #$80
 	sta char_start
-InitData_elsedoneblock132
-InitData_elsedoneblock120
+InitData_elsedoneblock157
+InitData_elsedoneblock145
 	; 8 bit binop
 	; Add/sub where right value is constant number
 	; 8 bit binop
@@ -1039,17 +1388,17 @@ InitData_elsedoneblock120
 	; Calling storevariable on generic assign expression
 	ldx i ; optimized, look out for bugs
 	sta char_arr,x
-InitData_forloopcounter94
-InitData_loopstart95
+InitData_forloopcounter119
+InitData_loopstart120
 	; Compare is onpage
 	; Test Inc dec D
 	inc i
 	lda num_chars
 	cmp i ;keep
-	bne InitData_forloop92
-InitData_loopdone135: ;keep
-InitData_forloopend93
-InitData_loopend96
+	bne InitData_forloop117
+InitData_loopdone160: ;keep
+InitData_forloopend118
+InitData_loopend121
 	rts
 	
 ; // Check for any user inputs
@@ -1061,126 +1410,132 @@ CheckInputs
 	; Calling storevariable on generic assign expression
 	sta key
 	
-; // Reboot
+; // RESET
 	; Binary clause Simplified: EQUALS
 	; Compare with pure num / var optimization
 	cmp #$51;keep
-	bne CheckInputs_elsedoneblock140
-CheckInputs_ConditionalTrueBlock138: ;Main true block ;keep 
+	bne CheckInputs_elsedoneblock165
+CheckInputs_ConditionalTrueBlock163: ;Main true block ;keep 
 	
 ; // Q - Quit
+	; Clear screen with offset
+	lda #$20
+	ldx #$fa
+CheckInputs_clearloop169
+	dex
+	sta $0000+$400,x
+	sta $00fa+$400,x
+	sta $01f4+$400,x
+	sta $02ee+$400,x
+	bne CheckInputs_clearloop169
 	jsr $ff3d
-CheckInputs_elsedoneblock140
+CheckInputs_elsedoneblock165
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$30;keep
-	bne CheckInputs_elsedoneblock146
-CheckInputs_ConditionalTrueBlock144: ;Main true block ;keep 
+	bne CheckInputs_elsedoneblock173
+CheckInputs_ConditionalTrueBlock171: ;Main true block ;keep 
 	
 ; // 0-9 Adjust speed 
-; // NOTE: higher values of 'speed' are slower
-	lda #$12
+	lda #$9
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock146
+CheckInputs_elsedoneblock173
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$31;keep
-	bne CheckInputs_elsedoneblock152
-CheckInputs_ConditionalTrueBlock150: ;Main true block ;keep 
+	bne CheckInputs_elsedoneblock179
+CheckInputs_ConditionalTrueBlock177: ;Main true block ;keep 
 	
 ; //(slowest)
-	lda #$10
+	lda #$8
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock152
+CheckInputs_elsedoneblock179
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$32;keep
-	bne CheckInputs_elsedoneblock158
-CheckInputs_ConditionalTrueBlock156: ;Main true block ;keep 
-	lda #$e
+	bne CheckInputs_elsedoneblock185
+CheckInputs_ConditionalTrueBlock183: ;Main true block ;keep 
+	lda #$7
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock158
+CheckInputs_elsedoneblock185
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$33;keep
-	bne CheckInputs_elsedoneblock164
-CheckInputs_ConditionalTrueBlock162: ;Main true block ;keep 
-	lda #$c
+	bne CheckInputs_elsedoneblock191
+CheckInputs_ConditionalTrueBlock189: ;Main true block ;keep 
+	lda #$6
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock164
+CheckInputs_elsedoneblock191
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$34;keep
-	bne CheckInputs_elsedoneblock170
-CheckInputs_ConditionalTrueBlock168: ;Main true block ;keep 
-	lda #$a
+	bne CheckInputs_elsedoneblock197
+CheckInputs_ConditionalTrueBlock195: ;Main true block ;keep 
+	lda #$5
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock170
+CheckInputs_elsedoneblock197
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$35;keep
-	bne CheckInputs_elsedoneblock176
-CheckInputs_ConditionalTrueBlock174: ;Main true block ;keep 
-	lda #$8
+	bne CheckInputs_elsedoneblock203
+CheckInputs_ConditionalTrueBlock201: ;Main true block ;keep 
+	lda #$4
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock176
+CheckInputs_elsedoneblock203
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$36;keep
-	bne CheckInputs_elsedoneblock182
-CheckInputs_ConditionalTrueBlock180: ;Main true block ;keep 
-	lda #$6
+	bne CheckInputs_elsedoneblock209
+CheckInputs_ConditionalTrueBlock207: ;Main true block ;keep 
+	lda #$3
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock182
+CheckInputs_elsedoneblock209
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$37;keep
-	bne CheckInputs_elsedoneblock188
-CheckInputs_ConditionalTrueBlock186: ;Main true block ;keep 
-	lda #$4
+	bne CheckInputs_elsedoneblock215
+CheckInputs_ConditionalTrueBlock213: ;Main true block ;keep 
+	lda #$2
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock188
+CheckInputs_elsedoneblock215
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$38;keep
-	bne CheckInputs_elsedoneblock194
-CheckInputs_ConditionalTrueBlock192: ;Main true block ;keep 
-	lda #$2
+	bne CheckInputs_elsedoneblock221
+CheckInputs_ConditionalTrueBlock219: ;Main true block ;keep 
+	lda #$1
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock194
+CheckInputs_elsedoneblock221
 	; Binary clause Simplified: EQUALS
 	lda key
 	; Compare with pure num / var optimization
 	cmp #$39;keep
-	bne CheckInputs_elsedoneblock200
-CheckInputs_ConditionalTrueBlock198: ;Main true block ;keep 
+	bne CheckInputs_elsedoneblock227
+CheckInputs_ConditionalTrueBlock225: ;Main true block ;keep 
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta speed
-CheckInputs_elsedoneblock200
+CheckInputs_elsedoneblock227
 	rts
 	
-; //(fastest)
-; //PrintXYZ(speed, key, 0);
-; //WaitForKeypress();
 ; // Poke value into an address
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : PokeAddr
@@ -1188,7 +1543,7 @@ CheckInputs_elsedoneblock200
 pokeaddr_x	dc.b	0
 pokeaddr_y	dc.b	0
 pokeaddr_v	dc.b	0
-PokeAddr_block203
+PokeAddr_block230
 PokeAddr
 	; Swapped comparison expressions
 	; Binary clause Simplified: LESS
@@ -1196,65 +1551,175 @@ PokeAddr
 	; Add/sub where right value is constant number
 	lda myscreenwidth
 	sec
-	sbc #$2
+	sbc #$1
 	 ; end add / sub var with constant
 	; Compare with pure num / var optimization
 	cmp pokeaddr_x;keep
-	bcs PokeAddr_elsedoneblock207
-PokeAddr_ConditionalTrueBlock205: ;Main true block ;keep 
+	bcs PokeAddr_elsedoneblock234
+PokeAddr_ConditionalTrueBlock232: ;Main true block ;keep 
 	rts
-PokeAddr_elsedoneblock207
+PokeAddr_elsedoneblock234
 	; Binary clause Simplified: LESS
 	lda pokeaddr_x
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	bcs PokeAddr_elsedoneblock213
-PokeAddr_ConditionalTrueBlock211: ;Main true block ;keep 
+	bcs PokeAddr_elsedoneblock240
+PokeAddr_ConditionalTrueBlock238: ;Main true block ;keep 
 	rts
-PokeAddr_elsedoneblock213
-	; Binary clause Simplified: GREATER
-	lda pokeaddr_y
+PokeAddr_elsedoneblock240
+	; Swapped comparison expressions
+	; Binary clause Simplified: LESS
+	; 8 bit binop
+	; Add/sub where right value is constant number
+	lda myscreenheight
+	sec
+	sbc #$1
+	 ; end add / sub var with constant
 	; Compare with pure num / var optimization
-	cmp myscreenheight;keep
-	bcc PokeAddr_elsedoneblock219
-	beq PokeAddr_elsedoneblock219
-PokeAddr_ConditionalTrueBlock217: ;Main true block ;keep 
+	cmp pokeaddr_y;keep
+	bcs PokeAddr_elsedoneblock246
+PokeAddr_ConditionalTrueBlock244: ;Main true block ;keep 
 	rts
-PokeAddr_elsedoneblock219
+PokeAddr_elsedoneblock246
 	; Binary clause Simplified: LESS
 	lda pokeaddr_y
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	bcs PokeAddr_elsedoneblock225
-PokeAddr_ConditionalTrueBlock223: ;Main true block ;keep 
+	bcs PokeAddr_elsedoneblock252
+PokeAddr_ConditionalTrueBlock250: ;Main true block ;keep 
 	rts
-PokeAddr_elsedoneblock225
-	
-; // Debug
-; //PrintXYZ(pokeaddr_x, pokeaddr_y, pokeaddr_v);
-; //WaitForKeypress();
-	; Binary clause Simplified: EQUALS
-	lda myscreenwidth
-	; Compare with pure num / var optimization
-	cmp #$28;keep
-	bne PokeAddr_elseblock230
-PokeAddr_ConditionalTrueBlock229: ;Main true block ;keep 
-	jmp PokeAddr_elsedoneblock231
-PokeAddr_elseblock230
+PokeAddr_elsedoneblock252
 	
 ; // VIC screen plot
 ; // Pointer value to screen RAM
-; //p := SCREEN_CHAR_LOC + SCREEN_WIDTH * pokeaddr_y + pokeaddr_x;
-; //poke(p, 0, pokeaddr_v);
+	; Generic 16 bit op
+	ldy #0
+	; Right is PURE NUMERIC : Is word =1
+	; 16 bit mul or div
+	lda pokeaddr_x
+PokeAddr_int_shift_var257 = $54
+	sta PokeAddr_int_shift_var257
+	sty PokeAddr_int_shift_var257+1
+		lsr PokeAddr_int_shift_var257+1
+	ror PokeAddr_int_shift_var257+0
+
+	lda PokeAddr_int_shift_var257
+	ldy PokeAddr_int_shift_var257+1
+PokeAddr_rightvarInteger_var258 = $54
+	sta PokeAddr_rightvarInteger_var258
+	sty PokeAddr_rightvarInteger_var258+1
+	; Generic 16 bit op
+	; Integer constant assigning
+	ldy #$04
+	lda #$00
+PokeAddr_rightvarInteger_var261 = $56
+	sta PokeAddr_rightvarInteger_var261
+	sty PokeAddr_rightvarInteger_var261+1
+	; Swapping nodes :  num * expr -> exp*num (mul only)
+	; Right is PURE NUMERIC : Is word =1
+	; 16 bit mul or div
+	; Mul 16x8 setup
+	ldy #0
+	lda pokeaddr_y
+	sta mul16x8_num1
+	sty mul16x8_num1Hi
+	lda #$28
+	sta mul16x8_num2
+	jsr mul16x8_procedure
+	; Low bit binop:
+	clc
+	adc PokeAddr_rightvarInteger_var261
+PokeAddr_wordAdd259
+	sta PokeAddr_rightvarInteger_var261
+	; High-bit binop
+	tya
+	adc PokeAddr_rightvarInteger_var261+1
+	tay
+	lda PokeAddr_rightvarInteger_var261
+	; Low bit binop:
+	clc
+	adc PokeAddr_rightvarInteger_var258
+PokeAddr_wordAdd255
+	sta PokeAddr_rightvarInteger_var258
+	; High-bit binop
+	tya
+	adc PokeAddr_rightvarInteger_var258+1
+	tay
+	lda PokeAddr_rightvarInteger_var258
+	sta p
+	sty p+1
+	; Poke
+	lda pokeaddr_v
+	; Calling storevariable on generic assign expression
+	; Storing to a pointer
+	ldy #$0
+	sta (p),y
+	
 ; // Pointer value to color RAM
-; //p := SCREEN_COL_LOC + SCREEN_WIDTH * pokeaddr_y + pokeaddr_x;
-; //poke(p, 0, curr_color);
+	; Generic 16 bit op
+	ldy #0
+	; Right is PURE NUMERIC : Is word =1
+	; 16 bit mul or div
+	lda pokeaddr_x
+PokeAddr_int_shift_var264 = $54
+	sta PokeAddr_int_shift_var264
+	sty PokeAddr_int_shift_var264+1
+		lsr PokeAddr_int_shift_var264+1
+	ror PokeAddr_int_shift_var264+0
+
+	lda PokeAddr_int_shift_var264
+	ldy PokeAddr_int_shift_var264+1
+PokeAddr_rightvarInteger_var265 = $54
+	sta PokeAddr_rightvarInteger_var265
+	sty PokeAddr_rightvarInteger_var265+1
+	; Generic 16 bit op
+	; Integer constant assigning
+	ldy #$d8
+	lda #$00
+PokeAddr_rightvarInteger_var268 = $56
+	sta PokeAddr_rightvarInteger_var268
+	sty PokeAddr_rightvarInteger_var268+1
+	; Swapping nodes :  num * expr -> exp*num (mul only)
+	; Right is PURE NUMERIC : Is word =1
+	; 16 bit mul or div
+	; Mul 16x8 setup
+	ldy #0
+	lda pokeaddr_y
+	sta mul16x8_num1
+	sty mul16x8_num1Hi
+	lda #$28
+	sta mul16x8_num2
+	jsr mul16x8_procedure
+	; Low bit binop:
+	clc
+	adc PokeAddr_rightvarInteger_var268
+PokeAddr_wordAdd266
+	sta PokeAddr_rightvarInteger_var268
+	; High-bit binop
+	tya
+	adc PokeAddr_rightvarInteger_var268+1
+	tay
+	lda PokeAddr_rightvarInteger_var268
+	; Low bit binop:
+	clc
+	adc PokeAddr_rightvarInteger_var265
+PokeAddr_wordAdd262
+	sta PokeAddr_rightvarInteger_var265
+	; High-bit binop
+	tya
+	adc PokeAddr_rightvarInteger_var265+1
+	tay
+	lda PokeAddr_rightvarInteger_var265
+	sta p
+	sty p+1
+	; Poke
+	lda curr_color
+	; Calling storevariable on generic assign expression
+	; Storing to a pointer
+	ldy #$0
+	sta (p),y
+	
 ; // VDC screen plot
-; // $D600 is VDC Address Register
-; // $D601 is VDC Data Register
-; // VDC Character Display area(screen) $0000-$07FF
-; // VDC Character Attributes(color) $0800-$0FFF
-; // VDC Character Definitions $2000-$3FFF
 ; // Fill color for string
 	lda pokeaddr_x
 	sta screen_x_80
@@ -1267,15 +1732,15 @@ PokeAddr_elseblock230
 	ldx #$2 ; optimized, look out for bugs
 	lda #31
 	sta $D600
-PokeAddr_fill80_text240
+PokeAddr_fill80_text269
 	bit $D600
-	bpl PokeAddr_fill80_text240
+	bpl PokeAddr_fill80_text269
 	sty $D601
 	dex
-PokeAddr_fill80_loop241
+PokeAddr_fill80_loop270
 	sty $D601
 	dex
-	bne PokeAddr_fill80_loop241
+	bne PokeAddr_fill80_loop270
 	
 ; // Display text
 	lda pokeaddr_x
@@ -1289,16 +1754,15 @@ PokeAddr_fill80_loop241
 	ldx #$2 ; optimized, look out for bugs
 	lda #31
 	sta $D600
-PokeAddr_fill80_text242
+PokeAddr_fill80_text271
 	bit $D600
-	bpl PokeAddr_fill80_text242
+	bpl PokeAddr_fill80_text271
 	sty $D601
 	dex
-PokeAddr_fill80_loop243
+PokeAddr_fill80_loop272
 	sty $D601
 	dex
-	bne PokeAddr_fill80_loop243
-PokeAddr_elsedoneblock231
+	bne PokeAddr_fill80_loop272
 	rts
 	
 ; //
@@ -1339,7 +1803,7 @@ Plot
 ; // Call timing delay
 	jsr DoDelay
 	
-; // Map points in the four indexes
+; // Map chars in the up/down/across indexes
 	lda x1
 	; Calling storevariable on generic assign expression
 	sta pokeaddr_x
@@ -1355,13 +1819,12 @@ Plot
 	lda mainIndex
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	; Signed compare
-	bne Plot_elsedoneblock248
-Plot_ConditionalTrueBlock246: ;Main true block ;keep 
+	bne Plot_elsedoneblock277
+Plot_ConditionalTrueBlock275: ;Main true block ;keep 
 	
 ; // line 900
 	rts
-Plot_elsedoneblock248
+Plot_elsedoneblock277
 	
 ; // line 910
 	; 8 bit binop
@@ -1396,34 +1859,34 @@ Plot_elsedoneblock248
 	lda pattern_type
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne Plot_elseblock253
-Plot_ConditionalTrueBlock252: ;Main true block ;keep 
+	bne Plot_elseblock282
+Plot_ConditionalTrueBlock281: ;Main true block ;keep 
 	
 ; // line 920
 ; // Select pattern style
 	lda colSelect
 	; Calling storevariable on generic assign expression
 	sta plotIndexMax
-	jmp Plot_elsedoneblock254
-Plot_elseblock253
+	jmp Plot_elsedoneblock283
+Plot_elseblock282
 	lda mainIndex
 	; Calling storevariable on generic assign expression
 	sta plotIndexMax
-Plot_elsedoneblock254
+Plot_elsedoneblock283
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta plotIndex
-Plot_forloop259
+Plot_forloop288
 	; Binary clause Simplified: EQUALS
 	lda x1
 	; Compare with pure num / var optimization
 	cmp centerX;keep
 	; Signed compare
-	bne Plot_localfailed404
-	jmp Plot_ConditionalTrueBlock358
-Plot_localfailed404
-	jmp Plot_elseblock359
-Plot_ConditionalTrueBlock358: ;Main true block ;keep 
+	bne Plot_localfailed433
+	jmp Plot_ConditionalTrueBlock387
+Plot_localfailed433
+	jmp Plot_elseblock388
+Plot_ConditionalTrueBlock387: ;Main true block ;keep 
 	
 ; // Map chars surrounding the up/down/across indexes
 ; // line 930
@@ -1474,18 +1937,18 @@ Plot_ConditionalTrueBlock358: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta pokeaddr_v
 	jsr PokeAddr
-	jmp Plot_elsedoneblock360
-Plot_elseblock359
+	jmp Plot_elsedoneblock389
+Plot_elseblock388
 	; Binary clause Simplified: EQUALS
 	lda y1
 	; Compare with pure num / var optimization
 	cmp centerY;keep
 	; Signed compare
-	bne Plot_localfailed429
-	jmp Plot_ConditionalTrueBlock408
-Plot_localfailed429
-	jmp Plot_elseblock409
-Plot_ConditionalTrueBlock408: ;Main true block ;keep 
+	bne Plot_localfailed458
+	jmp Plot_ConditionalTrueBlock437
+Plot_localfailed458
+	jmp Plot_elseblock438
+Plot_ConditionalTrueBlock437: ;Main true block ;keep 
 	
 ; // line 950
 	lda x1
@@ -1535,8 +1998,8 @@ Plot_ConditionalTrueBlock408: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta pokeaddr_v
 	jsr PokeAddr
-	jmp Plot_elsedoneblock410
-Plot_elseblock409
+	jmp Plot_elsedoneblock439
+Plot_elseblock438
 	lda y1
 	; Calling storevariable on generic assign expression
 	sta y2
@@ -1545,8 +2008,8 @@ Plot_elseblock409
 	; Compare with pure num / var optimization
 	cmp centerX;keep
 	; Signed compare
-	bpl Plot_elseblock434
-Plot_ConditionalTrueBlock433: ;Main true block ;keep 
+	bpl Plot_elseblock463
+Plot_ConditionalTrueBlock462: ;Main true block ;keep 
 	
 ; // line 970
 ; // line 970
@@ -1570,8 +2033,8 @@ Plot_ConditionalTrueBlock433: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta pokeaddr_v
 	jsr PokeAddr
-	jmp Plot_elsedoneblock435
-Plot_elseblock434
+	jmp Plot_elsedoneblock464
+Plot_elseblock463
 	
 ; // Fills right side diagonal
 	; 8 bit binop
@@ -1595,7 +2058,7 @@ Plot_elseblock434
 	; Calling storevariable on generic assign expression
 	sta pokeaddr_v
 	jsr PokeAddr
-Plot_elsedoneblock435
+Plot_elsedoneblock464
 	lda x1
 	; Calling storevariable on generic assign expression
 	sta x2
@@ -1604,8 +2067,8 @@ Plot_elsedoneblock435
 	; Compare with pure num / var optimization
 	cmp centerY;keep
 	; Signed compare
-	bpl Plot_elseblock442
-Plot_ConditionalTrueBlock441: ;Main true block ;keep 
+	bpl Plot_elseblock471
+Plot_ConditionalTrueBlock470: ;Main true block ;keep 
 	
 ; // line 990
 ; // line 990
@@ -1630,8 +2093,8 @@ Plot_ConditionalTrueBlock441: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta pokeaddr_v
 	jsr PokeAddr
-	jmp Plot_elsedoneblock443
-Plot_elseblock442
+	jmp Plot_elsedoneblock472
+Plot_elseblock471
 	
 ; // Fills bottom corners
 	; 8 bit binop
@@ -1656,24 +2119,25 @@ Plot_elseblock442
 	; Calling storevariable on generic assign expression
 	sta pokeaddr_v
 	jsr PokeAddr
-Plot_elsedoneblock443
-Plot_elsedoneblock410
-Plot_elsedoneblock360
-Plot_forloopcounter261
-Plot_loopstart262
+Plot_elsedoneblock472
+Plot_elsedoneblock439
+Plot_elsedoneblock389
+Plot_forloopcounter290
+Plot_loopstart291
 	; Test Inc dec D
 	inc plotIndex
 	lda plotIndexMax
 	cmp plotIndex ;keep
-	beq Plot_loopdone448
-Plot_loopnotdone449
-	jmp Plot_forloop259
-Plot_loopdone448
-Plot_forloopend260
-Plot_loopend263
+	beq Plot_loopdone477
+Plot_loopnotdone478
+	jmp Plot_forloop288
+Plot_loopdone477
+Plot_forloopend289
+Plot_loopend292
 	rts
 	
 ; // for
+; // End Plot
 ; // Update the display
 	; NodeProcedureDecl -1
 	; ***********  Defining procedure : MainLoop
@@ -1682,37 +2146,27 @@ MainLoop
 	lda start_pos
 	; Calling storevariable on generic assign expression
 	sta mainIndex
-MainLoop_forloop451
+MainLoop_forloop480
 	
 ; // line 200
 ; // Update color
-	; 8 bit binop
-	; Add/sub where right value is constant number
-	jsr Random
-	and #$f
-	 ; end add / sub var with constant
+	; Load pointer array
+	ldy colorIdx
+	lda (cArrPtr),y
 	; Calling storevariable on generic assign expression
 	sta curr_color
-MainLoop_while466
-MainLoop_loopstart470
-	; Binary clause Simplified: EQUALS
-	lda curr_color
+	; Test Inc dec D
+	inc colorIdx
+	; Binary clause Simplified: GREATEREQUAL
+	lda colorIdx
 	; Compare with pure num / var optimization
-	cmp #$0;keep
-	bne MainLoop_elsedoneblock469
-MainLoop_ConditionalTrueBlock467: ;Main true block ;keep 
-	
-; // If black, pick another color..
-	; 8 bit binop
-	; Add/sub where right value is constant number
-	jsr Random
-	and #$f
-	 ; end add / sub var with constant
+	cmp cArrLen;keep
+	bcc MainLoop_elsedoneblock496
+MainLoop_ConditionalTrueBlock494: ;Main true block ;keep 
+	lda #$0
 	; Calling storevariable on generic assign expression
-	sta curr_color
-	jmp MainLoop_while466
-MainLoop_elsedoneblock469
-MainLoop_loopend471
+	sta colorIdx
+MainLoop_elsedoneblock496
 	
 ; // Map the data
 ; // Right
@@ -1869,8 +2323,8 @@ MainLoop_loopend471
 ; // line 280
 ; // Check user input	
 	jsr CheckInputs
-MainLoop_forloopcounter453
-MainLoop_loopstart454
+MainLoop_forloopcounter482
+MainLoop_loopstart483
 	; 8 bit binop
 	; Add/sub where right value is constant number
 	lda mainIndex
@@ -1881,12 +2335,12 @@ MainLoop_loopstart454
 	sta mainIndex
 	lda stop_pos
 	cmp mainIndex ;keep
-	beq MainLoop_loopdone474
-MainLoop_loopnotdone475
-	jmp MainLoop_forloop451
-MainLoop_loopdone474
-MainLoop_forloopend452
-MainLoop_loopend455
+	beq MainLoop_loopdone499
+MainLoop_loopnotdone500
+	jmp MainLoop_forloop480
+MainLoop_loopdone499
+MainLoop_forloopend481
+MainLoop_loopend484
 	rts
 	
 ; // Various Pattern Mutations
@@ -1894,6 +2348,8 @@ MainLoop_loopend455
 	; ***********  Defining procedure : DoMutations
 	;    Procedure type : User-defined procedure
 DoMutations
+	; Test Inc dec D
+	inc cycleCtr
 	jsr Random
 	; Calling storevariable on generic assign expression
 	sta rando
@@ -1919,14 +2375,17 @@ DoMutations
 	lda dir
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne DoMutations_elsedoneblock480
-DoMutations_ConditionalTrueBlock478: ;Main true block ;keep 
+	bne DoMutations_localfailed529
+	jmp DoMutations_ConditionalTrueBlock503
+DoMutations_localfailed529
+	jmp DoMutations_elsedoneblock505
+DoMutations_ConditionalTrueBlock503: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	lda pattern_type
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne DoMutations_elseblock507
-DoMutations_ConditionalTrueBlock506: ;Main true block ;keep 
+	bne DoMutations_elseblock533
+DoMutations_ConditionalTrueBlock532: ;Main true block ;keep 
 	
 ; // Mutations every full cycle
 ; // Toggle pattern type
@@ -1940,8 +2399,8 @@ DoMutations_ConditionalTrueBlock506: ;Main true block ;keep
 	lsr
 	; Calling storevariable on generic assign expression
 	sta num_chars
-	jmp DoMutations_elsedoneblock508
-DoMutations_elseblock507
+	jmp DoMutations_elsedoneblock534
+DoMutations_elseblock533
 	
 ; // 8-point pattern
 	lda #$1
@@ -1954,22 +2413,23 @@ DoMutations_elseblock507
 	lsr
 	; Calling storevariable on generic assign expression
 	sta num_chars
-DoMutations_elsedoneblock508
-	
-; //centerX := Random();
-; //while( centerX < 15 or centerX > 65 ) do centerX := Random();
-; //centerY := Random();
-; //while( centerY < 6 or centerY > 18 ) do centerY := Random();
+DoMutations_elsedoneblock534
 	; Binary clause Simplified: LESS
 	lda rando
 	; Compare with pure num / var optimization
 	cmp #$40;keep
-	; Signed compare
-	bpl DoMutations_elsedoneblock516
-DoMutations_ConditionalTrueBlock514: ;Main true block ;keep 
+	bcs DoMutations_elsedoneblock542
+DoMutations_ConditionalTrueBlock540: ;Main true block ;keep 
 	
-; // 1 in 4 chance to change center point
-	lda #$8
+; // Randomly change center point
+	; Right is PURE NUMERIC : Is word =0
+	; 8 bit div
+	lda myscreenwidth
+	sta div8x8_d
+	; Load right hand side
+	lda #$5
+	sta div8x8_c
+	jsr div8x8_procedure
 	; Calling storevariable on generic assign expression
 	sta temp
 	; 8 bit binop
@@ -1978,20 +2438,20 @@ DoMutations_ConditionalTrueBlock514: ;Main true block ;keep
 	; 8 bit mul of power 2
 	; 8 bit binop
 	; Add/sub where right value is constant number
-	lda #$28
+	lda myscreenwidth
 	sec
 	sbc temp
 	 ; end add / sub var with constant
 	lsr
-DoMutations_rightvarAddSub_var520 = $54
-	sta DoMutations_rightvarAddSub_var520
+DoMutations_rightvarAddSub_var551 = $54
+	sta DoMutations_rightvarAddSub_var551
 	; 8 bit binop
 	; Add/sub where right value is constant number
 	jsr Random
 	and temp
 	 ; end add / sub var with constant
 	clc
-	adc DoMutations_rightvarAddSub_var520
+	adc DoMutations_rightvarAddSub_var551
 	; Calling storevariable on generic assign expression
 	sta centerX
 	; 8 bit binop
@@ -2006,18 +2466,16 @@ DoMutations_rightvarAddSub_var520 = $54
 	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta centerY
-DoMutations_elsedoneblock516
-	
-; //clearscreen($20, SCREEN_CHAR_LOC);
-	; Binary clause Simplified: LESS
-	lda rando
-	; Compare with pure num / var optimization
-	cmp #$4;keep
-	; Signed compare
-	bpl DoMutations_elsedoneblock524
-DoMutations_ConditionalTrueBlock522: ;Main true block ;keep 
-	
-; // 1 in 64 chance to clear screen
+	; Clear screen with offset
+	lda #$20
+	ldx #$fa
+DoMutations_clearloop552
+	dex
+	sta $0000+$400,x
+	sta $00fa+$400,x
+	sta $01f4+$400,x
+	sta $02ee+$400,x
+	bne DoMutations_clearloop552
 	lda #$20
 	; Calling storevariable on generic assign expression
 	sta myChar
@@ -2027,25 +2485,23 @@ DoMutations_ConditionalTrueBlock522: ;Main true block ;keep
 	sta myLoc
 	sty myLoc+1
 	jsr Clear80
-DoMutations_elsedoneblock524
-DoMutations_elsedoneblock480
+DoMutations_elsedoneblock542
+DoMutations_elsedoneblock505
 	; Binary clause Simplified: LESS
 	lda rando
 	; Compare with pure num / var optimization
 	cmp #$10;keep
-	; Signed compare
-	bpl DoMutations_localfailed596
-	jmp DoMutations_ConditionalTrueBlock528
-DoMutations_localfailed596
-	jmp DoMutations_elsedoneblock530
-DoMutations_ConditionalTrueBlock528: ;Main true block ;keep 
+	bcs DoMutations_localfailed622
+	jmp DoMutations_ConditionalTrueBlock554
+DoMutations_localfailed622
+	jmp DoMutations_elsedoneblock556
+DoMutations_ConditionalTrueBlock554: ;Main true block ;keep 
 	; Binary clause Simplified: LESS
 	lda rando
 	; Compare with pure num / var optimization
 	cmp #$4;keep
-	; Signed compare
-	bpl DoMutations_elseblock600
-DoMutations_ConditionalTrueBlock599: ;Main true block ;keep 
+	bcs DoMutations_elseblock626
+DoMutations_ConditionalTrueBlock625: ;Main true block ;keep 
 	
 ; // One in 16 chance of mutation
 ; // Select new char range
@@ -2058,15 +2514,14 @@ DoMutations_ConditionalTrueBlock599: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta char_offset_st
 	jsr InitData
-	jmp DoMutations_elsedoneblock601
-DoMutations_elseblock600
+	jmp DoMutations_elsedoneblock627
+DoMutations_elseblock626
 	; Binary clause Simplified: LESS
 	lda rando
 	; Compare with pure num / var optimization
 	cmp #$8;keep
-	; Signed compare
-	bpl DoMutations_elseblock632
-DoMutations_ConditionalTrueBlock631: ;Main true block ;keep 
+	bcs DoMutations_elseblock658
+DoMutations_ConditionalTrueBlock657: ;Main true block ;keep 
 	lda #$5f
 	; Calling storevariable on generic assign expression
 	sta char_start_st
@@ -2076,15 +2531,14 @@ DoMutations_ConditionalTrueBlock631: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta char_offset_st
 	jsr InitData
-	jmp DoMutations_elsedoneblock633
-DoMutations_elseblock632
+	jmp DoMutations_elsedoneblock659
+DoMutations_elseblock658
 	; Binary clause Simplified: LESS
 	lda rando
 	; Compare with pure num / var optimization
 	cmp #$c;keep
-	; Signed compare
-	bpl DoMutations_elseblock648
-DoMutations_ConditionalTrueBlock647: ;Main true block ;keep 
+	bcs DoMutations_elseblock674
+DoMutations_ConditionalTrueBlock673: ;Main true block ;keep 
 	lda #$74
 	; Calling storevariable on generic assign expression
 	sta char_start_st
@@ -2094,8 +2548,8 @@ DoMutations_ConditionalTrueBlock647: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta char_offset_st
 	jsr InitData
-	jmp DoMutations_elsedoneblock649
-DoMutations_elseblock648
+	jmp DoMutations_elsedoneblock675
+DoMutations_elseblock674
 	lda #$40
 	; Calling storevariable on generic assign expression
 	sta char_start_st
@@ -2105,26 +2559,26 @@ DoMutations_elseblock648
 	; Calling storevariable on generic assign expression
 	sta char_offset_st
 	jsr InitData
-DoMutations_elsedoneblock649
-DoMutations_elsedoneblock633
-DoMutations_elsedoneblock601
+DoMutations_elsedoneblock675
+DoMutations_elsedoneblock659
+DoMutations_elsedoneblock627
 	; Binary clause Simplified: EQUALS
 	lda rev_enable
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne DoMutations_elseblock656
-DoMutations_ConditionalTrueBlock655: ;Main true block ;keep 
+	bne DoMutations_elseblock682
+DoMutations_ConditionalTrueBlock681: ;Main true block ;keep 
 	
 ; // Toggle reverse chars
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta rev_enable
-	jmp DoMutations_elsedoneblock657
-DoMutations_elseblock656
+	jmp DoMutations_elsedoneblock683
+DoMutations_elseblock682
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta rev_enable
-DoMutations_elsedoneblock657
+DoMutations_elsedoneblock683
 	
 ; // Adjust pattern size		
 	lda #$1
@@ -2139,36 +2593,125 @@ DoMutations_elsedoneblock657
 	; 8 bit binop
 	; Add/sub where right value is constant number
 	jsr Random
-	and #$c
+	and #$8
 	 ; end add / sub var with constant
 	clc
-	adc #$8
+	adc #$c
 	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta stop_pos
-DoMutations_elsedoneblock530
+DoMutations_elsedoneblock556
+	
+; //clearscreen($20, SCREEN_CHAR_LOC);
+	; Binary clause Simplified: GREATEREQUAL
+	lda cycleCtr
+	; Compare with pure num / var optimization
+	cmp #$4;keep
+	bcc DoMutations_localfailed813
+	jmp DoMutations_ConditionalTrueBlock689
+DoMutations_localfailed813
+	jmp DoMutations_elsedoneblock691
+DoMutations_ConditionalTrueBlock689: ;Main true block ;keep 
+	
+; // Update color palette	
+	jsr Random
+	; Calling storevariable on generic assign expression
+	sta rando
+	; Binary clause Simplified: LESS
+	; Compare with pure num / var optimization
+	cmp #$33;keep
+	bcs DoMutations_elseblock817
+DoMutations_ConditionalTrueBlock816: ;Main true block ;keep 
+	lda #<cArr1
+	ldx #>cArr1
+	sta cArrPtr
+	stx cArrPtr+1
+	lda #$8
+	; Calling storevariable on generic assign expression
+	sta cArrLen
+	jmp DoMutations_elsedoneblock818
+DoMutations_elseblock817
+	; Binary clause Simplified: LESS
+	lda rando
+	; Compare with pure num / var optimization
+	cmp #$66;keep
+	bcs DoMutations_elseblock881
+DoMutations_ConditionalTrueBlock880: ;Main true block ;keep 
+	lda #<cArr2
+	ldx #>cArr2
+	sta cArrPtr
+	stx cArrPtr+1
+	lda #$5
+	; Calling storevariable on generic assign expression
+	sta cArrLen
+	jmp DoMutations_elsedoneblock882
+DoMutations_elseblock881
+	; Binary clause Simplified: LESS
+	lda rando
+	; Compare with pure num / var optimization
+	cmp #$99;keep
+	bcs DoMutations_elseblock913
+DoMutations_ConditionalTrueBlock912: ;Main true block ;keep 
+	lda #<cArr3
+	ldx #>cArr3
+	sta cArrPtr
+	stx cArrPtr+1
+	lda #$7
+	; Calling storevariable on generic assign expression
+	sta cArrLen
+	jmp DoMutations_elsedoneblock914
+DoMutations_elseblock913
+	; Binary clause Simplified: LESS
+	lda rando
+	; Compare with pure num / var optimization
+	cmp #$cc;keep
+	bcs DoMutations_elseblock929
+DoMutations_ConditionalTrueBlock928: ;Main true block ;keep 
+	lda #<cArr4
+	ldx #>cArr4
+	sta cArrPtr
+	stx cArrPtr+1
+	lda #$7
+	; Calling storevariable on generic assign expression
+	sta cArrLen
+	jmp DoMutations_elsedoneblock930
+DoMutations_elseblock929
+	lda #<cArr5
+	ldx #>cArr5
+	sta cArrPtr
+	stx cArrPtr+1
+	lda #$b
+	; Calling storevariable on generic assign expression
+	sta cArrLen
+DoMutations_elsedoneblock930
+DoMutations_elsedoneblock914
+DoMutations_elsedoneblock882
+DoMutations_elsedoneblock818
+	lda #$0
+	; Calling storevariable on generic assign expression
+	sta cycleCtr
+DoMutations_elsedoneblock691
 	rts
 block1
 	
-; // Debug
-; //PrintXYZ(temp, 0, 0);
-; //WaitForKeypress();
-; //call(^$fd49);	
-; // Trigger NMI
+; // End DoMutations
 ; // Show the title and check number of columns
 	jsr ShowTitle
 	
-; // Set 2 mhz mode
-	lda $D030
-	ora #1
-	sta $D030
-	
-; //poke(^53296, 0, 1);  	
-; //	2Mhz(works in both 64 and 128 mode) POKE 53296,1
-; //poke(^53296, 0, 0);	
-; //	1Mhz(works in both 64 and 128 mode) POKE 53296,0
 ; // Init char array	
 	jsr InitData
+	
+; // Clear screen
+	; Clear screen with offset
+	lda #$20
+	ldx #$fa
+MainProgram_clearloop935
+	dex
+	sta $0000+$400,x
+	sta $00fa+$400,x
+	sta $01f4+$400,x
+	sta $02ee+$400,x
+	bne MainProgram_clearloop935
 	lda #$20
 	; Calling storevariable on generic assign expression
 	sta myChar
@@ -2189,26 +2732,26 @@ block1
 	sta myLoc
 	sty myLoc+1
 	jsr Clear80
-MainProgram_while662
-MainProgram_loopstart666
+MainProgram_while936
+MainProgram_loopstart940
 	; Binary clause Simplified: NOTEQUALS
 	lda #$1
 	; Compare with pure num / var optimization
 	cmp #$0;keep
-	beq MainProgram_elsedoneblock665
-MainProgram_ConditionalTrueBlock663: ;Main true block ;keep 
+	beq MainProgram_elsedoneblock939
+MainProgram_ConditionalTrueBlock937: ;Main true block ;keep 
 	
 ; // Init VDC color mem 
 	jsr MainLoop
 	
-; // Pattern mutations
+; // Do Pattern Mutations
 	jsr DoMutations
 	
 ; // Get fresh array of chars
 	jsr InitData
-	jmp MainProgram_while662
-MainProgram_elsedoneblock665
-MainProgram_loopend667
+	jmp MainProgram_while936
+MainProgram_elsedoneblock939
+MainProgram_loopend941
 	; End of program
 	; Ending memory block at $2020
 EndBlock2020:
