@@ -18,11 +18,11 @@ end;
 
 // Do timing delay 
 // @TODO: Find better way than delay loop
-procedure DoDelay();
+procedure DoDelay(mydelay:byte);
 begin
-	if( speed > 0 ) then
+	if( mydelay > 0 ) then
 	begin
-		for i := 0 to speed do	
+		for i := 0 to mydelay do	
 		begin
 			wait(255);
 		end;
@@ -30,12 +30,12 @@ begin
 end;
 
 // Debug up to 3 numeric vars
-procedure PrintXYZ( myX:signed byte, myY:signed byte, myZ:signed byte );
+procedure PrintXYZ( myX:integer, myY:signed byte, myZ:signed byte );
 begin
 	// Erase & print values
 	moveto(1, 5, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myX, 2);
+	PrintDecimal(0, 4);
+	PrintDecimal(myX, 4);
 
 	moveto(1, 6, hi(SCREEN_CHAR_LOC));
 	PrintDecimal(0, 2);
@@ -68,31 +68,6 @@ begin
 	clearscreen($20, SCREEN_CHAR_LOC);
 end;
 
-
-// Fill char array
-procedure InitData();
-begin
-	// Set center based on screen width setting
-	//centerX := myscreenwidth / 2 - 1;
-	
-	for i := 0 to num_chars do							// line 150
-	begin
-		// Populate char_arr with 50/50 split between these ranges:
-		// 65-128 and 193-256
-		char_start := char_start_st;
-		char_offset := char_offset_st;
-		
-		// Option for reverse chars
-		if( rev_enable = 1 ) then
-		begin
-			if( Random() > 127 ) then				// line 165
-				char_start := char_start + 128;		// line 165
-		end;
-		
-		char_arr[i] := Random() & char_offset + char_start;
-	end;
-end; 
-
 // Check for any user inputs
 procedure CheckInputs();
 begin	
@@ -106,15 +81,15 @@ begin
 	end;
 	
 	// 0-9 Adjust speed 
-	if(key = 48) then speed := 9; // (slowest)
-	if(key = 49) then speed := 8;
-	if(key = 50) then speed := 7;
-	if(key = 51) then speed := 6;
-	if(key = 52) then speed := 5;
-	if(key = 53) then speed := 4;
-	if(key = 54) then speed := 3;
-	if(key = 55) then speed := 2;
-	if(key = 56) then speed := 1;
+	if(key = 48) then speed := 18; // (slowest)
+	if(key = 49) then speed := 16;
+	if(key = 50) then speed := 14;
+	if(key = 51) then speed := 12;
+	if(key = 52) then speed := 10;
+	if(key = 53) then speed := 8;
+	if(key = 54) then speed := 6;
+	if(key = 55) then speed := 4;
+	if(key = 56) then speed := 2;
 	if(key = 57) then speed := 0; // (fastest)
 		
 	// S - Toggle 40/80 Col Screen
@@ -128,7 +103,6 @@ begin
 	end;
 end;
 
-
 // Poke value into an address
 procedure PokeAddr(pokeaddr_x:byte, pokeaddr_y:byte, pokeaddr_v:byte);
 begin
@@ -137,9 +111,13 @@ begin
 	if( pokeaddr_y > SCREEN_HEIGHT - 1 ) then return;
 	if( pokeaddr_y < 0) then return;
 	
+	// Using AddressTable for screen updates
+	// This is faster than using poke()
+	p := AddressTable( #saddr, pokeaddr_x, pokeaddr_y );
+	p[0] := pokeaddr_v;
+	
 	// Pointer to screen RAM
-	p := SCREEN_CHAR_LOC + myscreenwidth * pokeaddr_y + pokeaddr_x;
-
-	poke(p, 0, pokeaddr_v);
+	//p := SCREEN_CHAR_LOC + myscreenwidth * pokeaddr_y + pokeaddr_x;
+	//poke(p, 0, pokeaddr_v);
 end;
 

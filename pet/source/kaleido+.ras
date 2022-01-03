@@ -34,13 +34,12 @@ var
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
 	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
 	char_arr 	  	: array[20] of byte;
-	p 			  	: pointer;
+	p 			  	: pointer;	// Generic pointer
 	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando : byte;
 	x1, y1, x2, y2	: signed byte;
-
-	// Used for keyboard input
-	key: byte;
-	
+	key 				: byte; 		// Used for keyboard input
+    saddr : array[25] of integer;	// Array for screen AddressTable
+    caddr : array[25] of integer;	// Array for color AddressTable
 	// Text for splash screen  	
 	titlemsg:  string = ("KALEIDOSCOPE+");
 	authormsg1: string = ("JESSICA PETERSEN <FUZZYBAD>, 2021");
@@ -60,6 +59,17 @@ begin
 	// Determine screen width and clear it
 	SetScreenWidth();
 
+	// Using AddressTable for screen updates
+    definescreen();
+
+	if( myscreenwidth = 40 ) then
+	begin
+	    CreateAddressTable( #saddr, SCREEN_CHAR_LOC, 40, 25 );
+    end else
+    begin
+	    CreateAddressTable( #saddr, SCREEN_CHAR_LOC, 80, 25 );	    
+    end;
+  
 	// Set uppercase
 	poke(^59468, 0, 12);
 
@@ -96,6 +106,30 @@ begin
    	printString(promptmsg, 0, 13);
 
 	WaitForKeypress();
+end;		// End ShowTitle
+
+// Fill char array
+procedure InitData();
+begin
+	// Set center based on screen width setting
+	//centerX := myscreenwidth / 2 - 1;
+	
+	for i := 0 to num_chars do						// line 150
+	begin
+		// Populate char_arr with 50/50 split between these ranges:
+		// 65-128 and 193-256
+		char_start := char_start_st;
+		char_offset := char_offset_st;
+		
+		// Option for reverse chars
+		if( rev_enable = 1 ) then
+		begin
+			if( Random() > 127 ) then				// line 165
+				char_start := char_start + 128;		// line 165
+		end;
+		
+		char_arr[i] := Random() & char_offset + char_start;
+	end;
 end;
 
 //////////////////////////
@@ -108,7 +142,7 @@ begin
 	//WaitForKeypress();
 
 	// Call timing delay
-	DoDelay();
+	DoDelay(speed);
 	
 	// Map chars in the up/down/across indexes
 	PokeAddr(x1, y1, char_arr[0]);				// line 900
@@ -175,8 +209,8 @@ begin
 				PokeAddr(x2, y2, char_arr[plotIndex]);
 			end;
 		end;
-	end; // for
-end;
+	end; 	// End for
+end;		// End Plot
 
 // Update the display
 procedure MainLoop();
@@ -217,7 +251,7 @@ begin
 		// Check user input	
 		CheckInputs();
 	end;
-end;
+end;		// End MainLoop
 
 // Various Pattern Mutations
 procedure DoMutations();
@@ -262,25 +296,21 @@ begin
 		begin
 			char_start_st	:= 76;			// Balls and lines pattern
 			char_offset_st	:= 5;
-			InitData();
 		end
 		else if( rando < 8 ) then
 		begin
 			char_start_st	:= 95;			// Triangles
 			char_offset_st	:= 11;	
-			InitData();
 		end
 		else if( rando < 12 ) then
 		begin
 			char_start_st	:= 116;			// Angles
 			char_offset_st	:= 11;	
-			InitData();
 		end
 		else
 		begin
 			char_start_st	:= 64;			// Graphics Chars
 			char_offset_st	:= 63;
-			InitData();
 		end;
 		
 		// Toggle reverse chars
@@ -290,16 +320,9 @@ begin
 		// Adjust pattern size		
 		dir := 1;	// Set pattern moving outward
 		start_pos := 1;
-		stop_pos := Random() & 12 + 8;
-		
-		//clearscreen($20, SCREEN_CHAR_LOC);
+		stop_pos := Random() & 8 + 12;
 	end;
-	
-	// Debug
-	//PrintXYZ(temp, 0, 0);
-	//WaitForKeypress();
-	//call(^$fd49);	// Trigger NMI	
-end;
+end;		// End DoMutations
 
 begin
 	// Show the title and check number of columns

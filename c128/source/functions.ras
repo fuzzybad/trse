@@ -1,6 +1,6 @@
 
 //	Method to get a char from the keyboard buffer
-//	TRSE procedures return accumulator value
+  //	TRSE procedures return accumulator value
 procedure GetKey();
 begin
 	call(^$ffe4);	// getin
@@ -18,11 +18,11 @@ end;
 
 // Do timing delay 
 // @TODO: Find better way than delay loop
-procedure DoDelay();
+procedure DoDelay(mydelay:byte);
 begin
-	if( speed > 0 ) then
+	if( mydelay > 0 ) then
 	begin
-		for i := 0 to speed do	
+		for i := 0 to mydelay do	
 		begin
 			wait(255);
 		end;
@@ -58,56 +58,43 @@ begin
 	end;
 end;
 
-// Poke value into an address
-procedure PokeAddr(pokeaddr_x:byte, pokeaddr_y:byte, pokeaddr_v:byte);
+// VIC & VDC screen plot
+procedure PokeAddr(pokeaddr_x:byte, pokeaddr_y:byte, pokeaddr_v:byte, pokeaddr_c:byte);
 begin
-	if( pokeaddr_x > myscreenwidth - 1 ) then return;
+	if( pokeaddr_x > 79 ) then return;
 	if( pokeaddr_x < 0) then return;
 	if( pokeaddr_y > myscreenheight - 1 ) then return;
 	if( pokeaddr_y < 0) then return;
 
-	// VIC screen plot
-
-	// Pointer value to screen RAM
-	p := SCREEN_CHAR_LOC + 40 * pokeaddr_y + (pokeaddr_x / 2);
-	poke(p, 0, pokeaddr_v);
-
-	// Pointer value to color RAM
-	p := SCREEN_COL_LOC + 40 * pokeaddr_y + (pokeaddr_x / 2);
-	poke(p, 0, curr_color);
-
- 	// VDC screen plot
-
-	// Fill color for string
-	MoveTo80(pokeaddr_x, pokeaddr_y, $08);
-	Fill80(curr_color, 2);
+	if( pokeaddr_x < 40 ) then
+	begin
+		// Using AddressTable for screen updates
+		// This is faster than using poke()
+		p := AddressTable( #saddr, pokeaddr_x, pokeaddr_y ); // pick row 24 (range is 0 to 24) and column 39 (range is 0 to 39)
+		p[0] := pokeaddr_v;  // place a character at the bottom right of the display
+	
+		p := AddressTable( #caddr, pokeaddr_x, pokeaddr_y ); // pick same location in colour RAM
+		p[0] := pokeaddr_c;
+		
+		// Pointer value to screen RAM
+		//p := SCREEN_CHAR_LOC + 40 * pokeaddr_y + (pokeaddr_x / 2);
+		//poke(p, 0, pokeaddr_v);
+	
+		// Pointer value to color RAM
+		//p := SCREEN_COL_LOC + 40 * pokeaddr_y + (pokeaddr_x / 2);
+		//poke(p, 0, curr_color);
+	end;
 	
 	// Display text
-	MoveTo80(pokeaddr_x, pokeaddr_y, $00);
+	MoveTo80(pokeaddr_x+20, pokeaddr_y, $00);
 	Fill80(pokeaddr_v, 2);
+
+	// Fill color for string
+	MoveTo80(pokeaddr_x+20, pokeaddr_y, $08);
+	Fill80(pokeaddr_c, 2);
 end;
 
-// Fill char array
-procedure InitData();
-begin	
-	for i := 0 to num_chars do							// line 150
-	begin
-		// Populate char_arr 
-		char_start := char_start_st;
-		char_offset := char_offset_st;
-		
-		// Option for reverse chars
-		if( rev_enable = 1 ) then
-		begin
-			if( Random() > 127 ) then				// line 165
-				char_start := char_start + 128;		// line 165
-		end;
-		
-		char_arr[i] := Random() & char_offset + char_start;
-	end;
-end; 
-
-// Check for any user inputs
+// Check for user input
 procedure CheckInputs();
 begin	
 	key := GetKey();

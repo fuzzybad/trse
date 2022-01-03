@@ -39,6 +39,10 @@ var
 	p 			  	: pointer;
 	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando: byte;
 	x1, y1, x2, y2	: signed byte;
+	key 				: byte; 		// Used for keyboard input
+    saddr : array[23] of integer;	// Array for screen AddressTable
+    caddr : array[23] of integer;	// Array for color AddressTable
+
 	// Color arrays
 	cArr1			: array[] of byte = (1, 7, 2, 7, 1); // wht, yel, red 
 	cArr2			: array[] of byte = (4, 5, 6, 5, 4); // pur, grn, blu 
@@ -52,9 +56,6 @@ var
 	
 	// VIC Colors
 	// 0 = black, 1 = white, 2 = red, 3 = cyan, 4 = purple, 5 = green, 6 = blue, 7 = yellow
-
-	// Used for keyboard input
-	key: byte;
 	
 	// Text for splash screen  	
 	titlemsg:	string = ("KALEIDOSCOPE+");
@@ -74,6 +75,12 @@ var
 //	Method which shows title screen and checks screen width
 procedure ShowTitle();
 begin
+	// Using AddressTable for screen updates
+    definescreen();
+	// not sure why vars not working for myscreenwidth/myscreenheight
+    CreateAddressTable( #saddr, SCREEN_CHAR_LOC, SCREEN_WIDTH, SCREEN_HEIGHT ); 
+    CreateAddressTable( #caddr, SCREEN_COL_LOC, SCREEN_WIDTH, SCREEN_HEIGHT );
+
 	// Set palette
 	cArrPtr := #cArr1;
 	cArrLen := length(cArr1);
@@ -127,39 +134,27 @@ begin
    	printString(promptmsg, 0, 13);
 
 	WaitForKeypress();
-	
-	// Setup VIC screen
-	// @TODO: Need to check for PAL/NTSC and position screen accordingly
-	/*
-	asm("
-		sei
-		lda $9002
-		and #128
-		ora myscreenwidth
-		sta $9002	// Set # of columns
-		lda myscreenheight
-		rol
-		and #126
-		sta $9003	// Set # of rows
-		lda #10
-		sta $9000	// Set horizontal screen position
-		lda #40
-		sta $9001	// Set vertical screen position
-		cli
-	");
-	*/
-	
-	//for i := 0 to myscreenwidth do
-	//begin
-	//	PokeAddr(i, 0, i);		
-	//end;
-	//for i := 0 to myscreenheight do
-	//begin
-	//	PokeAddr(0, i, i);		
-	//end;
-	//WaitForKeypress();
-end;
+end;		// End ShowTitle
 
+// Fill char array
+procedure InitData();
+begin	
+	for i := 0 to num_chars do							// line 150
+	begin
+		// Populate char_arr 
+		char_start := char_start_st;
+		char_offset := char_offset_st;
+		
+		// Option for reverse chars
+		if( rev_enable = 1 ) then
+		begin
+			if( Random() > 127 ) then				// line 165
+				char_start := char_start + 128;		// line 165
+		end;
+		
+		char_arr[i] := Random() & char_offset + char_start;
+	end;
+end;
 
 //////////////////////////
 // Plot chars on screen
@@ -171,10 +166,10 @@ begin
 	//WaitForKeypress();
 
 	// Call timing delay
-	DoDelay();
+	DoDelay(speed);
 
 	// Map chars in the up/down/across indexes
-	PokeAddr(x1, y1, char_arr[0]);				// line 900
+	PokeAddr(x1, y1, char_arr[0], curr_color);	// line 900
 
 	if( mainIndex = 1 ) then return;				// line 910
 	
@@ -196,20 +191,20 @@ begin
 			x2 := x1 + plotIndex;
 			y2 := y1;
 			// Fills right of vertical
-			PokeAddr(x2, y2, char_arr[plotIndex]);
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			x2 := x1 - plotIndex;
 			// Fills left of vertical
-			PokeAddr(x2, y2, char_arr[plotIndex]);
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 		end 
 		else if( y1 = centerY ) then			// line 950
 		begin
 			x2 := x1;
 			y2 := y1 + plotIndex;
 			// Fills below horizontal
-			PokeAddr(x2, y2, char_arr[plotIndex]);
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			y2 := y1 - plotIndex;
 			// Fills above horizontal
-			PokeAddr(x2, y2, char_arr[plotIndex]);
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 		end
 		else begin
 			y2 := y1;						// line 970
@@ -217,11 +212,11 @@ begin
 			begin
 				// Fills left side diagonal
 				x2 := x1 + plotIndex;
-				PokeAddr(x2, y2, char_arr[plotIndex]);
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			end else begin
 				// Fills right side diagonal
 				x2 := x1 - plotIndex;		// line 980
-				PokeAddr(x2, y2, char_arr[plotIndex]);
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			end;
 			
 			x2 := x1;						// line 990
@@ -230,16 +225,16 @@ begin
 			begin
 				// Fills top corners
 				y2 := y1 + plotIndex;
-				PokeAddr(x2, y2, char_arr[plotIndex]);					
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);					
 			end
 			else begin
 				// Fills bottom corners
 				y2 := y1 - plotIndex;		// line 1000
-				PokeAddr(x2, y2, char_arr[plotIndex]);
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			end;
 		end;
-	end; // for
-end;
+	end; 	// End for
+end;		// End Plot
 
 // Update the display
 procedure MainLoop();
@@ -286,7 +281,7 @@ begin
 		// Check user input	
 		CheckInputs();
 	end;
-end;
+end;		// End MainLoop
 
 // Various Pattern Mutations
 procedure DoMutations();
@@ -332,25 +327,21 @@ begin
 		begin
 			char_start_st	:= 76;			// Balls and lines pattern
 			char_offset_st	:= 5;
-			InitData();
 		end
 		else if( rando < 8 ) then
 		begin
 			char_start_st	:= 95;			// Triangles
 			char_offset_st	:= 11;	
-			InitData();
 		end
 		else if( rando < 12 ) then
 		begin
 			char_start_st	:= 116;			// Angles
 			char_offset_st	:= 11;	
-			InitData();
 		end
 		else
 		begin
 			char_start_st	:= 64;			// Graphics Chars
 			char_offset_st	:= 63;
-			InitData();
 		end;
 		
 		// Toggle reverse chars
@@ -390,9 +381,8 @@ begin
 		end;
 		
 		cycleCtr := 0;
-		//clearscreen($20, SCREEN_CHAR_LOC);
 	end;	
-end;											// End DoMutations
+end;		// End DoMutations
 
 begin
 	// Show the title and check number of columns

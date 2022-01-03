@@ -35,42 +35,28 @@ var
 	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
 	curr_color		: byte = 1;	// Current color
 	char_arr 	  	: array[20] of byte;
-	p 			  	: pointer;
+	p 			  	: pointer;	// Generic pointer
 	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando : byte;
 	x1, y1, x2, y2	: signed byte;
-	// COlor arrays
-	cArr1			: array[] of byte = (1, 15, 12, 11, 11, 12, 15, 1); // grays
-	cArr2			: array[] of byte = (1, 3, 14, 6, 14, 3, 1); // cool colors
-	cArr3			: array[] of byte = (7, 8, 2, 10, 2, 8, 7 ); // warm colors
-	cArr4			: array[] of byte = (2, 8, 7, 5, 6, 4, 6, 5, 7, 8, 2); // rainbow
-	cArr5			: array[] of byte = (5, 13, 1, 13, 5); // Greens
-	//cArr5			: array[] of byte = (14, 10, 1, 10, 14); // trans rights
+	key 				: byte; 		// Used for keyboard input
+    saddr : array[25] of integer;	// Array for screen AddressTable
+    caddr : array[25] of integer;	// Array for color AddressTable
+	// Color arrays
+	cArr1			: array[] of byte = (1, 15, 12, 11, 11, 12, 15, 1); // Grays
+	cArr2			: array[] of byte = (5, 13, 1, 13, 5); // Greens
+	cArr3			: array[] of byte = (1, 3, 14, 6, 14, 3, 1); // Cool colors
+	cArr4			: array[] of byte = (7, 10, 2, 8, 9, 8, 2, 10, 7 ); // Warm colors
+	cArr5			: array[] of byte = (2, 8, 7, 5, 6, 4, 6, 5, 7, 8, 2); // Rainbow
+	//cArr5			: array[] of byte = (14, 10, 1, 10, 14); // Trans rights
 	colorIdx			: byte = 0;
 	cArrPtr			: pointer;
 	cArrLen			: byte = 0;
 	cycleCtr			: byte = 0;
 	
-/*	
-	0	$00	black
-	1	$01	white
-	2	$02	red
-	3	$03	cyan
-	4	$04	purple
-	5	$05	green
-	6	$06	blue
-	7	$07	yellow
-	8	$08	orange
-	9	$09	brown
-	10	$0A	pink
-	11	$0B	dark grey
-	12	$0C	grey
-	13	$0D	light green
-	14	$0E	light blue
-	15	$0F	light grey
-*/
-
-	// Used for keyboard input
-	key: byte;
+	// 0	  $00 black,		1 $01 white,			2 $02 red,		3 $03 cyan
+	// 4	  $04 purple,	5 $05 green,			6 $06 blue,		7 $07 yellow
+	// 8	  $08 orange,	9 $09 brown, 		10 $0A pink,		11 $0B dark grey
+	// 12 $0C grey, 		13 $0D lt green,		14 $0E lt blue,	15 $0F lt grey
 	
 	// Text for splash screen  	
 	titlemsg:	string = ("KALEIDOSCOPE+");
@@ -82,24 +68,6 @@ var
 	// PRESS ANY KEY
 	promptmsg: string = (208, 210, 197, 211, 211, 32, 193, 206, 217, 32, 203, 197, 217);
 
-/*
- * @TODO: Try using AddressTable for screen updates
-var
-    saddr : array[25] of integer;
-    caddr : array[25] of integer;
-
-begin
-    definescreen();
-    CreateAddressTable( saddr, $0400, 40, 25 );   // $0400 screen address, 40 characters per column, 25 rows
-    CreateAddressTable( caddr, $D800, 40, 25 );   // $D800 color address, 40 characters per column, 25 rows
-
-    screenmemory := AddressTable( saddr, 39, 24 ); // pick row 24 (range is 0 to 24) and column 39 (range is 0 to 39)
-    screenmemory[0] := 33;  // place a character at the bottom right of the display
-
-    colormemory := AddressTable( cadder, 39, 24 );; // pick same location in colour RAM
-    colormemory := RED;
-*/
-
 // Include common functions
 @include "functions.ras"
 
@@ -107,6 +75,11 @@ begin
 //	Method which shows title screen and checks screen width
 procedure ShowTitle();
 begin
+	// Using AddressTable for screen updates
+    definescreen();
+    CreateAddressTable( #saddr, $0400, 40, 25 );   // $0400 screen address, 40 characters per column, 25 rows
+    CreateAddressTable( #caddr, $D800, 40, 25 );   // $D800 color address, 40 characters per column, 25 rows
+
 	// Set palette
 	cArrPtr := #cArr1;
 	cArrLen := length(cArr1);
@@ -157,7 +130,27 @@ begin
    	printString(promptmsg, 0, length(promptmsg));
 
 	WaitForKeypress();
-end;
+end;		// End ShowTitle
+
+// Fill char array
+procedure InitData();
+begin	
+	for i := 0 to num_chars do						// line 150
+	begin
+		// Populate char_arr 
+		char_start := char_start_st;
+		char_offset := char_offset_st;
+		
+		// Option for reverse chars
+		if( rev_enable = 1 ) then
+		begin
+			if( Random() > 127 ) then				// line 165
+				char_start := char_start + 128;		// line 165
+		end;
+		
+		char_arr[i] := Random() & char_offset + char_start;
+	end;
+end; 
 
 //////////////////////////
 // Plot chars on screen
@@ -169,10 +162,10 @@ begin
 	//WaitForKeypress();
 
 	// Call timing delay
-	DoDelay();
+	DoDelay(speed);
 
 	// Map chars in the up/down/across indexes
-	PokeAddr(x1, y1, char_arr[0]);				// line 900
+	PokeAddr(x1, y1, char_arr[0], curr_color);	// line 900
 
 	if( mainIndex = 1 ) then return;				// line 910
 	
@@ -194,32 +187,32 @@ begin
 			x2 := x1 + plotIndex;
 			y2 := y1;
 			// Fills right of vertical
-			PokeAddr(x2, y2, char_arr[plotIndex]);
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			x2 := x1 - plotIndex;
 			// Fills left of vertical
-			PokeAddr(x2, y2, char_arr[plotIndex]);
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 		end 
 		else if( y1 = centerY ) then			// line 950
 		begin
 			x2 := x1;
 			y2 := y1 + plotIndex;
 			// Fills below horizontal
-			PokeAddr(x2, y2, char_arr[plotIndex]);
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			y2 := y1 - plotIndex;
 			// Fills above horizontal
-			PokeAddr(x2, y2, char_arr[plotIndex]);
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 		end
 		else begin
 			y2 := y1;						// line 970
-			if( x1 < centerX ) then				// line 970
+			if( x1 < centerX ) then			// line 970
 			begin
 				// Fills left side diagonal
 				x2 := x1 + plotIndex;
-				PokeAddr(x2, y2, char_arr[plotIndex]);
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			end else begin
 				// Fills right side diagonal
 				x2 := x1 - plotIndex;		// line 980
-				PokeAddr(x2, y2, char_arr[plotIndex]);
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			end;
 			
 			x2 := x1;						// line 990
@@ -228,16 +221,16 @@ begin
 			begin
 				// Fills top corners
 				y2 := y1 + plotIndex;
-				PokeAddr(x2, y2, char_arr[plotIndex]);					
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);					
 			end
 			else begin
 				// Fills bottom corners
 				y2 := y1 - plotIndex;		// line 1000
-				PokeAddr(x2, y2, char_arr[plotIndex]);
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
 			end;
 		end;
-	end; // for
-end;
+	end; 	// End for
+end;		// End Plot
 
 // Update the display
 procedure MainLoop();
@@ -288,7 +281,7 @@ begin
 		// Check user input	
 		CheckInputs();
 	end;
-end;
+end;		// End MainLoop
 
 // Various Pattern Mutations
 procedure DoMutations();
@@ -334,25 +327,21 @@ begin
 		begin
 			char_start_st	:= 76;			// Balls and lines pattern
 			char_offset_st	:= 5;
-			InitData();
 		end
 		else if( rando < 8 ) then
 		begin
 			char_start_st	:= 95;			// Triangles
 			char_offset_st	:= 11;	
-			InitData();
 		end
 		else if( rando < 12 ) then
 		begin
 			char_start_st	:= 116;			// Angles
 			char_offset_st	:= 11;	
-			InitData();
 		end
 		else
 		begin
 			char_start_st	:= 64;			// Graphics Chars
 			char_offset_st	:= 63;
-			InitData();
 		end;
 		
 		// Toggle reverse chars
@@ -392,18 +381,10 @@ begin
 		end;
 		
 		cycleCtr := 0;
-		//clearscreen($20, SCREEN_CHAR_LOC);
 	end;
-
-	// Debug
-	//PrintXYZ(temp, 0, 0);
-	//WaitForKeypress();
-	//call(^$fd49);	// Trigger NMI	
-end;
+end;		// End DoMutations
 
 begin
-	//@include "functions.ras";
-	
 	// Show the title and check number of columns
 	ShowTitle();	
 
