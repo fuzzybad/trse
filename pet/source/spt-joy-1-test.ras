@@ -1,0 +1,78 @@
+program PET40;
+//@use "input/key"
+//@use "output/screen"
+//@use "output/pob"
+//@use "os/model"
+//@use "os/interrupts"
+//@use "compression/compression"
+
+// Set the model of PET required
+@projectsettings "petmodel" "3032"
+
+var
+	portAval 	  	 	: byte;
+	portAvalOld			: byte;
+	outTxt				: string = ("     ");
+
+procedure getPortAVal();
+begin
+	asm("
+    lda $E84F;
+    //eor $d0; // 1100 0000	Inverts values
+    //ora $3F; // 0011 1111 	Mask bits 6-7
+    ");
+end;
+
+/* main program */  
+begin
+
+	definescreen();
+
+	clearscreen($20, SCREEN_CHAR_LOC);
+
+	// main loop
+	while( true ) do
+	begin
+		portAval := getPortAVal();
+		
+		if( portAval <> portAvalOld ) then
+		begin
+			// show raw value
+			moveto(0, 0, hi(SCREEN_CHAR_LOC));
+			PrintDecimal(0, 4);
+			PrintDecimal(portAval, 4);
+			
+			// show text descriptions
+			moveto(0, 1, hi(SCREEN_CHAR_LOC));
+			if( portAval & 1 = 0 ) then outTxt := "LEFT "
+			else outTxt := "    ";
+			printstring(#outTxt,0,5);
+
+			moveto(0, 2, hi(SCREEN_CHAR_LOC));
+			if( portAval & 2 = 0 ) then outTxt := "RIGHT"
+			else outTxt := "     ";
+			printstring(#outTxt,0,5);
+
+			moveto(0, 3, hi(SCREEN_CHAR_LOC));
+			if( portAval & 4 = 0 ) then outTxt := "UP   "
+			else outTxt := "     ";
+			printstring(#outTxt,0,5);
+
+			moveto(0, 4, hi(SCREEN_CHAR_LOC));
+			if( portAval & 8 = 0 ) then outTxt := "DOWN "
+			else outTxt := "     ";
+			printstring(#outTxt,0,5);
+
+			moveto(0, 5, hi(SCREEN_CHAR_LOC));
+			if( portAval & 32 = 0 ) then outTxt := "FIRE "
+			else outTxt := "     ";
+			printstring(#outTxt,0,5);
+
+		end;
+		
+		portAvalOld := portAval;
+	end;
+	
+end.
+
+
