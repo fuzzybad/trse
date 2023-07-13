@@ -1,0 +1,221 @@
+SPT Tron Coding Notes
+---------------------
+
+Program variables:
+I, J, LS, LE   - Temp vars (int)
+X1, Y1, X2, Y2 - Coordinates of players (int)
+D1, D2, D3, D4 - Direction of players (int)(-40-up, 1-right, 40-down, -1-left) D1/D2 = Current Heading, D3/D4 Last Heading
+I1, I2         - Directional input of players (int)(-40-up, 1-right, 40-down, -1-left) 
+F1, F2         - Fire button input of players (bool)
+C1, C2         - Player collision state (bool)
+O1, O2, O3, O4 - Old position of player - used for trail (int)
+TC             - Turn Counter (bool)
+GE             - Game Ended (bool)
+CD             - Crash animation chars (array)
+S1, S2         - Score of players (int)
+SX, SY, SO     - X, Y, Offset for Positioned Poke & Print routines (int)
+TP$            - String output by Positioned Poke & Print routines (string)
+SL             - String length used by Positioned Poke routine (int)
+DL             - Value used by Delay routine (int)
+GD             - "Game Data" (array)
+PV             - Port Value read from Data Port B1 (int)
+SP             - Sound Pitch Value (int)
+SE             - Sound Octave Value  (int)
+
+Constants:
+SW - Score to win game (5)
+SC - Screen location (32768)
+DB - Data Port B (59471)
+RV - ROM Value PEEK(57344)
+SR - Sound Register (59467)
+SV - Sound Octave Number (59466)
+SF - Sound Frequency (59464)
+
+
+Structure:
+INIT
+    30 GOSUB 1800 (INIT VARS)
+    40 GOSUB 1950 (INIT GAME STATE)
+    40 GOSUB 1600 (SHOW TITLE SCREEN)
+    50 GOSUB 1700 (SETUP GAME SCREEN)
+    
+MAIN
+    110 GOSUB 1000 (READ JOYSTICKS)
+    120 GOSUB 1100 (READ KEYBOARD)
+    130 GOSUB 1400 (UPDATE POSITIONS)
+    140 GOSUB 1300 (CHECK COLLISIONS)
+    150 GOSUB 1450 (GAME STATE)
+    160 GOSUB 1500 (UPDATE SCREEN)
+    170 GOSUB 2220 (ALT ENGINE SOUND)
+    180 IF GE THEN 40
+    999 GOTO 110
+    
+Include text from movie: "RUN PROGRAM" "END OF LINE" "GREETINGS PROGRAMS"
+
+
+Subroutines:
+1000 READ JOYSTICKS
+1100 READ KEYBOARD
+1200 NEW ROUND
+1250 NEW GAME
+1300 CHECK COLLISIONS
+1400 UPDATE POSITIONS
+1450 GAME STATE
+1500 UPDATE SCREEN
+1600 SHOW TITLE SCREEN
+1700 SETUP GAME SCREEN
+1800 INIT VARS
+1900 UPDATE SCORE DISPLAY
+1950 INIT GAME STATE
+2000 DELAY FUNCTION
+2020 PRINT POSITIONED STRING
+2050 POKE POSITIONED STRING
+2100 CYCLE TEXT/AWAIT INPUT
+2200 INIT ENGINE SOUND
+2220 ALT ENGINE SOUND
+2250 SOUND STOP
+2260 CRASH SOUND
+2300 SOUND TEST
+
+
+ML ROUTINES
+-----------
+(as of 5/27/23)
+BASIC code: $0400 - $1916
+VARIABLES: $1916 - $1C89
+TOTAL BYTES: $1889 (6,281)
+
+ML routines: $1D00 - $2000(?)
+
+
+
+Misc
+----
+Normal character screen codes are 1-26 (A-Z) - OFFSET -64
+Normal number screen codes are 48-57 (0-9)   - OFFSET 0
+Reversed character screen codes are 129-154 (A-Z) - OFFSET +64
+Reversed number screen codes are 176-185 (0-9)    - OFFSET +128
+
+Determine PET model by checking first byte of EDIT ROM at $E000 (57344)
+$A0 (160) = B1
+$48 (72)  = B2
+$36 (54)  = B4-40
+$4B (75)  = B4-80
+$A9 (169) = B4-MP
+
+
+Position Cursor for PRINT: (doesn't work on basic 4)
+---------------------
+  POKE 198,x:POKE 216,y:
+  sys 58843 (BASIC1)
+  sys 57949 (BASIC2)
+  sys 57471 (BASIC4)
+
+For text display, store entire words/phrases are strings instead of chars.  
+Reference char in string using MIDSTR$($string,pos,chars)
+
+
+Change character set:
+---------------------
+To direct the computer to uppercase/graphics mode:
+POKE 59468,12
+
+To direct the computer to lower/uppercase mode:
+POKE 59468,14
+
+
+----------------
+SOUND GENERATION
+----------------
+Three pokes are required to make sound:
+    POKE 59467,16 "SR" (turn on port for sound output use 0 to turn it off*)
+    POKE 59466,octave "SV" (octave number, see below)
+    POKE 59464,frequency "SF" (0 for no sound)
+
+After setting 59467 you can adjust 59466 and 59464 to get any sort of sound, but to get music you need to set them with specific values, here is a three-octave note table.
+
+Set 59466 with octave range desired and play notes by setting the frequency in 59464. To stop any sound use POKE 59464,0.
+
+Note    Frequency
+-----------------------------------------------------
+        octave=15	    octave=51	    octave=85
+        Oct.0	Oct.1	Oct.1	Oct.2	Oct.2	Oct.3
+-----------------------------------------------------
+B	    251	    125	    251	    125	    251	    125
+C	    238	    118	    238	    118	    238	    118
+C#	    224	    110	    224	    110	    224	    110
+D	    210	    104	    210	    104	    210	    104
+D#	    199	    99	    199	    99	    199	    99
+E	    188	    93	    188	    93	    188	    93
+F	    177	    88	    177	    88	    177	    88
+F#	    168	    83	    168	    83	    168	    83
+G	    158	    78	    158	    78	    158	    78
+G#	    149	    74	    149	    74	    149	    74
+A	    140	    69	    140	    69	    140	    69
+A#	    133	    65	    133	    65	    133	    65
+-----------------------------------------------------
+
+
+Interrupts
+----------
+From "The Commodore PET Revealed", p10:
+	
+The contents of the interrupt vector
+in machines with the old ROMs is hexadecimal E66B, and
+in machines with the new ROMs hex E61B.
+
+ TIME	008D-008F	141-143	Real-Time Jiffy Clock (approx) 1/60 Sec
+ CINV	0090-0091	144-145	Vector: Hardware Interrupt
+ CBINV	0092-0093	146-147	Vector: BRK Instr. Interrupt	
+ NMINV	0094-0095	148-149	Vector: Non-Maskable Interrupt
+
+
+
+Keyboard Matrix
+---------------
+
+E810 (59408)	PORT A	
+    7   Diagnostic sense (pin 5 on the user port)
+    6   IEEE EOI in
+    5   Cassette sense #2
+    4   Cassette sense #1
+    3-0 Keyboard row select (through 4->10 decoder) - Rows 0-9
+
+E812 (59410)	PORT B	
+    7-0 Contents of keyboard row 
+	Usually all or all but one bits set.            
+                
+                
+Graphics keyboard decoding table:
+
+	// Scan keyboard directly
+	//  $E812 Bits 3,2,1,0 = row select
+	//	----+------------------------
+	//	row |  7  6  5  4  3  2  1  0
+	//	    | 128 64 32 16 8  4  2  1
+	//	----+------------------------
+	//	 9  |  =  .  -- ^C  <  sp [ ^R   ^C = STOP, ^R = Reverse on
+	//	 8  |  -  0  rs  >  -- ]  @  ls  rs = right shift, ls = left shift
+	//	 7  |  +  2  --  ?  ,  n  v  x
+	//	 6  |  3  1  ^M  ;  m  b  c  z   ^M = return
+	//	 5  |  *  5  --  :  k  h  f  s
+	//	 4  |  6  4  --  l  j  g  d  a
+	//	 3  |  /  8  --  p  i  y  r  w
+	//	 2  |  9  7  ^   o  u  t  e  q
+	//	 1  | ^T  ^Q --  )  \  '  $  "   ^T = DEL, ^Q = cursor down
+	//	 0  | ^]  ^S <-  (  &  %  #  !   ^] = cursor right, ^S = home
+	//
+	//	 W  = row 3, val 1	- P1 Up
+	//	 8  = row 3, val 64	- P2 Down
+	//	 A  = row 4, val 1	- P1 Left
+	//	 D  = row 4, val 2	- P1 Right
+	//	 6  = row 4, val 128	- P2 Right
+	//	 4  = row 4, val 64	- P2 Left
+	//	 S  = row 5, val 1	- P1 Down
+	//	 5  = row 5, val 64 	- P2 Down
+	//	 EN = row 6, val 32 	- Return	
+	//	 RS = row 8, val 32 	- P2 Fire
+	//	 SP = row 9, val 4	- P1 Fire
+
+
+

@@ -1,0 +1,78 @@
+/**
+ *	Two Player Light Cycles
+ *	Supports SPT Dual Joystick Interface
+ *	JLP 2023 (fuzzybad@gmail.com)
+ */
+
+program LightCycles;
+
+@use "input/key"
+//@use "str"
+//@use "crt"
+//@use "output/screen"
+//@use "output/pob"
+//@use "os/model"
+//@use "os/interrupts"
+//@use "compression/compression"
+
+// Set the model of PET required
+//@projectsettings "petmodel" "3032"
+
+
+/* === variables ============================================================================================ */
+@include "variables.ras"
+		
+/* === functions ============================================================================================ */
+@include "functions.ras"
+
+/* === main logic ============================================================================================ */
+procedure game_loop();
+begin
+
+	while (game_over_flag=0) do
+	begin
+	  	// check input devices
+	  	check_input();
+	  	
+		// 115 gosub2220:rem alt engine sound
+	  		  	
+		// update positions
+		update_positions();
+		
+	  	// 135 rem gosub2220:rem alt engine sound
+	  	
+	  	// check collisions
+	  	check_collisions();
+	  	
+	  	// game state
+	  	check_game_state();
+	  	
+	  	// update screen
+	  	update_screen();
+	  	
+	  	// 170 rem gosub2220:rem alt engine sound
+	  	
+	  	// 180 if ge then ge=0:goto40:rem new game
+	  	if( game_over_flag = 1 ) then return;
+	  	
+	  	// Slow it down
+		// @@TODO: Replace with interrupt routine
+	  	do_delay(game_speed);
+	end;
+end;
+
+// Init
+begin
+	DefineScreen();
+	screen_loc := #SCREEN_CHAR_LOC;
+	set_uppercase();
+
+	// Primary loop
+	while(1) do
+	begin
+		game_over_flag := 0;
+		title_screen();
+		game_screen();
+		game_loop();
+	end;
+end.

@@ -1,0 +1,770 @@
+/* 
+Tron Light Cycles - Functions 
+*/
+
+// Predefine these to prevent error
+procedure init_gamestate();
+procedure init_engine_sound();
+procedure new_game();
+procedure alternate_engine_sound();
+procedure player_crash();
+procedure sound_stop();
+
+// Clear Screen
+procedure cls();
+begin
+	ClearScreen($20, screen_char_loc);
+	moveto(0,0,hi(screen_char_loc));
+end;
+
+// Set lower/uppercase mode
+procedure set_lowercase();
+begin
+	poke(#$E84C,0,14);
+end;
+
+// Set uppercase/graphics mode
+procedure set_uppercase();
+begin
+	poke(#$E84C,0,12);
+end;
+
+// Set graphic mode
+procedure cursor_graphic();
+begin
+	_A := GRAPHIC_MODE;
+    call(#$FFD2);
+end;
+
+// Set text mode
+procedure cursor_text();
+begin
+	_A := TEXT_MODE;
+	call(#$FFD2);
+end;
+
+// Home cursor
+procedure cursor_home();
+begin
+	_A := HOME;
+    call(#$FFD2);
+end;
+
+// Clear screen & home cursor
+procedure cursor_clear();
+begin
+	_A := CLR_HOME;
+    call(#$FFD2);
+end;
+
+// Return/Line Feed
+procedure cursor_return();
+begin
+	_A := KEY_RETURN;
+    call(#$FFD2);
+end;
+
+// Move cursor down
+procedure cursor_down();
+begin
+	_A := CRSR_DN;
+    call(#$FFD2);
+end;
+
+// Move cursor right
+procedure cursor_right();
+begin
+	_A := CRSR_RT;
+    call(#$FFD2);
+end;
+
+// Print using KERNAL routine
+procedure basic_print( _ptr:pointer, _center_txt:boolean, _mylen:byte );
+var
+	next_ch: byte;
+begin
+	// Center text
+	if _center_txt = true then
+	begin
+		if _mylen < MYSCREEN_WIDTH then begin
+			for i := 0 to ((MYSCREEN_WIDTH - _mylen) / 2) do	cursor_right();
+		end;
+	end;
+
+	// Print text
+	next_ch := 0;
+	while(_ptr[next_ch] <> 0) do
+	begin 
+		_A := _ptr[next_ch];
+    		call(#$FFD2);
+    		inc(next_ch);
+	end;
+	
+	cursor_return();
+end;
+
+// Print using KERNAL routine at X,Y location
+procedure basic_printat( _pa_ptr:pointer, _pa_myx:byte, _pa_myy:byte);
+var
+	pa_next_ch: byte;
+begin
+	// Home cursor
+	cursor_home();
+	
+	// Cursor right
+	if _pa_myx > 0 then	begin
+		for i := 0 to _pa_myx do	cursor_right();
+	end;
+
+	// Cursor down
+	if _pa_myy > 0 then	begin
+		for i := 0 to _pa_myy do cursor_down();
+	end;
+
+	// Print text
+	pa_next_ch := 0;
+	while(_pa_ptr[pa_next_ch] <> 0) do
+	begin 
+		_A := _pa_ptr[pa_next_ch];
+    		call(#$FFD2);
+    		inc(pa_next_ch);
+	end;
+end;
+
+// Scan Keyboard Row
+procedure scan_kb_row();
+begin
+	// Might not be needed
+end;
+
+// Read input devices - keyboard & SPT dual joys
+procedure check_input();
+var
+	check_input_val : byte;
+begin
+	// Initialize	
+	player_1_input := 0;
+	player_2_input := 0;
+	player_1_fire := 0;
+	player_2_fire := 0;
+	enter_pressed := 0;
+
+	// Read controller values from Port B
+	check_input_val := LOC_PORT_B;
+	
+	// Checking SPT Single Joystick
+	//if (not check_input_val & 1) then player_1_input := 1;	// Left
+	//if (not check_input_val & 2) then player_1_input := 2;	// Right
+	//if (not check_input_val & 4) then player_1_input := 3;	// Up
+	//if (not check_input_val & 8) then player_1_input := 4;	// Down
+	//if (not check_input_val & 32) then player_1_fire := 1;	// Fire
+
+	// Checking SPT Double Joysticks
+	if (check_input_val & 3 = 0) then player_1_fire := 1;		// Fire
+	if (not check_input_val & 4) then player_1_input := 1;		// Left
+	if (not check_input_val & 8) then player_1_input := 2;		// Right
+	if (not check_input_val & 1) then player_1_input := 3;		// Up
+	if (not check_input_val & 2) then player_1_input := 4;		// Down
+
+	if (check_input_val & 48 = 0) then player_2_fire := 1;		// Fire
+	if (not check_input_val & 64) then player_2_input := 1;	// Left
+	if (not check_input_val & 128) then player_2_input := 2;	// Right
+	if (not check_input_val & 16) then player_2_input := 3;	// Up
+	if (not check_input_val & 32) then player_2_input := 4;	// Down
+
+	// Scan keyboard directly
+	// 	$E812 bits 3,2,1,0 = row select
+	//	----+------------------------
+	//	row |  7  6  5  4  3  2  1  0
+	//	    | 128 64 32 16 8  4  2  1
+	//	----+------------------------
+	//	 9  |  =  .  -- ^C  <  sp [ ^R   ^C = STOP, ^R = Reverse on
+	//	 8  |  -  0  rs  >  -- ]  @  ls  rs = right shift, ls = left shift
+	//	 7  |  +  2  --  ?  ,  n  v  x
+	//	 6  |  3  1  ^M  ;  m  b  c  z   ^M = return
+	//	 5  |  *  5  --  :  k  h  f  s
+	//	 4  |  6  4  --  l  j  g  d  a
+	//	 3  |  /  8  --  p  i  y  r  w
+	//	 2  |  9  7  ^   o  u  t  e  q
+	//	 1  | ^T  ^Q --  )  \  '  $  "   ^T = DEL, ^Q = cursor down
+	//	 0  | ^]  ^S <-  (  &  %  #  !   ^] = cursor right, ^S = home
+	//
+	//	 W  = row 3, val 1	- P1 Up
+	//	 8  = row 3, val 64	- P2 Down
+	//	 A  = row 4, val 1	- P1 Left
+	//	 D  = row 4, val 2	- P1 Right
+	//	 6  = row 4, val 128	- P2 Right
+	//	 4  = row 4, val 64	- P2 Left
+	//	 S  = row 5, val 1	- P1 Down
+	//	 5  = row 5, val 64 	- P2 Down
+	//	 EN = row 6, val 32 	- Return	
+	//	 RS = row 8, val 32 	- P2 Fire
+	//	 SP = row 9, val 4	- P1 Fire
+
+	// Scan the keyboard rows and process input
+	// 	- Apparently TRSE loops don't run the last item?!
+	for j := 3 to 10 do begin
+		LOC_DATA_A := j;
+		check_input_val := 255 - LOC_DATA_B;
+		
+		/*
+		if j = 0 then begin
+			moveto(1,1,hi(screen_char_loc));
+			printdecimal(check_input_val,2);
+		end;
+	
+		if j = 1 then begin
+			moveto(1,1,hi(screen_char_loc));
+			printdecimal(check_input_val,2);
+		end;
+	
+		if j = 2 then begin
+			moveto(1,1,hi(screen_char_loc));
+			printdecimal(check_input_val,2);
+		end;
+		*/
+		
+		if j = 3 then begin
+			// W - P1 Up
+			if (check_input_val & 1) then player_1_input := 3;
+			// 8 - P2 Up
+			if (check_input_val & 64) then player_2_input := 3;
+		end;
+		
+		if j = 4 then begin
+			// A - P1 Left
+			if (check_input_val & 1) then player_1_input := 1;
+			// D - P1 Right
+			if (check_input_val & 2) then player_1_input := 2;
+			// 4 - P2 Left
+			if (check_input_val & 64) then player_2_input := 1;
+			// 6 - P2 Right
+			if (check_input_val & 128) then player_2_input := 2;
+		end;
+		
+		if j = 5 then begin
+			// S - P1 Down
+			if (check_input_val & 1) then player_1_input := 4;
+			// 5 - P2 Down
+			if (check_input_val & 64) then player_2_input := 4;
+		end;
+		
+		if j = 6 then begin
+			// RETURN - Toggle Options
+			if (check_input_val & 32) then begin
+				enter_pressed := 1;
+				moveto(41,0,hi(screen_char_loc));
+				printstring("RETURN",0,6);
+			end;
+		end;
+
+		/*
+		if j = 7 then begin
+			moveto(1,1,hi(screen_char_loc));
+			printdecimal(check_input_val,2);
+		end;
+		*/
+		
+		if j = 8 then begin
+			// RIGHT SHIFT - P1 Fire
+			if (check_input_val & 32) then player_2_fire := 1;
+		end;
+
+		if j = 9 then begin
+			// SPACE - P2 Fire
+			if (check_input_val & 4) then	 player_1_fire := 1;
+		end;
+	end;
+	
+	// getin - read kernal keyboard input
+	//call(#$FFE4); 
+	//check_input_val := _A;
+	//moveto(1,2,hi(screen_char_loc));
+	//printdecimal(check_input_val,2);
+	
+	if ( player_1_fire = 1 or player_2_fire = 1) then begin 
+		returnvalue(true);
+	end else begin
+		returnvalue(false);
+	end
+end;
+
+// Update score disp
+procedure update_score();
+begin
+	// Convert value from decimal number to screen code
+	screen_loc[11] := score_p1 + 48 + 128;
+	screen_loc[28] := score_p2 + 48 + 128;
+end;
+
+// Delay function
+procedure do_delay( delay_val: byte );
+begin
+	if( delay_val > 0 ) then	begin
+		for j := 0 to delay_val do wait(255);
+	end;
+end;
+
+// Cycle text right & await input
+procedure cycle_text_right_wait( ctrw_x:byte, ctrw_y:byte, ctrw_num_chars:byte );
+begin
+	// Controls when trailing chars at end are drawn
+    	temp_byte := 0;
+    	// Number of trailing chars
+    	num_trail := ctrw_num_chars / 2;
+
+	// Cycle characters within string
+	while( true ) do
+	begin
+		for i := 0 to ctrw_num_chars step 1 do	 
+		begin
+			screen_loc_work := screen_loc + ctrw_x + MYSCREEN_WIDTH * ctrw_y;
+			
+			// Leading char
+			if screen_loc_work[i] > 127 then 	begin
+				screen_loc_work[i] := screen_loc_work[i] -128;
+			end else begin
+				screen_loc_work[i] := screen_loc_work[i] +128;
+			end;
+				
+			// Trailing char
+			if i < num_trail then begin
+				j := ctrw_num_chars - num_trail + i;
+			end	else begin
+			    j := i - num_trail;
+				// Activate trailing char after index reaches a given point
+			    temp_byte := 1;
+			end;	
+		
+			if temp_byte = 1 then
+			begin
+				if screen_loc_work[j] > 127 then 
+				begin
+					screen_loc_work[j] := screen_loc_work[j] -128;
+				end	else begin
+					screen_loc_work[j] := screen_loc_work[j] +128;
+				end;
+			end;	
+
+			if check_input() = true then return;
+			do_delay(scroll_speed);	
+		end;
+	end;
+end;
+
+// Cycle text left & await input
+procedure cycle_text_left_wait( ctlw_x:byte, ctlw_y:byte, ctlw_num_chars:byte );
+begin
+	// Controls when trailing chars at end are drawn
+    	temp_byte := 0;
+    	// Number of trailing chars
+    	num_trail := ctlw_num_chars / 2;
+
+	// Cycle characters within string
+	while( true ) do
+	begin
+		for i := ctlw_num_chars-1 to -1 step -1 do	 
+		begin
+			screen_loc_work := screen_loc + ctlw_x + MYSCREEN_WIDTH * ctlw_y;
+			
+			// Leading char
+			if screen_loc_work[i] > 127 then 	begin
+				screen_loc_work[i] := screen_loc_work[i] -128;
+			end else begin
+				screen_loc_work[i] := screen_loc_work[i] +128;
+			end;
+				
+			// Trailing char
+			if i >= ctlw_num_chars -num_trail then begin
+				j := i - num_trail -1;
+			end	else begin
+			    j := ctlw_num_chars - num_trail +i -1;
+				// Activate trailing char after index reaches a given point
+			    temp_byte := 1;
+			end;	
+		
+			if temp_byte = 1 then
+			begin
+				if screen_loc_work[j] > 127 then 
+				begin
+					screen_loc_work[j] := screen_loc_work[j] -128;
+				end	else begin
+					screen_loc_work[j] := screen_loc_work[j] +128;
+				end;
+			end;	
+
+			if check_input() = true then return;
+			do_delay(scroll_speed);
+		end;
+	end;
+end;
+
+// Draw box around title screen
+procedure draw_title_screen_box();
+begin	
+	// Draw top and bottom	
+	screen_loc_work := screen_loc + 960;
+	
+	for i := 0 to MYSCREEN_WIDTH do
+	begin
+		screen_loc[i]		:= SCR_SOLID_BLOCK;
+		screen_loc_work[i]	:= SCR_SOLID_BLOCK;
+    	end;
+	
+	// Draw sides
+	for i := 1 to MYSCREEN_HEIGHT do
+	begin
+		screen_loc_work			:= screen_loc + 39 * i;
+		screen_loc_work[i]		:= SCR_SOLID_BLOCK;
+		screen_loc_work[i+39]	:= SCR_SOLID_BLOCK;
+	end;
+end;
+
+// Show title
+procedure title_screen();
+begin
+	// Call CLR/HOME
+	cursor_clear();
+
+	// Print title strings
+	basic_print(#title_msg_0, 1, 19);
+	basic_print(#title_msg_1, 1, 20);
+	basic_print(#title_msg_2, 1, 20);
+	basic_print(#title_msg_3, 1, 20);
+	basic_print(#title_msg_4, 1, 31);
+	basic_print(#title_msg_5, 1, 23);
+	basic_print(#title_msg_6, 1, 17);
+	basic_print(#title_msg_7, 1, 22);
+	basic_print(#title_msg_8, 1, 17);
+	basic_print(#title_msg_9, 1, 23);
+	basic_print(#title_msg_10, 1, 19);
+
+	// Draw box around screen
+	draw_title_screen_box();
+	
+	// cycle text & wait (X, Y, # Chars)
+	cycle_text_right_wait(10, 21, 19);
+	
+	//basic_printat(#title_msg_10, 10, 19);
+	//cycle_text_left_wait(10, 21, 19);
+	
+	//@@TODO: Animate pattern or cycles going around perimiter of title screen
+	//		  at a fixed distance from each other. 
+	//
+	//		  STRETCH_GOAL:
+	//		  Trail erases itself after some amount of chars (32?).
+	//		  Allow player to control either or both cycles at title screen;
+	//		  If either cycle crashes, take user to special screen with credits
+	//		  and access to alternate trail mode, which is erased after some amount 
+	// 		  of chars (255?)
+end;
+
+// Draw box around game screen
+procedure draw_game_screen_box();
+begin	
+	// Draw top line
+	screen_loc_work := screen_loc + MYSCREEN_WIDTH;
+	for i := 0 to MYSCREEN_WIDTH do screen_loc_work[i] := SCR_MID_HORIZ_LN;
+
+	// Draw bottom line
+	screen_loc_work := screen_loc + 960;
+	for i := 0 to MYSCREEN_WIDTH do screen_loc_work[i] := SCR_MID_HORIZ_LN;
+		
+	// Draw sides
+	for i := 1 to MYSCREEN_HEIGHT do
+	begin
+		screen_loc_work := screen_loc + 39 * i;
+		screen_loc_work[i] := SCR_MID_VERT_LN;
+		screen_loc_work[i+39] := SCR_MID_VERT_LN;
+	end;
+
+	// top left mid box corner
+	screen_loc_work := screen_loc + MYSCREEN_WIDTH;
+	screen_loc_work[0] := SCR_MID_TOP_LT_CORNER;
+
+	// top right mid box corner
+	screen_loc_work := screen_loc + 79;
+	screen_loc_work[0] := SCR_MID_TOP_RT_CORNER;
+	
+	// bot left mid box corner
+	screen_loc_work := screen_loc + 960;
+	screen_loc_work[0] := SCR_MID_BOT_LT_CORNER;
+	
+	// bot right mid box corner
+	screen_loc_work := screen_loc + 999;
+	screen_loc_work[0] := SCR_MID_BOT_RT_CORNER;
+
+end;
+
+// Setup game screen
+procedure game_screen();
+begin
+	// Call CLR/HOME
+	cursor_clear();
+
+	// Draw box around screen
+	draw_game_screen_box();	
+	
+	// Draw score display (text, not score values)
+	basic_printat(#score_msg_0, 1, 0);	// string, x, y
+	
+	update_score();
+	
+	init_engine_sound();
+	
+	init_gamestate();
+
+	// debug line
+	//basic_printat("GAME START", 15, 10);	// string, x, y
+end;
+
+// Start new round
+procedure new_round();
+begin
+	update_score();
+	
+	// Calculation for centered text
+	tmp := (MYSCREEN_WIDTH - message_len) / 2;
+	
+	// Print new round message & wait for input
+	basic_printat(message_ptr, tmp, 13);	// string, x, y
+	cycle_text_right_wait(tmp, 13, message_len);	// x, y, # chars
+
+	// Adjust game speed based on round 
+	if( score_p1 = 1 or score_p2 = 1 ) then game_speed := 28;
+	if( score_p1 = 2 or score_p2 = 2 ) then game_speed := 24;
+	if( score_p1 = 3 or score_p2 = 3 ) then game_speed := 20;
+	if( score_p1 = 4 or score_p2 = 4 ) then game_speed := 16;
+
+	game_screen();
+end;
+
+// Start new game
+procedure new_game();
+begin
+	update_score();
+	
+	// Calculation for centered text
+	tmp := (MYSCREEN_WIDTH - message_len) / 2;
+
+	// Print Game Over message
+	basic_printat(message_ptr, tmp, 13);	// string, x, y
+
+	// await input
+	cycle_text_right_wait(tmp, 13, message_len);	// x, y, # chars
+	
+	// Reset scores
+	score_p1	:= 0;
+	score_p2	:= 0;
+	
+	// Reset game speed
+	game_speed := 32;
+	
+	// Return to main loop
+	game_over_flag := 1;
+end;
+
+// Game state
+procedure check_game_state();
+begin
+	// Check for player crashed
+	if (player_1_crash = 1 or player_2_crash = 1) then begin
+		player_crash();
+		sound_stop();
+	end;
+	
+	if (player_1_crash = 1 and player_2_crash = 1) then begin
+		message_ptr := #msg_both_crash;
+		message_len := length(msg_both_crash);
+		new_round();
+	end 
+	else if (player_1_crash = 1) then begin
+		// Increment score 
+		score_p2 := score_p2 + 1;
+		
+		if (score_p2 < SCORE_TO_WIN) then begin
+			message_ptr := #msg_p1_crash;
+			message_len := length(msg_p1_crash);
+			new_round();
+		end;
+	end
+	else if (player_2_crash = 1) then begin
+		// Increment score 
+		score_p1 := score_p1 + 1;
+		
+		if (score_p1 < SCORE_TO_WIN) then begin
+			message_ptr := #msg_p2_crash;
+			message_len := length(msg_p2_crash);
+			new_round();
+		end;
+	end;
+	
+	// Check for end of game
+	if (score_p1 >= SCORE_TO_WIN) then begin
+		message_ptr := #msg_p1_wins;
+		message_len := length(msg_p1_wins);
+		new_game();
+	end
+	else if (score_p2 >= SCORE_TO_WIN) then begin
+		message_ptr := #msg_p2_wins;
+		message_len := length(msg_p2_wins);
+		new_game();
+	end;
+end;
+
+// Check Collisions
+//	player_1_xy, player_2_xy 		- Player Coordinates
+//	player_1_crash, player_2_crash	- Crash Flags
+procedure check_collisions();
+begin
+	player_1_crash := 0;
+	player_2_crash := 0;
+	
+	if (turn_counter or player_1_fire) then begin
+		screen_loc_work := screen_loc + player_1_xy;
+		if ( peek(screen_loc_work, 0) <> 32 ) then player_1_crash := 1;
+	end;
+
+	if (turn_counter or player_2_fire) then begin
+		screen_loc_work := screen_loc + player_2_xy;
+		if ( peek(screen_loc_work, 0) <> 32 ) then player_2_crash := 1;		
+	end;
+end;
+
+// Update Positions
+// 	player_1_xy, player_2_xy 		- Player Coordinates
+// 	player_1_head, player_2_head 		- Player Headings 
+// 	player_1_fire, player_2_fire 		- Turbo Engaged
+// 	player_1_trail, player_2_trail 	- Trail Positions 
+procedure update_positions();
+begin
+	// Check if move avail
+	turn_counter := turn_counter + 1;
+	if turn_counter > 1 then turn_counter := 0; 	// May need to tweak this value
+	
+	// Move P1 if normal move is available or turbo engaged
+	if (turn_counter = 1 or player_1_fire = 1) then
+	begin
+		// Direction change only allowed when turbo not engaged
+		if (player_1_fire = 0) then
+		begin
+			// Verify input was received and not opposite of current dir
+			if (player_1_input and (player_1_input <> dir_opp_arr[player_1_head])) then
+			begin
+				// Set new heading
+				player_1_head	:= player_1_input;
+			end;
+		end;
+		
+		// Draw Trail
+		player_1_trail[1]	:= player_1_trail[0];
+		player_1_trail[0]	:= screen_loc + player_1_xy;
+		
+		// Update Player 1 Position
+		if (player_1_head) then player_1_xy := player_1_xy + dir_map_arr[player_1_head];
+	end;
+
+	// Move P2 if normal move is available or turbo engaged
+	if (turn_counter = 1 or player_2_fire = 1) then
+	begin
+		// Direction change only allowed when turbo not engaged
+		if (player_2_fire = 0) then
+		begin
+			// Verify input was received and not opposite of current dir
+			if (player_2_input and (player_2_input <> dir_opp_arr[player_2_head])) then
+			begin
+				// Set new heading
+				player_2_head	:= player_2_input;
+			end;
+		end;
+
+		// Draw Trail
+		player_2_trail[1]	:= player_2_trail[0];
+		player_2_trail[0]	:= screen_loc + player_2_xy;
+
+		// Update Player 2 Position
+		if (player_2_head) then player_2_xy := player_2_xy + dir_map_arr[player_2_head];
+	end;
+end;
+
+// Update Screen
+//	player_1_xy, player_2_xy - Player Coordinates 	
+//	player_1_trail, player_2_trail - Trail Coordinates
+procedure update_screen();
+begin
+	// P1 bike & trail
+	screen_loc_work		:= screen_loc + player_1_xy;
+	screen_loc_work[0]	:= SCR_DIAMOND;
+	screen_loc_work		:= player_1_trail[1];
+	screen_loc_work[0]	:= SCR_SOLID_BLOCK;
+
+	// P2 bike & trail
+	screen_loc_work		:= screen_loc + player_2_xy;
+	screen_loc_work[0]	:= SCR_CIRCLE;
+	screen_loc_work		:= player_2_trail[1];
+	screen_loc_work[0]	:= SCR_SHADED_BLOCK;
+end;
+
+// Init Variables
+procedure init_gamestate();
+begin
+	player_1_xy			:= 5 + (12 * MYSCREEN_WIDTH);
+	player_2_xy			:= 34 + (12 * MYSCREEN_WIDTH);
+	player_1_head		:= 2; // heading right
+	player_2_head		:= 1; // heading left
+	player_1_trail[0]	:= 0;
+	player_1_trail[1]	:= 0;
+	player_2_trail[0]	:= 0;
+	player_2_trail[1]	:= 0;
+	player_1_crash		:= 0;
+	player_2_crash		:= 0;
+	player_1_input		:= 0;
+	player_2_input		:= 0;
+	player_1_fire		:= 0;
+	player_2_fire		:= 0;
+	turn_counter			:= 0;
+end;
+
+// crash visual & sound effect
+procedure player_crash();
+begin
+	// Explode in all directions:
+	//
+	//  *  *  *
+	//   * * *
+	//    ***
+	//  *******
+	//    *** 
+	//   * * *
+	//  *  *  *
+	
+	// 2265 j=.:for i=160 to 127 step-1
+	// 2270 if c1=1 then pokesc+x1+y1,cd(j)
+	// 2275 if c2=1 then pokesc+x2+y2,cd(j)
+	// 2280 j=j+1:if j>2 then j=0
+	// 2285 pokesf,i:next
+end;
+
+// sound stop
+procedure sound_stop();
+begin
+	// 2255 pokesr,0:return
+end;
+
+// init engine sound
+procedure init_engine_sound();
+begin
+	// 2205 pokesr,16:rem enable sound
+	// 2210 pokesv,se(0):rem octave
+	// 2215 sp=200:rem pitch
+	alternate_engine_sound();
+end;
+	
+// alt engine sound
+procedure alternate_engine_sound();
+begin
+	// 2225 if sp=200 then sp=205:goto2240
+	// 2230 if sp=205 then sp=200
+	// 2240 pokesf,sp:rem pitch
+end;
+
