@@ -88,6 +88,9 @@ var
 	num_trail: 		byte = 0;
 	scroll_speed: 	byte = 16;	// Speed of scrolling - lower is faster
 	game_speed:		byte = 32;	// Speed of game - lower is faster
+	do_music:		boolean = 0;
+	music_idx:		byte = 0;
+	music_sust_idx:	byte = 0;
 	sound_pitch:		byte = 255;
 	sound_oct_idx:	byte = 0;
 	sound_oct_arr:	array[3] of byte = (15, 51, 85);
@@ -146,3 +149,50 @@ var
 	msg_p1_wins:		string = ("PLAYER 1 WINS");
 	msg_p2_wins:		string = ("PLAYER 2 WINS");
 
+	// Intro to "Anthem for Keyboard Solo" Tron theme - 7/4 time
+	// Transcribed from sheet music: https://www.sheetmusicplus.com/title/tron-theme-digital-sheet-music/22158340
+	// How to read sheet music: https://theonlinemetronome.com/blogs/8/treble-clef
+	/**
+	 *       Oct.0	Oct.1
+	 * ---------------------
+	 * B	    251	    125	 
+	 * C	    238	    118	 
+	 * C#	224	    110	 
+	 * D	    210	    104	 
+	 * D#	199	    99	 
+	 * E	    188	    93	 
+	 * F	    177	    88	 
+	 * F#	168	    83	 
+	 * G	    158	    78	 
+	 * G#	149	    74	 
+	 * A	    140	    69	 
+	 * A#	133	    65	 
+	 */
+	// Array structure - pitch, octave, sustain value 
+	theme_music_arr: array[100] of byte = (
+		// half measure rst
+		0,0,7,
+		// rst, C6, D6, E6, rst, C6, D6, E6, C6
+		0,0,2,  238,1,1,  210,1,1,  188,1,3,  0,0,1,  238,1,1,  210,1,1,  188,1,2,  238,1,2,
+		// G6, D6, B6, G5
+		158,1,4,  210,1,4,  251,1,4,  158,0,3,
+		// rst, A5, B6, C6, rst, A5, B6, C6, A5
+		0,0,2,  140,0,1,  251,1,1,  238,1,3,  0,0,1,  140,0,1,  251,1,1,  238,1,2,  140,0,2,
+		// E6, B6, G#5, A5
+		188,1,4,  251,1,4,  149,0,4,  188,0,3,
+		// rst, A5, G5, F5, A5, B6, rst
+		0,0,2,  140,0,1,  158,0,1,  177,0,2,  140,0,2,  251,1,6,
+		// rst, C6, B6, A5, C6, D6
+		0,0,2,  238,1,1,  251,1,1,  140,0,2,  238,1,2,  210,1,6,
+		// rst, D#6, C#6, B6, D#6, F#6, C#6
+		0,0,2,  199,1,1,  224,1,1,  251,1,2,  199,1,2,  168,1,4,  224,1,3,
+		// rst, F#6, E6, D6, F#6, A6
+		0,0,2,  168,1,1,  188,1,1,  210,1,2,  168,1,2,  140,1,6,
+		// half measure rst
+		0,0,7,		
+		// Stop
+		0,0,0
+		);
+		
+
+// eof

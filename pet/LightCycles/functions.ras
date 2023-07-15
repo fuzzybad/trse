@@ -9,6 +9,7 @@ procedure new_game();
 procedure alternate_engine_sound();
 procedure player_crash();
 procedure stop_sound();
+procedure play_title_music();
 
 // Clear Screen
 procedure cls();
@@ -288,6 +289,14 @@ begin
     	// Number of trailing chars
     	num_trail := ctrw_num_chars / 2;
 
+	if (do_music) then
+	begin
+		// Initialize music
+		music_idx		:= 0;
+		music_sust_idx	:= 0;
+		LOC_SOUND_REG	:= 16;
+	end;
+
 	// Cycle characters within string
 	while( true ) do
 	begin
@@ -321,6 +330,12 @@ begin
 				end;
 			end;	
 
+			// Play theme song
+			if (do_music) then
+			begin
+				play_title_music();
+			end;
+
 			if check_input() = true then return;
 			do_delay(scroll_speed);	
 		end;
@@ -334,6 +349,14 @@ begin
     	temp_byte := 0;
     	// Number of trailing chars
     	num_trail := ctlw_num_chars / 2;
+
+	if (do_music) then
+	begin
+		// Initialize music
+		music_idx		:= 0;
+		music_sust_idx	:= 0;
+		LOC_SOUND_REG	:= 16;
+	end;
 
 	// Cycle characters within string
 	while( true ) do
@@ -367,6 +390,12 @@ begin
 					screen_loc_work[j] := screen_loc_work[j] +128;
 				end;
 			end;	
+
+			// Play theme song
+			if (do_music) then
+			begin
+				play_title_music();
+			end;
 
 			if check_input() = true then return;
 			do_delay(scroll_speed);
@@ -416,6 +445,9 @@ begin
 
 	// Draw box around screen
 	draw_title_screen_box();
+	
+	// Play theme song
+	//play_title_music();
 	
 	// cycle text & wait (X, Y, # Chars)
 	cycle_text_right_wait(10, 21, 19);
@@ -738,21 +770,74 @@ begin
 	end;
 end;
 
-// sound stop
-procedure stop_sound();
+// Play title music - called from external loop
+procedure play_title_music();
 begin
-	LOC_SOUND_REG	:= 0;
+	// Loop over note array
+	// 	Structure - note value, octave, sustain value 
+
+	// Change note when index is zero
+	if (music_sust_idx = 0) then
+	begin
+		// End tune when pitch & sustain both = 0
+		if (theme_music_arr[music_idx] = 0 and theme_music_arr[music_idx+2] = 0) then begin
+			music_idx := 0;
+		end;
+	
+		// Set octave
+		LOC_SOUND_OCT	:= sound_oct_arr[theme_music_arr[music_idx+1]];
+		// Set the pitch
+		LOC_SOUND_FREQ	:= theme_music_arr[music_idx];
+		// Set sustain - this value is tuned based on routine calling this function
+		music_sust_idx	:= theme_music_arr[music_idx+2] * 9;
+		
+		// Next note
+		music_idx := music_idx + 3;
+		
+		// Just in case we hit end of array before end of music marker
+		if music_idx >= length(theme_music_arr) then music_idx := 0;
+	end;
+	
+	music_sust_idx := music_sust_idx -1;
 end;
+
+/* - Singleton version
+// Play title music
+procedure play_title_music();
+begin
+	// enable sound
+	LOC_SOUND_REG	:= 16;
+
+	// Loop over note array
+	// 	Structure - note value, octave, sustain value 
+	for i:=0 to length(theme_music_arr) step 3 do
+	begin
+		// Exit when pitch & sustain both = 0
+		if (theme_music_arr[i] = 0 and theme_music_arr[i+2] = 0) then break;
+
+		// set octave
+		LOC_SOUND_OCT	:= sound_oct_arr[theme_music_arr[i+1]];
+		// Set the pitch
+		LOC_SOUND_FREQ	:= theme_music_arr[i];
+		
+		// Sustain
+		for tmp:=0 to theme_music_arr[i+2] do
+		begin
+			do_delay(150);
+		end;
+	end;
+	
+	stop_sound();
+end;
+*/
 
 // init engine sound
 procedure init_engine_sound();
 begin
 	// enable sound
 	LOC_SOUND_REG	:= 16;
-	
 	// set octave
-	LOC_SOUND_OCT	:= sound_oct_arr[sound_oct_idx];
-	
+	LOC_SOUND_OCT	:= sound_oct_arr[0];
 	// set pitch 
 	sound_pitch		:= 200;
 	
@@ -782,6 +867,12 @@ begin
 	
 	// Set the pitch
 	LOC_SOUND_FREQ	:= sound_pitch;
+end;
+
+// sound stop
+procedure stop_sound();
+begin
+	LOC_SOUND_REG	:= 0;
 end;
 
 // eof
