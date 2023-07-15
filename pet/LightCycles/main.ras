@@ -35,11 +35,13 @@ begin
 	  	check_input();
 	  	
 		// 115 gosub2220:rem alt engine sound
+	  	//alternate_engine_sound();
 	  		  	
 		// update positions
 		update_positions();
 		
 	  	// 135 rem gosub2220:rem alt engine sound
+	  	alternate_engine_sound();
 	  	
 	  	// check collisions
 	  	check_collisions();
@@ -51,7 +53,8 @@ begin
 	  	update_screen();
 	  	
 	  	// 170 rem gosub2220:rem alt engine sound
-	  	
+  	  	//alternate_engine_sound();
+	
 	  	// 180 if ge then ge=0:goto40:rem new game
 	  	if( game_over_flag = 1 ) then return;
 	  	

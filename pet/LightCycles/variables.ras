@@ -89,6 +89,7 @@ var
 	scroll_speed: 	byte = 16;	// Speed of scrolling - lower is faster
 	game_speed:		byte = 32;	// Speed of game - lower is faster
 	sound_pitch:		byte = 255;
+	sound_oct_idx:	byte = 0;
 	sound_oct_arr:	array[3] of byte = (15, 51, 85);
 	crash_anim_arr:	array[3] of byte = (42, 87, 81);
 	dir_map_arr:		array[5] of integer = (0, -1, 1, -40, 40);
