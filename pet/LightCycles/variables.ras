@@ -6,6 +6,7 @@ var
 	const	MYSCREEN_WIDTH: byte = 40;
 	const	MYSCREEN_HEIGHT: byte = 24;
 	const	SCORE_TO_WIN: byte = 5;
+	const	DEF_GAME_SPEED: byte = 50;
 	// Keyboard Locations
 	const	LOC_KEYB: address = 151;	// Keys being pressed
 	const	LOC_KEYBUF: address = 158;	// Keyboard buffer
@@ -70,6 +71,7 @@ var
 	screen_loc:		pointer;
 	screen_loc_work:	pointer;
 	message_ptr:		pointer;
+	song_ptr:		pointer;
 
 	// Counters
 	i: byte = 0;
@@ -85,10 +87,8 @@ var
 	score_p1: 		byte = 0;
 	score_p2:		byte = 0;
 	temp_byte:		byte = 0;
-	num_trail: 		byte = 0;
 	scroll_speed: 	byte = 16;	// Speed of scrolling - lower is faster
-	game_speed:		byte = 32;	// Speed of game - lower is faster
-	do_music:		boolean = 0;
+	game_speed:		byte = DEF_GAME_SPEED;	// Speed of game - lower is faster
 	music_idx:		byte = 0;
 	music_sust_idx:	byte = 0;
 	sound_pitch:		byte = 255;
@@ -111,6 +111,12 @@ var
 	player_2_xy:		integer = 0;
 	player_1_trail:	array[2] of integer;
 	player_2_trail:	array[2] of integer;
+	scroll_num_char:	byte = 0;
+	scroll_x:		byte = 0;
+	scroll_y:		byte = 0;
+	scroll_num_trail:byte = 0;
+	scroll_inp_brk:	boolean = 0;
+	scroll_step:		byte = 0;
 
 	// Message Strings
 	title_msg_0:		string = (CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
@@ -148,51 +154,56 @@ var
 	msg_p2_crash:	string = ("PLAYER 2 CRASHED");
 	msg_p1_wins:		string = ("PLAYER 1 WINS");
 	msg_p2_wins:		string = ("PLAYER 2 WINS");
+	msg_get_ready:	string = ("PRESS FIRE WHEN READY");
 
+	// Music notes
+	const CONST_NOTE_B:	byte = 251;
+	const CONST_NOTE_BS:	byte = 245;	// Improvised
+	const CONST_NOTE_C:	byte = 238;
+	const CONST_NOTE_CS:	byte = 224;
+	const CONST_NOTE_D:	byte = 210;
+	const CONST_NOTE_DS:	byte = 199;
+	const CONST_NOTE_E:	byte = 188;
+	const CONST_NOTE_ES:	byte = 183;	// Improvised
+	const CONST_NOTE_F:	byte = 177;
+	const CONST_NOTE_FS:	byte = 168;
+	const CONST_NOTE_G:	byte = 158;
+	const CONST_NOTE_GS:	byte = 149;
+	const CONST_NOTE_A:	byte = 140;
+	const CONST_NOTE_AS:	byte = 133;
+	
 	// Intro to "Anthem for Keyboard Solo" Tron theme - 7/4 time
 	// Transcribed from sheet music: https://www.sheetmusicplus.com/title/tron-theme-digital-sheet-music/22158340
 	// How to read sheet music: https://theonlinemetronome.com/blogs/8/treble-clef
-	/**
-	 *       Oct.0	Oct.1
-	 * ---------------------
-	 * B	    251	    125	 
-	 * C	    238	    118	 
-	 * C#	224	    110	 
-	 * D	    210	    104	 
-	 * D#	199	    99	 
-	 * E	    188	    93	 
-	 * F	    177	    88	 
-	 * F#	168	    83	 
-	 * G	    158	    78	 
-	 * G#	149	    74	 
-	 * A	    140	    69	 
-	 * A#	133	    65	 
-	 */
 	// Array structure - pitch, octave, sustain value 
 	theme_music_arr: array[100] of byte = (
-		// half measure rst
-		0,0,7,
-		// rst, C6, D6, E6, rst, C6, D6, E6, C6
-		0,0,2,  238,1,1,  210,1,1,  188,1,3,  0,0,1,  238,1,1,  210,1,1,  188,1,2,  238,1,2,
-		// G6, D6, B6, G5
-		158,1,4,  210,1,4,  251,1,4,  158,0,3,
-		// rst, A5, B6, C6, rst, A5, B6, C6, A5
-		0,0,2,  140,0,1,  251,1,1,  238,1,3,  0,0,1,  140,0,1,  251,1,1,  238,1,2,  140,0,2,
-		// E6, B6, G#5, A5
-		188,1,4,  251,1,4,  149,0,4,  188,0,3,
-		// rst, A5, G5, F5, A5, B6, rst
-		0,0,2,  140,0,1,  158,0,1,  177,0,2,  140,0,2,  251,1,6,
-		// rst, C6, B6, A5, C6, D6
-		0,0,2,  238,1,1,  251,1,1,  140,0,2,  238,1,2,  210,1,6,
-		// rst, D#6, C#6, B6, D#6, F#6, C#6
-		0,0,2,  199,1,1,  224,1,1,  251,1,2,  199,1,2,  168,1,4,  224,1,3,
-		// rst, F#6, E6, D6, F#6, A6
-		0,0,2,  168,1,1,  188,1,1,  210,1,2,  168,1,2,  140,1,6,
-		// half measure rst
-		0,0,7,		
-		// Stop
-		0,0,0
+		0,0,7, 	// half measure rst
+		0,0,2,  CONST_NOTE_C,1,1,  CONST_NOTE_D,1,1,  CONST_NOTE_E,1,3,  0,0,1,  CONST_NOTE_C,1,1,  CONST_NOTE_D,1,1,  CONST_NOTE_E,1,2,  CONST_NOTE_C,1,2,
+		CONST_NOTE_G,1,4,  CONST_NOTE_D,1,4,  CONST_NOTE_B,1,4,  CONST_NOTE_G,0,3,
+		0,0,2,  CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_C,1,3,  0,0,1,  CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_C,1,2,  CONST_NOTE_A,0,2,
+		CONST_NOTE_E,1,4,  CONST_NOTE_B,1,4,  CONST_NOTE_GS,0,4,  CONST_NOTE_E,0,3,
+		0,0,2,  CONST_NOTE_A,0,1,  CONST_NOTE_G,0,1,  CONST_NOTE_F,0,2,  CONST_NOTE_A,0,2,  CONST_NOTE_B,1,6,
+		0,0,2,  CONST_NOTE_C,1,1,  CONST_NOTE_B,1,1,  CONST_NOTE_A,0,2,  CONST_NOTE_C,1,2,  CONST_NOTE_D,1,6,
+		0,0,2,  CONST_NOTE_DS,1,1,  CONST_NOTE_CS,1,1,  CONST_NOTE_B,1,2,  CONST_NOTE_DS,1,2,  CONST_NOTE_FS,1,4,  CONST_NOTE_CS,1,3,
+		0,0,2,  CONST_NOTE_FS,1,1,  CONST_NOTE_E,1,1,  CONST_NOTE_D,1,2,  CONST_NOTE_FS,1,2,  CONST_NOTE_A,1,6,
+		0,0,7,	// half measure rst
+		0,0,0	// Stop
 		);
 		
+	// Tron Scherzo - daa, dah, da-da, daa, da-da-da-daaaa
+	// Need sheet music - did it by ear
+	// Array structure - pitch, octave, sustain value 
+	// D#, D, D#, E, C
+	// C#, C  D# F
+	game_end_music_arr: array[50] of byte = (
+		//CONST_NOTE_G,0,2,  CONST_NOTE_FS,0,2,  CONST_NOTE_G,0,1,  CONST_NOTE_A,0,2,  CONST_NOTE_FS,0,3,
+		//CONST_NOTE_G,0,1,  CONST_NOTE_FS,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_C,1,4, 
+		0,0,7,	// half measure rst
+		CONST_NOTE_DS,1,2,  CONST_NOTE_D,1,2,  CONST_NOTE_DS,1,1,  CONST_NOTE_E,1,2,  CONST_NOTE_C,1,3,
+		CONST_NOTE_CS,1,1,  CONST_NOTE_C,1,1,  CONST_NOTE_DS,1,1,  CONST_NOTE_F,1,4, 
+		0,0,14,	// full measure rst
+		0,0,0	// Stop
+		);
+
 
 // eof

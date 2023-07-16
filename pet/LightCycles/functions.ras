@@ -1,142 +1,14 @@
 /* 
-Tron Light Cycles - Functions 
+Tron Light Cycles - Game Functions 
 */
 
 // Predefine these to prevent error
 procedure init_gamestate();
 procedure init_engine_sound();
-procedure new_game();
 procedure alternate_engine_sound();
 procedure player_crash();
 procedure stop_sound();
-procedure play_title_music();
 
-// Clear Screen
-procedure cls();
-begin
-	ClearScreen($20, screen_char_loc);
-	moveto(0,0,hi(screen_char_loc));
-end;
-
-// Set lower/uppercase mode
-procedure set_lowercase();
-begin
-	poke(#$E84C,0,14);
-end;
-
-// Set uppercase/graphics mode
-procedure set_uppercase();
-begin
-	poke(#$E84C,0,12);
-end;
-
-// Set graphic mode
-procedure cursor_graphic();
-begin
-	_A := GRAPHIC_MODE;
-    call(#$FFD2);
-end;
-
-// Set text mode
-procedure cursor_text();
-begin
-	_A := TEXT_MODE;
-	call(#$FFD2);
-end;
-
-// Home cursor
-procedure cursor_home();
-begin
-	_A := HOME;
-    call(#$FFD2);
-end;
-
-// Clear screen & home cursor
-procedure cursor_clear();
-begin
-	_A := CLR_HOME;
-    call(#$FFD2);
-end;
-
-// Return/Line Feed
-procedure cursor_return();
-begin
-	_A := KEY_RETURN;
-    call(#$FFD2);
-end;
-
-// Move cursor down
-procedure cursor_down();
-begin
-	_A := CRSR_DN;
-    call(#$FFD2);
-end;
-
-// Move cursor right
-procedure cursor_right();
-begin
-	_A := CRSR_RT;
-    call(#$FFD2);
-end;
-
-// Print using KERNAL routine
-procedure basic_print( _ptr:pointer, _center_txt:boolean, _mylen:byte );
-var
-	next_ch: byte;
-begin
-	// Center text
-	if _center_txt = true then
-	begin
-		if _mylen < MYSCREEN_WIDTH then begin
-			for i := 0 to ((MYSCREEN_WIDTH - _mylen) / 2) do	cursor_right();
-		end;
-	end;
-
-	// Print text
-	next_ch := 0;
-	while(_ptr[next_ch] <> 0) do
-	begin 
-		_A := _ptr[next_ch];
-    		call(#$FFD2);
-    		inc(next_ch);
-	end;
-	
-	cursor_return();
-end;
-
-// Print using KERNAL routine at X,Y location
-procedure basic_printat( _pa_ptr:pointer, _pa_myx:byte, _pa_myy:byte);
-var
-	pa_next_ch: byte;
-begin
-	// Home cursor
-	cursor_home();
-	
-	// Cursor right
-	if _pa_myx > 0 then	begin
-		for i := 0 to _pa_myx do	cursor_right();
-	end;
-
-	// Cursor down
-	if _pa_myy > 0 then	begin
-		for i := 0 to _pa_myy do cursor_down();
-	end;
-
-	// Print text
-	pa_next_ch := 0;
-	while(_pa_ptr[pa_next_ch] <> 0) do
-	begin 
-		_A := _pa_ptr[pa_next_ch];
-    		call(#$FFD2);
-    		inc(pa_next_ch);
-	end;
-end;
-
-// Scan Keyboard Row
-procedure scan_kb_row();
-begin
-	// Might not be needed
-end;
 
 // Read input devices - keyboard & SPT dual joys
 procedure check_input();
@@ -225,11 +97,11 @@ begin
 		
 		if j = 6 then begin
 			// RETURN - Toggle Options
-			if (check_input_val & 32) then begin
-				enter_pressed := 1;
-				moveto(41,0,hi(screen_char_loc));
-				printstring("RETURN",0,6);
-			end;
+			//if (check_input_val & 32) then begin
+			//	enter_pressed := 1;
+			//	moveto(41,0,hi(screen_char_loc));
+			//	printstring("RETURN",0,6);
+			//end;
 		end;
 
 		/*
@@ -266,139 +138,37 @@ begin
 end;
 
 // Update score disp
-procedure update_score();
+procedure update_score(us_do_beep:boolean);
 begin
 	// Convert value from decimal number to screen code
 	screen_loc[11] := score_p1 + 48 + 128;
 	screen_loc[28] := score_p2 + 48 + 128;
-end;
 
-// Delay function
-procedure do_delay( delay_val: byte );
-begin
-	if( delay_val > 0 ) then	begin
-		for j := 0 to delay_val do wait(255);
-	end;
-end;
-
-// Cycle text right & await input
-procedure cycle_text_right_wait( ctrw_x:byte, ctrw_y:byte, ctrw_num_chars:byte );
-begin
-	// Controls when trailing chars at end are drawn
-    	temp_byte := 0;
-    	// Number of trailing chars
-    	num_trail := ctrw_num_chars / 2;
-
-	if (do_music) then
+	// Beep and flash score change
+	if (us_do_beep) then
 	begin
-		// Initialize music
-		music_idx		:= 0;
-		music_sust_idx	:= 0;
-		LOC_SOUND_REG	:= 16;
-	end;
-
-	// Cycle characters within string
-	while( true ) do
-	begin
-		for i := 0 to ctrw_num_chars step 1 do	 
+		for i := 0 to 6 do
 		begin
-			screen_loc_work := screen_loc + ctrw_x + MYSCREEN_WIDTH * ctrw_y;
-			
-			// Leading char
-			if screen_loc_work[i] > 127 then 	begin
-				screen_loc_work[i] := screen_loc_work[i] -128;
-			end else begin
-				screen_loc_work[i] := screen_loc_work[i] +128;
+			// Flash changed score_msg_0
+			if (player_1_crash) then begin
+				screen_loc[28] := screen_loc[28] + 128;
 			end;
-				
-			// Trailing char
-			if i < num_trail then begin
-				j := ctrw_num_chars - num_trail + i;
-			end	else begin
-			    j := i - num_trail;
-				// Activate trailing char after index reaches a given point
-			    temp_byte := 1;
-			end;	
-		
-			if temp_byte = 1 then
-			begin
-				if screen_loc_work[j] > 127 then 
-				begin
-					screen_loc_work[j] := screen_loc_work[j] -128;
-				end	else begin
-					screen_loc_work[j] := screen_loc_work[j] +128;
-				end;
-			end;	
-
-			// Play theme song
-			if (do_music) then
-			begin
-				play_title_music();
+			if (player_2_crash) then begin
+				screen_loc[11] := screen_loc[11] + 128;				
 			end;
 
-			if check_input() = true then return;
-			do_delay(scroll_speed);	
-		end;
-	end;
-end;
-
-// Cycle text left & await input
-procedure cycle_text_left_wait( ctlw_x:byte, ctlw_y:byte, ctlw_num_chars:byte );
-begin
-	// Controls when trailing chars at end are drawn
-    	temp_byte := 0;
-    	// Number of trailing chars
-    	num_trail := ctlw_num_chars / 2;
-
-	if (do_music) then
-	begin
-		// Initialize music
-		music_idx		:= 0;
-		music_sust_idx	:= 0;
-		LOC_SOUND_REG	:= 16;
-	end;
-
-	// Cycle characters within string
-	while( true ) do
-	begin
-		for i := ctlw_num_chars-1 to -1 step -1 do	 
-		begin
-			screen_loc_work := screen_loc + ctlw_x + MYSCREEN_WIDTH * ctlw_y;
-			
-			// Leading char
-			if screen_loc_work[i] > 127 then 	begin
-				screen_loc_work[i] := screen_loc_work[i] -128;
-			end else begin
-				screen_loc_work[i] := screen_loc_work[i] +128;
-			end;
-				
-			// Trailing char
-			if i >= ctlw_num_chars -num_trail then begin
-				j := i - num_trail -1;
-			end	else begin
-			    j := ctlw_num_chars - num_trail +i -1;
-				// Activate trailing char after index reaches a given point
-			    temp_byte := 1;
-			end;	
-		
-			if temp_byte = 1 then
-			begin
-				if screen_loc_work[j] > 127 then 
-				begin
-					screen_loc_work[j] := screen_loc_work[j] -128;
-				end	else begin
-					screen_loc_work[j] := screen_loc_work[j] +128;
-				end;
-			end;	
-
-			// Play theme song
-			if (do_music) then
-			begin
-				play_title_music();
-			end;
-
-			if check_input() = true then return;
-			do_delay(scroll_speed);
+			// Enable sound
+			LOC_SOUND_REG	:= 16;
+			// Set octave
+			LOC_SOUND_OCT	:= sound_oct_arr[1];
+			// Set the pitch
+			LOC_SOUND_FREQ	:= CONST_NOTE_E;
+			// Sustain note
+			do_delay(128);
+			// Turn off sound
+			LOC_SOUND_REG := 0;
+			// Sustain pause		
+			do_delay(128);
 		end;
 	end;
 end;
@@ -446,24 +216,14 @@ begin
 	// Draw box around screen
 	draw_title_screen_box();
 	
-	// Play theme song
-	//play_title_music();
-	
-	// cycle text & wait (X, Y, # Chars)
-	cycle_text_right_wait(10, 21, 19);
-	
-	//basic_printat(#title_msg_10, 10, 19);
-	//cycle_text_left_wait(10, 21, 19);
-	
+	// Cycle text, wait for input, play music
+	// xpos, ypos, # chars, # cycles, direction, input break, play music
+	song_ptr := #theme_music_arr;
+	//song_ptr := #game_end_music_arr;
+	cycle_text(10, 21, 19, 0, 0, 1, 1);
+		
 	//@@TODO: Animate pattern or cycles going around perimiter of title screen
 	//		  at a fixed distance from each other. 
-	//
-	//		  STRETCH_GOAL:
-	//		  Trail erases itself after some amount of chars (32?).
-	//		  Allow player to control either or both cycles at title screen;
-	//		  If either cycle crashes, take user to special screen with credits
-	//		  and access to alternate trail mode, which is erased after some amount 
-	// 		  of chars (255?)
 end;
 
 // Draw box around game screen
@@ -480,9 +240,9 @@ begin
 	// Draw sides
 	for i := 1 to MYSCREEN_HEIGHT do
 	begin
-		screen_loc_work := screen_loc + 39 * i;
-		screen_loc_work[i] := SCR_MID_VERT_LN;
-		screen_loc_work[i+39] := SCR_MID_VERT_LN;
+		screen_loc_work			:= screen_loc + 39 * i;
+		screen_loc_work[i]		:= SCR_MID_VERT_LN;
+		screen_loc_work[i+39]	:= SCR_MID_VERT_LN;
 	end;
 
 	// top left mid box corner
@@ -515,7 +275,7 @@ begin
 	// Draw score display (text, not score values)
 	basic_printat(#score_msg_0, 1, 0);	// string, x, y
 	
-	update_score();
+	update_score(0);
 	
 	init_engine_sound();
 	
@@ -528,28 +288,38 @@ end;
 // Start new round
 procedure new_round();
 begin
-	update_score();
-	
-	// Calculation for centered text
+	// Print crash message for several seconds
+	do_delay(64);
 	tmp := (MYSCREEN_WIDTH - message_len) / 2;
+	basic_printat(message_ptr, tmp, 13);	// string, x, y
+	// xpos, ypos, # chars, # cycles, direction, input break, play music
+	cycle_text(tmp, 13, message_len, 3, 1, 0, 0);
+
+	// Beep and flash score change
+	update_score(1);
 	
 	// Print new round message & wait for input
-	basic_printat(message_ptr, tmp, 13);	// string, x, y
-	cycle_text_right_wait(tmp, 13, message_len);	// x, y, # chars
+	do_delay(64);
+	message_len := length(msg_get_ready);
+	tmp := (MYSCREEN_WIDTH - message_len) / 2;
+	basic_printat(#msg_get_ready, tmp, 13);
+	// xpos, ypos, # chars, # cycles, direction, input break, play music
+	cycle_text(tmp, 13, message_len, 0, 0, 1, 0);
 
-	// Adjust game speed based on round 
-	if( score_p1 = 1 or score_p2 = 1 ) then game_speed := 28;
-	if( score_p1 = 2 or score_p2 = 2 ) then game_speed := 24;
-	if( score_p1 = 3 or score_p2 = 3 ) then game_speed := 20;
-	if( score_p1 = 4 or score_p2 = 4 ) then game_speed := 16;
+	// Adjust game speed
+	if( score_p1 = 1 or score_p2 = 1 ) then game_speed := DEF_GAME_SPEED - 10;
+	if( score_p1 = 2 or score_p2 = 2 ) then game_speed := DEF_GAME_SPEED - 20;
+	if( score_p1 = 3 or score_p2 = 3 ) then game_speed := DEF_GAME_SPEED - 25;
+	if( score_p1 = 4 or score_p2 = 4 ) then game_speed := DEF_GAME_SPEED - 30;
 
+	// Redraw game screen
 	game_screen();
 end;
 
 // Start new game
 procedure new_game();
 begin
-	update_score();
+	update_score(0);
 	
 	// Calculation for centered text
 	tmp := (MYSCREEN_WIDTH - message_len) / 2;
@@ -557,15 +327,17 @@ begin
 	// Print Game Over message
 	basic_printat(message_ptr, tmp, 13);	// string, x, y
 
-	// await input
-	cycle_text_right_wait(tmp, 13, message_len);	// x, y, # chars
+	// Cycle text, wait for input, & play music
+	// xpos, ypos, # chars, # cycles, direction, input break, play music
+	song_ptr := #game_end_music_arr;
+	cycle_text(tmp, 13, message_len, 20, 0, 0, 1);
 	
 	// Reset scores
 	score_p1	:= 0;
 	score_p2	:= 0;
 	
 	// Reset game speed
-	game_speed := 32;
+	game_speed := DEF_GAME_SPEED;
 	
 	// Return to main loop
 	game_over_flag := 1;
@@ -770,67 +542,6 @@ begin
 	end;
 end;
 
-// Play title music - called from external loop
-procedure play_title_music();
-begin
-	// Loop over note array
-	// 	Structure - note value, octave, sustain value 
-
-	// Change note when index is zero
-	if (music_sust_idx = 0) then
-	begin
-		// End tune when pitch & sustain both = 0
-		if (theme_music_arr[music_idx] = 0 and theme_music_arr[music_idx+2] = 0) then begin
-			music_idx := 0;
-		end;
-	
-		// Set octave
-		LOC_SOUND_OCT	:= sound_oct_arr[theme_music_arr[music_idx+1]];
-		// Set the pitch
-		LOC_SOUND_FREQ	:= theme_music_arr[music_idx];
-		// Set sustain - this value is tuned based on routine calling this function
-		music_sust_idx	:= theme_music_arr[music_idx+2] * 9;
-		
-		// Next note
-		music_idx := music_idx + 3;
-		
-		// Just in case we hit end of array before end of music marker
-		if music_idx >= length(theme_music_arr) then music_idx := 0;
-	end;
-	
-	music_sust_idx := music_sust_idx -1;
-end;
-
-/* - Singleton version
-// Play title music
-procedure play_title_music();
-begin
-	// enable sound
-	LOC_SOUND_REG	:= 16;
-
-	// Loop over note array
-	// 	Structure - note value, octave, sustain value 
-	for i:=0 to length(theme_music_arr) step 3 do
-	begin
-		// Exit when pitch & sustain both = 0
-		if (theme_music_arr[i] = 0 and theme_music_arr[i+2] = 0) then break;
-
-		// set octave
-		LOC_SOUND_OCT	:= sound_oct_arr[theme_music_arr[i+1]];
-		// Set the pitch
-		LOC_SOUND_FREQ	:= theme_music_arr[i];
-		
-		// Sustain
-		for tmp:=0 to theme_music_arr[i+2] do
-		begin
-			do_delay(150);
-		end;
-	end;
-	
-	stop_sound();
-end;
-*/
-
 // init engine sound
 procedure init_engine_sound();
 begin
@@ -872,7 +583,7 @@ end;
 // sound stop
 procedure stop_sound();
 begin
-	LOC_SOUND_REG	:= 0;
+	LOC_SOUND_REG := 0;
 end;
 
 // eof

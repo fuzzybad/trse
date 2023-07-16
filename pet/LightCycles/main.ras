@@ -19,13 +19,12 @@ program LightCycles;
 //@projectsettings "petmodel" "3032"
 
 
-/* === variables ============================================================================================ */
+// === includes =====================================
 @include "variables.ras"
-		
-/* === functions ============================================================================================ */
+@include "support_functions.ras"
 @include "functions.ras"
 
-/* === main logic ============================================================================================ */
+// === main logic ===================================
 procedure game_loop();
 begin
 
@@ -74,9 +73,7 @@ begin
 	while(1) do
 	begin
 		game_over_flag := 0;
-		do_music := 1;
 		title_screen();
-		do_music := 0;
 		game_screen();
 		game_loop();
 	end;
