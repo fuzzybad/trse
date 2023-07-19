@@ -8,7 +8,7 @@ procedure init_engine_sound();
 procedure alternate_engine_sound();
 procedure player_crash();
 procedure stop_sound();
-
+procedure play_animate_irq();
 
 // Read input devices - keyboard & SPT dual joys
 procedure check_input();
@@ -25,14 +25,14 @@ begin
 	// Read controller values from Port B
 	check_input_val := LOC_PORT_B;
 	
-	// Checking SPT Single Joystick
+	// Check SPT Single Joystick
 	//if (not check_input_val & 1) then player_1_input := 1;	// Left
 	//if (not check_input_val & 2) then player_1_input := 2;	// Right
 	//if (not check_input_val & 4) then player_1_input := 3;	// Up
 	//if (not check_input_val & 8) then player_1_input := 4;	// Down
 	//if (not check_input_val & 32) then player_1_fire := 1;	// Fire
 
-	// Checking SPT Double Joysticks
+	// Check SPT Double Joysticks
 	if (check_input_val & 3 = 0) then player_1_fire := 1;		// Fire
 	if (not check_input_val & 4) then player_1_input := 1;		// Left
 	if (not check_input_val & 8) then player_1_input := 2;		// Right
@@ -51,24 +51,20 @@ begin
 		LOC_DATA_A := j;
 		check_input_val := 255 - LOC_DATA_B;
 		
-		/*
-		 * These rows not used here
-		 *
 		if j = 0 then begin
-			moveto(1,1,hi(screen_char_loc));
-			printdecimal(check_input_val,2);
+//			moveto(1,1,hi(screen_char_loc));
+//			printdecimal(check_input_val,2);
 		end;
 	
 		if j = 1 then begin
-			moveto(1,1,hi(screen_char_loc));
-			printdecimal(check_input_val,2);
+//			moveto(1,1,hi(screen_char_loc));
+//			printdecimal(check_input_val,2);
 		end;
 	
 		if j = 2 then begin
-			moveto(1,1,hi(screen_char_loc));
-			printdecimal(check_input_val,2);
+//			moveto(1,1,hi(screen_char_loc));
+//			printdecimal(check_input_val,2);
 		end;
-		*/
 		
 		if j = 3 then begin
 			// W - P1 Up
@@ -104,14 +100,10 @@ begin
 			//end;
 		end;
 
-		/*
-		 * This row not used here
-		 *
 		if j = 7 then begin
-			moveto(1,1,hi(screen_char_loc));
-			printdecimal(check_input_val,2);
+//			moveto(1,1,hi(screen_char_loc));
+//			printdecimal(check_input_val,2);
 		end;
-		*/
 		
 		if j = 8 then begin
 			// RIGHT SHIFT - P1 Fire
@@ -123,7 +115,7 @@ begin
 			if (check_input_val & 4) then	 player_1_fire := 1;
 		end;
 	end;
-	
+
 	// getin - read kernal keyboard input
 	//call(#$FFE4); 
 	//check_input_val := _A;
@@ -134,7 +126,29 @@ begin
 		returnvalue(true);
 	end else begin
 		returnvalue(false);
-	end
+	end;
+end;
+
+// Displays game mode
+procedure display_game_mode();
+begin
+	moveto(11,10,hi(screen_char_loc));
+	
+	if game_mode = 0 then basic_printat(#msg_one_player,11,20);
+	if game_mode = 1 then basic_printat(#msg_two_player,11,20);
+end;
+
+// Handle additional input during cycle text routine
+procedure cycle_text_input_handler();
+begin
+	if (player_1_input = 1 or player_2_input = 1) then begin
+		game_mode := 0; 	// two player
+		display_game_mode();
+	end;
+	if (player_1_input = 2 or player_2_input = 2) then begin
+		game_mode := 1;	// one player
+		display_game_mode();
+	end;	
 end;
 
 // Update score disp
@@ -216,11 +230,28 @@ begin
 	// Draw box around screen
 	draw_title_screen_box();
 	
+	// Start animation interrupt
+	play_animate_irq();
+	
+	// Show game mode
+	display_game_mode();
+			
+	// Run input function within cycle routine
+	scroll_input := 1;
+
+	// Song to play	
+	song_ptr := #theme_music_arr;
+
 	// Cycle text, wait for input, play music
 	// xpos, ypos, # chars, # cycles, direction, input break, play music
-	song_ptr := #theme_music_arr;
 	//song_ptr := #game_end_music_arr;
-	cycle_text(10, 21, 19, 0, 0, 1, 1);
+	cycle_text(10, 22, 19, 0, 0, 1, 1);
+
+	// Disable input during text scroll 
+	scroll_input := 0;
+
+	// Stop animation interrupt
+	Interrupts::Disable();
 		
 	//@@TODO: Animate pattern or cycles going around perimiter of title screen
 	//		  at a fixed distance from each other. 
@@ -260,7 +291,6 @@ begin
 	// bot right mid box corner
 	screen_loc_work := screen_loc + 999;
 	screen_loc_work[0] := SCR_MID_BOT_RT_CORNER;
-
 end;
 
 // Setup game screen
@@ -268,27 +298,20 @@ procedure game_screen();
 begin
 	// Call CLR/HOME
 	cursor_clear();
-
 	// Draw box around screen
-	draw_game_screen_box();	
-	
+	draw_game_screen_box();
 	// Draw score display (text, not score values)
-	basic_printat(#score_msg_0, 1, 0);	// string, x, y
-	
+	if (game_mode = 0) then basic_printat(#score_msg_1, 1, 0);	// string, x, y
+	if (game_mode = 1) then basic_printat(#score_msg_0, 1, 0);	// string, x, y
 	update_score(0);
-	
 	init_engine_sound();
-	
 	init_gamestate();
-
-	// debug
-	//basic_printat("GAME START", 15, 10);	// string, x, y
 end;
 
 // Start new round
 procedure new_round();
 begin
-	// Print crash message for several seconds
+	// Print crash message
 	do_delay(64);
 	tmp := (MYSCREEN_WIDTH - message_len) / 2;
 	basic_printat(message_ptr, tmp, 13);	// string, x, y
@@ -321,25 +344,19 @@ procedure new_game();
 begin
 	update_score(0);
 	
-	// Calculation for centered text
-	tmp := (MYSCREEN_WIDTH - message_len) / 2;
-
 	// Print Game Over message
+	tmp := (MYSCREEN_WIDTH - message_len) / 2;
 	basic_printat(message_ptr, tmp, 13);	// string, x, y
 
 	// Cycle text, wait for input, & play music
-	// xpos, ypos, # chars, # cycles, direction, input break, play music
 	song_ptr := #game_end_music_arr;
+	// xpos, ypos, # chars, # cycles, direction, input break, play music
 	cycle_text(tmp, 13, message_len, 20, 0, 0, 1);
 	
-	// Reset scores
+	// Reset scores, game speed & return to main loop
 	score_p1	:= 0;
 	score_p2	:= 0;
-	
-	// Reset game speed
 	game_speed := DEF_GAME_SPEED;
-	
-	// Return to main loop
 	game_over_flag := 1;
 end;
 
@@ -361,9 +378,16 @@ begin
 		// Increment score 
 		score_p2 := score_p2 + 1;
 		
-		if (score_p2 < SCORE_TO_WIN) then begin
-			message_ptr := #msg_p1_crash;
-			message_len := length(msg_p1_crash);
+		if (score_p2 < SCORE_TO_WIN) then 
+		begin
+			if (game_mode = 0) then
+			begin
+				message_ptr := #msg_plr_crash;
+				message_len := length(msg_plr_crash);
+			end else begin
+				message_ptr := #msg_p1_crash;
+				message_len := length(msg_p1_crash);
+			end;
 			new_round();
 		end;
 	end
@@ -372,21 +396,38 @@ begin
 		score_p1 := score_p1 + 1;
 		
 		if (score_p1 < SCORE_TO_WIN) then begin
-			message_ptr := #msg_p2_crash;
-			message_len := length(msg_p2_crash);
+			if (game_mode = 0) then begin
+				message_ptr := #msg_sark_crash;
+				message_len := length(msg_sark_crash);
+			end else begin 
+				message_ptr := #msg_p2_crash;
+				message_len := length(msg_p2_crash);
+			end;
 			new_round();
 		end;
 	end;
 	
 	// Check for end of game
-	if (score_p1 >= SCORE_TO_WIN) then begin
-		message_ptr := #msg_p1_wins;
-		message_len := length(msg_p1_wins);
+	if (score_p1 >= SCORE_TO_WIN) then 
+	begin
+		if (game_mode = 0) then begin
+			message_ptr := #msg_plr_wins;
+			message_len := length(msg_plr_wins);
+		end else begin
+			message_ptr := #msg_p1_wins;
+			message_len := length(msg_p1_wins);
+		end;
 		new_game();
 	end
-	else if (score_p2 >= SCORE_TO_WIN) then begin
-		message_ptr := #msg_p2_wins;
-		message_len := length(msg_p2_wins);
+	else if (score_p2 >= SCORE_TO_WIN) then 
+	begin
+		if (game_mode = 0) then begin
+			message_ptr := #msg_sark_wins;
+			message_len := length(msg_sark_wins);
+		end else begin
+			message_ptr := #msg_p2_wins;
+			message_len := length(msg_p2_wins);
+		end;
 		new_game();
 	end;
 end;
@@ -410,6 +451,129 @@ begin
 	end;
 end;
 
+// Check if Sark can 
+procedure sark_check_if_move_safe();
+begin
+	
+end;
+
+// Check & return distance to crash_anim_arr
+function sark_crash_distance(scd_head:byte) : byte;
+var
+	scd_i:		byte;
+	scd_crash:	byte;
+	scd_tmp_int:	integer;
+begin
+	scd_i := 0;
+	scd_crash := 0;
+	scd_tmp_int := player_2_xy;
+
+	while (scd_crash = 0) do
+	begin
+		scd_i := scd_i + 1;	// number of moves until crash
+		scd_tmp_int := scd_tmp_int + dir_map_arr[scd_head]; // increment pos
+		screen_loc_work := screen_loc + scd_tmp_int;
+		if (peek(screen_loc_work, 0) <> 32) then scd_crash := 1;
+	end;
+	
+	sark_crash_distance := scd_i;
+end;
+
+// P2 routine for single player game
+//  Set player_2_input, player_2_fire
+procedure sark_move();
+var
+	sm_tmp_int:	integer;
+	sm_tmp_byt1:	byte;
+	sm_tmp_byt2:	byte;
+	sm_i:		byte;
+	sm_head:		byte;	
+	sm_cr_th:	byte;	// crash threshold
+	sm_trbo_th:	byte;	// turbo threshold
+begin
+	// Logic routine to box in opponent & avoid crashing..
+	//
+	//	1.	Check distance on current heading to obstacle.  
+	//		Avoid crashing.
+	//		Turn to direction with longest distance.
+	//
+	sm_cr_th		:= 4;
+	sm_trbo_th	:= 5;
+	sm_head		:= player_2_head;
+	sm_tmp_byt1	:= sark_crash_distance(sm_head);
+	
+	if (sm_tmp_byt1 < sm_cr_th) then
+	begin
+		// crash imminent, check other directions
+		if (sm_head = 1 or sm_head = 2) then
+		begin
+			// Sark moving L or R. Check U/D			
+			sm_head := 3;
+			sm_tmp_byt1 := sark_crash_distance(sm_head);
+			sm_head := 4;
+			sm_tmp_byt2 := sark_crash_distance(sm_head);	
+			
+			// Switch to direction with longest distance
+			if (sm_tmp_byt1 > sm_tmp_byt2) then begin
+				player_2_head := 3;
+			end else begin
+				player_2_head := 4;				
+			end;
+		end else
+		begin
+			// Sark moving U or D. Check L/R
+			sm_head := 1;
+			sm_tmp_byt1 := sark_crash_distance(sm_head);
+			sm_head := 2;
+			sm_tmp_byt2 := sark_crash_distance(sm_head);	
+			
+			// Switch to direction with longest distance
+			if (sm_tmp_byt1 > sm_tmp_byt2) then begin
+				player_2_head := 1;
+			end else begin
+				player_2_head := 2;				
+			end;
+		end;
+	end;
+
+	// DEBUG distance to obstacle
+	//moveto(1,1,hi(screen_char_loc));
+	//printdecimal(sm_tmp_byt1,2);
+
+	// 	2. If opponent less than 'n' moves away, engage turbo boost.
+	if (player_1_xy > player_2_xy) then
+	begin
+		// row value - remainder dropped
+		sm_tmp_byt1 := (player_1_xy - player_2_xy) / MYSCREEN_WIDTH;
+		// col value in remainder
+		sm_tmp_byt2 := (player_1_xy - player_2_xy) - (sm_tmp_byt1 * MYSCREEN_WIDTH);
+	end else begin
+		// row value - remainder dropped
+		sm_tmp_byt1 := (player_2_xy - player_1_xy) / MYSCREEN_WIDTH;
+		// col value in remainder
+		sm_tmp_byt2 := (player_2_xy - player_1_xy) - (sm_tmp_byt1 * MYSCREEN_WIDTH);		
+	end;
+	
+	// DEBUG rows from player
+	//moveto(41,1,hi(screen_char_loc));
+	//printdecimal(sm_tmp_byt1,2);
+
+	// DEBUG cols from player
+	//moveto(1,2,hi(screen_char_loc));
+	//printdecimal(sm_tmp_byt2,2);
+
+	// Engage turbo if threshold reached
+	if (sm_tmp_byt1 < sm_trbo_th and sm_tmp_byt2 < sm_trbo_th) then
+	begin
+		player_2_fire := 1;
+	end;
+
+	// TODO: Every 'n' cycles:
+	//	If opponent more than 'n' moves away, turn towards their predicted position
+	//	(based on current heading) if safe.  Prioritize X over Y (Y has fewer possible moves)
+
+end;
+
 // Update Positions
 // 	player_1_xy, player_2_xy 		- Player Coordinates
 // 	player_1_head, player_2_head 		- Player Headings 
@@ -417,6 +581,9 @@ end;
 // 	player_1_trail, player_2_trail 	- Trail Positions 
 procedure update_positions();
 begin
+	// P2 routine for single player game
+	if (game_mode = 0) then sark_move();
+	
 	// Check if move avail
 	turn_counter := turn_counter + 1;
 	if turn_counter > 1 then turn_counter := 0; 	// May need to tweak this value
@@ -503,6 +670,44 @@ begin
 	player_2_fire		:= 0;
 	turn_counter			:= 0;
 end;
+
+// Play music & animate via raster interrupt
+procedure play_music_animate();
+begin
+	Interrupts::StartIRQ();
+
+	// Play music inside the cycle_text() function instead for 2001 compatibility
+	//play_music();
+	
+	// For debugging	
+	//tmp_irq := tmp_irq + 1;
+	//moveto(41,0,hi(screen_char_loc));
+	//printdecimal(tmp_irq,2);
+	
+	// calling do_delay() causes crash
+	//wait(255);
+	//wait(255);
+	//wait(255);
+
+	Interrupts::CloseIRQ();
+end;
+
+// Routine to animate & play music via raster interrupt
+// NOTE: It seems only one interrupt can be running at a given time
+// NOTE: Raster not available on PET 2001 - use only for non-critical functions.
+// Init 'song_ptr' before calling:
+// 	song_ptr := #theme_music_arr;
+procedure play_animate_irq();
+begin
+	//music_idx		:= 0;
+	//music_sust_idx	:= 0;
+	//LOC_SOUND_REG	:= 16;
+	
+	// Set interrupt function & enable
+	Interrupts::RasterIRQ(#play_music_animate);
+	Interrupts::Enable();
+end;
+
 
 // crash visual & sound effect
 procedure player_crash();

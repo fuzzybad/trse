@@ -6,18 +6,18 @@
 
 program LightCycles;
 
-@use "input/key"
+@use "os/interrupts"
+@use "os/model"
+//@use "output/pbm"	- fatal error - needs PBM file
+//@use "input/key"	- compiler error when I try to use Held or Pressed
+//@use "compression/compression"	- Only use for large files - small ones INCREASE in size with this
 //@use "str"
 //@use "crt"
 //@use "output/screen"
 //@use "output/pob"
-//@use "os/model"
-//@use "os/interrupts"
-//@use "compression/compression"
 
 // Set the model of PET required
 //@projectsettings "petmodel" "3032"
-
 
 // === includes =====================================
 @include "variables.ras"
@@ -27,34 +27,21 @@ program LightCycles;
 // === main logic ===================================
 procedure game_loop();
 begin
-
 	while (game_over_flag=0) do
 	begin
 	  	// check input devices
 	  	check_input();
-	  	
-		// 115 gosub2220:rem alt engine sound
-	  	//alternate_engine_sound();
-	  		  	
 		// update positions
 		update_positions();
-		
-	  	// 135 rem gosub2220:rem alt engine sound
+		// go vroom
 	  	alternate_engine_sound();
-	  	
 	  	// check collisions
 	  	check_collisions();
-	  	
 	  	// game state
 	  	check_game_state();
-	  	
 	  	// update screen
 	  	update_screen();
-	  	
-	  	// 170 rem gosub2220:rem alt engine sound
-  	  	//alternate_engine_sound();
 	
-	  	// 180 if ge then ge=0:goto40:rem new game
 	  	if( game_over_flag = 1 ) then return;
 	  	
 	  	// Slow it down
@@ -65,6 +52,9 @@ end;
 
 // Init
 begin
+	// Disable interrupts
+	Interrupts::Disable();
+
 	DefineScreen();
 	screen_loc := #SCREEN_CHAR_LOC;
 	set_uppercase();

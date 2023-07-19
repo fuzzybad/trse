@@ -79,14 +79,16 @@ var
 	k: byte = 0;
 	
 	// Temp vars
-	tmp: integer = 0;
-	message_len: byte = 0;
+	tmp:				integer = 0;
+	tmp_irq:			byte = 0;
+	message_len:		byte = 0;
+	temp_byte:		byte = 0;
 	
 	// Game vars
+	game_mode:		boolean = 0;	// 0=One Player, 1=Two Player
 	game_over_flag:	byte = 0;
 	score_p1: 		byte = 0;
 	score_p2:		byte = 0;
-	temp_byte:		byte = 0;
 	scroll_speed: 	byte = 16;	// Speed of scrolling - lower is faster
 	game_speed:		byte = DEF_GAME_SPEED;	// Speed of game - lower is faster
 	music_idx:		byte = 0;
@@ -95,7 +97,7 @@ var
 	sound_oct_idx:	byte = 0;
 	sound_oct_arr:	array[3] of byte = (15, 51, 85);
 	crash_anim_arr:	array[3] of byte = (42, 87, 81);
-	dir_map_arr:		array[5] of integer = (0, -1, 1, -40, 40);
+	dir_map_arr:		array[5] of integer = (0, -1, 1, -40, 40);	// L, R, U, D
 	dir_opp_arr:		array[5] of byte = (0, 2, 1, 4, 3);
 	enter_pressed:	boolean = 0;
 	turn_counter:	byte = 0;
@@ -117,6 +119,7 @@ var
 	scroll_num_trail:byte = 0;
 	scroll_inp_brk:	boolean = 0;
 	scroll_step:		byte = 0;
+	scroll_input:	boolean = 0;
 
 	// Message Strings
 	title_msg_0:		string = (CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
@@ -145,16 +148,24 @@ var
 	title_msg_7:		string = (CRSR_DN,"USE SPT DUAL JOYSTICKS");
 	title_msg_8:		string = (CRSR_DN,"OR             OR");
 	title_msg_9:		string = ("WASD+SPC       8456+RSH");
-	title_msg_10:	string = (CRSR_DN,CRSR_DN,RVS_ON,"PRESS FIRE TO BEGIN");
+	title_msg_10:	string = (CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"PRESS FIRE TO BEGIN");
 
 	score_msg_0:		string = ("PLAYER 1:                    :PLAYER 2");
+	score_msg_1:		string = ("  PLAYER:                    :SARK");
 	
 	msg_both_crash:	string = ("BOTH CRASHED, REDO");
 	msg_p1_crash:	string = ("PLAYER 1 CRASHED");
 	msg_p2_crash:	string = ("PLAYER 2 CRASHED");
+	msg_plr_crash:	string = ("PLAYER CRASHED");
+	msg_sark_crash:	string = ("SARK CRASHED");
 	msg_p1_wins:		string = ("PLAYER 1 WINS");
 	msg_p2_wins:		string = ("PLAYER 2 WINS");
+	msg_plr_wins:	string = ("PLAYER WINS");
+	msg_sark_wins:	string = ("SARK WINS");
 	msg_get_ready:	string = ("PRESS FIRE WHEN READY");
+	
+	msg_one_player:	string = (">>> ",RVS_ON,"ONE PLAYER",RVS_OFF," >>>");
+	msg_two_player:	string = ("<<< ",RVS_ON,"TWO PLAYER",RVS_OFF," <<<");
 
 	// Music notes
 	const CONST_NOTE_B:	byte = 251;
@@ -187,22 +198,39 @@ var
 		0,0,2,  CONST_NOTE_DS,1,1,  CONST_NOTE_CS,1,1,  CONST_NOTE_B,1,2,  CONST_NOTE_DS,1,2,  CONST_NOTE_FS,1,4,  CONST_NOTE_CS,1,3,
 		0,0,2,  CONST_NOTE_FS,1,1,  CONST_NOTE_E,1,1,  CONST_NOTE_D,1,2,  CONST_NOTE_FS,1,2,  CONST_NOTE_A,1,6,
 		0,0,7,	// half measure rst
-		0,0,0	// Stop
+		0,0,0	// End
 		);
 		
-	// Tron Scherzo - daa, dah, da-da, daa, da-da-da-daaaa
+	// Tron Scherzo - DAA, dah, da-DA, daa. DA-da-DA-DAAA!
 	// Need sheet music - did it by ear
+	// https://www.reddit.com/r/piano/comments/14zix4y/tron_scherzo_wendy_carlos/
+	//
+	// AccordionPianist -
+	//	"I think the riff you are referring to is that repeating “build up” to the
+	//	first ascending pattern? Right hand plays B F C repeatedly (fingers 5,3,1) 
+	//	while left plays A,B,A,B…. Then it jumps to first “ascension” which left 
+	//	hand bass is G then G# then A while right plays D G C , C# G#, B A B E, 
+	//	respectively, then bass does a G# before the next “ascension”. Similar pattern 
+	//	just playing up from A (instead of G) same kind of thing.
+	//
 	// Array structure - pitch, octave, sustain value 
 	// D#, D, D#, E, C
-	// C#, C  D# F
+	// C#, C, D#, F
 	game_end_music_arr: array[50] of byte = (
+		// Take 1 - by ear
 		//CONST_NOTE_G,0,2,  CONST_NOTE_FS,0,2,  CONST_NOTE_G,0,1,  CONST_NOTE_A,0,2,  CONST_NOTE_FS,0,3,
 		//CONST_NOTE_G,0,1,  CONST_NOTE_FS,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_C,1,4, 
+		//0,0,7,	// half measure rst
+		// Take 2 - using pitch analyser
+		//CONST_NOTE_DS,1,2,  CONST_NOTE_D,1,2,  CONST_NOTE_DS,1,1,  CONST_NOTE_E,1,2,  CONST_NOTE_C,1,3,
+		//CONST_NOTE_CS,1,1,  CONST_NOTE_C,1,1,  CONST_NOTE_DS,1,1,  CONST_NOTE_F,1,4, 
 		0,0,7,	// half measure rst
-		CONST_NOTE_DS,1,2,  CONST_NOTE_D,1,2,  CONST_NOTE_DS,1,1,  CONST_NOTE_E,1,2,  CONST_NOTE_C,1,3,
-		CONST_NOTE_CS,1,1,  CONST_NOTE_C,1,1,  CONST_NOTE_DS,1,1,  CONST_NOTE_F,1,4, 
+		// Take 3 - Redditor AccordionPianist
+		CONST_NOTE_D,1,2,  CONST_NOTE_G,0,2,
+		CONST_NOTE_C,1,1,  CONST_NOTE_CS,1,2,  CONST_NOTE_GS,1,2, 0,0,1,
+		CONST_NOTE_B,1,1,  CONST_NOTE_A,1,1,  CONST_NOTE_B,1,1,  CONST_NOTE_E,1,4,
 		0,0,14,	// full measure rst
-		0,0,0	// Stop
+		0,0,0	// End
 		);
 
 

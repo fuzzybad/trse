@@ -7,6 +7,7 @@ procedure play_music();
 procedure check_input();
 procedure cycle_text_left();
 procedure cycle_text_right();
+procedure cycle_text_input_handler();
 
 // Clear Screen
 procedure cls();
@@ -80,12 +81,13 @@ end;
 procedure basic_print( _ptr:pointer, _center_txt:boolean, _mylen:byte );
 var
 	next_ch: byte;
+	bp_i: byte;
 begin
 	// Center text
 	if _center_txt = true then
 	begin
 		if _mylen < MYSCREEN_WIDTH then begin
-			for i := 0 to ((MYSCREEN_WIDTH - _mylen) / 2) do	cursor_right();
+			for bp_i := 0 to ((MYSCREEN_WIDTH - _mylen) / 2) do	cursor_right();
 		end;
 	end;
 
@@ -105,18 +107,19 @@ end;
 procedure basic_printat( _pa_ptr:pointer, _pa_myx:byte, _pa_myy:byte);
 var
 	pa_next_ch: byte;
+	pa_i: byte;
 begin
 	// Home cursor
 	cursor_home();
 	
 	// Cursor right
 	if _pa_myx > 0 then	begin
-		for i := 0 to _pa_myx do	cursor_right();
+		for pa_i := 0 to _pa_myx do	cursor_right();
 	end;
 
 	// Cursor down
 	if _pa_myy > 0 then	begin
-		for i := 0 to _pa_myy do cursor_down();
+		for pa_i := 0 to _pa_myy do cursor_down();
 	end;
 
 	// Print text
@@ -199,10 +202,10 @@ begin
 	end else begin
 		scroll_step := 1;
 	end;
-	
+
+	// Initialize music	
 	if (cts_play_music) then
 	begin
-		// Initialize music
 		music_idx		:= 0;
 		music_sust_idx	:= 0;
 		LOC_SOUND_REG	:= 16;
@@ -247,10 +250,18 @@ begin
 			screen_loc_work[j] := screen_loc_work[j] +128;
 		end;	
 
-		// Break on input
-		if (cts_input_brk and check_input() = true) then begin
-			scroll_inp_brk := 1;
-			return;
+		// If scrolling can be interrupted
+		if cts_input_brk then 
+		begin
+			// Break on 'fire'
+			if (check_input() = 1) then begin
+				scroll_inp_brk := 1;
+				return;
+			end;
+			// If additional input handling required
+			if (scroll_input) then begin
+				cycle_text_input_handler();
+			end;
 		end;
 		
 		// Play theme song
@@ -258,7 +269,7 @@ begin
 			play_music();
 		end;
 
-		do_delay(scroll_speed);	
+		do_delay(scroll_speed);
 	end;
 end;
 
@@ -292,10 +303,18 @@ begin
 			play_music();
 		end;
 
-		// Break on input
-		if (cts_input_brk and check_input() = true) then begin
-			scroll_inp_brk := 1;
-			return;
+		// If scrolling can be interrupted
+		if cts_input_brk then 
+		begin
+			// Break on 'fire'
+			if (check_input() = 1) then begin
+				scroll_inp_brk := 1;
+				return;
+			end;
+			// If additional input handling required
+			if (scroll_input) then begin
+				cycle_text_input_handler();
+			end;
 		end;
 	
 		do_delay(scroll_speed);	
