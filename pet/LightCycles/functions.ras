@@ -8,7 +8,8 @@ procedure init_engine_sound();
 procedure alternate_engine_sound();
 procedure player_crash();
 procedure stop_sound();
-procedure play_animate_irq();
+//procedure init_irq_animation();
+procedure play_title_animation();
 
 // Read input devices - keyboard & SPT dual joys
 procedure check_input();
@@ -149,6 +150,10 @@ begin
 		game_mode := 1;	// one player
 		display_game_mode();
 	end;	
+	
+	// Animate the scroll around title screen
+	// Ideally this would run by IRQ, but not able to solve crash..
+	play_title_animation();
 end;
 
 // Update score disp
@@ -189,22 +194,30 @@ end;
 
 // Draw box around title screen
 procedure draw_title_screen_box();
+var
+	dtsb_tmp : byte;
+	dtsb_i : byte;
 begin	
 	// Draw top and bottom	
 	screen_loc_work := screen_loc + 960;
 	
-	for i := 0 to MYSCREEN_WIDTH do
+	for dtsb_i := 0 to MYSCREEN_WIDTH step 2 do
 	begin
-		screen_loc[i]		:= SCR_SOLID_BLOCK;
-		screen_loc_work[i]	:= SCR_SOLID_BLOCK;
+		screen_loc[dtsb_i]		:= SCR_SOLID_BLOCK;
+		screen_loc_work[dtsb_i]	:= SCR_SOLID_BLOCK;
+		screen_loc[dtsb_i+1]		:= SCR_SHADED_BLOCK;
+		screen_loc_work[dtsb_i+1]:= SCR_SHADED_BLOCK;
     	end;
 	
 	// Draw sides
-	for i := 1 to MYSCREEN_HEIGHT do
+	for dtsb_i := 0 to MYSCREEN_HEIGHT step 2 do
 	begin
-		screen_loc_work			:= screen_loc + 39 * i;
-		screen_loc_work[i]		:= SCR_SOLID_BLOCK;
-		screen_loc_work[i+39]	:= SCR_SOLID_BLOCK;
+		dtsb_tmp := MYSCREEN_WIDTH-1;
+		screen_loc_work	:= screen_loc + (dtsb_tmp * dtsb_i);
+		screen_loc_work[dtsb_i]							:= SCR_SOLID_BLOCK;
+		screen_loc_work[dtsb_i+dtsb_tmp]					:= SCR_SHADED_BLOCK;
+		screen_loc_work[dtsb_i+MYSCREEN_WIDTH]			:= SCR_SHADED_BLOCK;
+		screen_loc_work[dtsb_i+MYSCREEN_WIDTH+dtsb_tmp]	:= SCR_SOLID_BLOCK;
 	end;
 end;
 
@@ -220,18 +233,20 @@ begin
 	basic_print(#title_msg_2, 1, 20);
 	basic_print(#title_msg_3, 1, 20);
 	basic_print(#title_msg_4, 1, 31);
-	basic_print(#title_msg_5, 1, 23);
-	basic_print(#title_msg_6, 1, 17);
-	basic_print(#title_msg_7, 1, 22);
+	basic_print(#title_msg_5, 1, 27);	
+	basic_print(#title_msg_6, 1, 13);		
+	basic_print(#title_msg_7, 1, 23);
 	basic_print(#title_msg_8, 1, 17);
-	basic_print(#title_msg_9, 1, 23);
-	basic_print(#title_msg_10, 1, 19);
+	basic_print(#title_msg_9, 1, 25);
+	basic_print(#title_msg_10, 1, 17);
+	basic_print(#title_msg_11, 1, 23);
+	basic_print(#title_msg_12, 1, 19);
 
 	// Draw box around screen
 	draw_title_screen_box();
 	
 	// Start animation interrupt
-	play_animate_irq();
+	//init_irq_animation();
 	
 	// Show game mode
 	display_game_mode();
@@ -251,7 +266,7 @@ begin
 	scroll_input := 0;
 
 	// Stop animation interrupt
-	Interrupts::Disable();
+	//Interrupts::Disable();
 		
 	//@@TODO: Animate pattern or cycles going around perimiter of title screen
 	//		  at a fixed distance from each other. 
@@ -351,7 +366,7 @@ begin
 	// Cycle text, wait for input, & play music
 	song_ptr := #game_end_music_arr;
 	// xpos, ypos, # chars, # cycles, direction, input break, play music
-	cycle_text(tmp, 13, message_len, 20, 0, 0, 1);
+	cycle_text(tmp, 13, message_len, 25, 0, 0, 1);
 	
 	// Reset scores, game speed & return to main loop
 	score_p1	:= 0;
@@ -451,12 +466,6 @@ begin
 	end;
 end;
 
-// Check if Sark can 
-procedure sark_check_if_move_safe();
-begin
-	
-end;
-
 // Check & return distance to crash_anim_arr
 function sark_crash_distance(scd_head:byte) : byte;
 var
@@ -497,8 +506,8 @@ begin
 	//		Avoid crashing.
 	//		Turn to direction with longest distance.
 	//
-	sm_cr_th		:= 4;
-	sm_trbo_th	:= 5;
+	sm_cr_th		:= 5;	// min val 2
+	sm_trbo_th	:= 8;
 	sm_head		:= player_2_head;
 	sm_tmp_byt1	:= sark_crash_distance(sm_head);
 	
@@ -514,7 +523,7 @@ begin
 			sm_tmp_byt2 := sark_crash_distance(sm_head);	
 			
 			// Switch to direction with longest distance
-			if (sm_tmp_byt1 > sm_tmp_byt2) then begin
+			if (sm_tmp_byt1 >= sm_tmp_byt2) then begin
 				player_2_head := 3;
 			end else begin
 				player_2_head := 4;				
@@ -528,7 +537,7 @@ begin
 			sm_tmp_byt2 := sark_crash_distance(sm_head);	
 			
 			// Switch to direction with longest distance
-			if (sm_tmp_byt1 > sm_tmp_byt2) then begin
+			if (sm_tmp_byt1 >= sm_tmp_byt2) then begin
 				player_2_head := 1;
 			end else begin
 				player_2_head := 2;				
@@ -568,10 +577,9 @@ begin
 		player_2_fire := 1;
 	end;
 
-	// TODO: Every 'n' cycles:
-	//	If opponent more than 'n' moves away, turn towards their predicted position
-	//	(based on current heading) if safe.  Prioritize X over Y (Y has fewer possible moves)
-
+	// If within player proximity, both have same heading, AND
+	//  player's row/col is open at Sark's row/col position,
+	//	then cut off the player 
 end;
 
 // Update Positions
@@ -671,48 +679,104 @@ begin
 	turn_counter			:= 0;
 end;
 
-// Play music & animate via raster interrupt
-procedure play_music_animate();
+// Play title screen animation 
+procedure play_title_animation();
+var
+	pta_tmp	: byte;
+	pta_i	: byte;
+	pta_screen_loc : pointer;
 begin
-	Interrupts::StartIRQ();
+	if anim_speed = 0 then
+	begin
+		// Top/bottom sides
+		for pta_i := 0 to MYSCREEN_WIDTH do
+		begin
+			// Top
+			pta_screen_loc := screen_loc + pta_i;
+			
+			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
+				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			end else begin
+				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+			end;		
 
+			// Bottom
+			pta_screen_loc := screen_loc + pta_i + (MYSCREEN_WIDTH * MYSCREEN_HEIGHT);
+			
+			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
+				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			end else begin
+				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+			end;		
+		end;
+
+		// Left/Right sides
+		for pta_i := 1 to MYSCREEN_HEIGHT do
+		begin
+			// Left
+			pta_screen_loc := screen_loc + pta_i * MYSCREEN_WIDTH;
+			
+			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
+				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			end else begin
+				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+			end;		
+
+			// Right
+			pta_screen_loc := screen_loc + (pta_i * MYSCREEN_WIDTH) + MYSCREEN_WIDTH -1;
+			
+			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
+				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			end else begin
+				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+			end;	
+		end;
+		
+		// Reset animation counter 
+		anim_speed := DEF_ANIM_SPEED;
+	end;
+	
+	anim_speed := anim_speed - 1;
+end;
+	
+// Runs on IRQ
+// I must be doing something wrong here, stack seems to get corrupted
+procedure do_irq_animation();
+begin
+ 	Interrupts::StartIRQ();
+
+	// Play animation
+	play_title_animation();
+	
 	// Play music inside the cycle_text() function instead for 2001 compatibility
 	//play_music();
 	
-	// For debugging	
-	//tmp_irq := tmp_irq + 1;
-	//moveto(41,0,hi(screen_char_loc));
-	//printdecimal(tmp_irq,2);
-	
-	// calling do_delay() causes crash
-	//wait(255);
-	//wait(255);
-	//wait(255);
+	tmp_irq := tmp_irq + 1;
 
+	// DEBUG counter
+	moveto(41,0,hi(screen_char_loc));
+	printdecimal(tmp_irq,2);
+	
 	Interrupts::CloseIRQ();
 end;
 
 // Routine to animate & play music via raster interrupt
 // NOTE: It seems only one interrupt can be running at a given time
 // NOTE: Raster not available on PET 2001 - use only for non-critical functions.
-// Init 'song_ptr' before calling:
-// 	song_ptr := #theme_music_arr;
-procedure play_animate_irq();
+procedure init_irq_animation();
 begin
-	//music_idx		:= 0;
-	//music_sust_idx	:= 0;
-	//LOC_SOUND_REG	:= 16;
+	tmp_irq := 0;
 	
 	// Set interrupt function & enable
-	Interrupts::RasterIRQ(#play_music_animate);
+	Interrupts::Disable();
+	Interrupts::RasterIRQ(#do_irq_animation);
 	Interrupts::Enable();
 end;
-
 
 // crash visual & sound effect
 procedure player_crash();
 begin
-	// Explode in all directions:
+	// IDEA: Explode in all directions:
 	//
 	//  *  *  *
 	//   * * *

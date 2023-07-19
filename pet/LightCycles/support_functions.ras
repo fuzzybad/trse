@@ -134,9 +134,11 @@ end;
 
 // Delay function
 procedure do_delay( delay_val: byte );
+var
+	dd_i : byte;
 begin
 	if( delay_val > 0 ) then	begin
-		for j := 0 to delay_val do wait(255);
+		for dd_i := 0 to delay_val do wait(255);
 	end;
 end;
 

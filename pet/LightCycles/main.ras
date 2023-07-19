@@ -3,6 +3,10 @@
  *	Supports SPT Dual Joystick Interface
  *	JLP 2023 (fuzzybad@gmail.com)
  */
+ 
+// TODO:
+//	Sark doesn't turn sometimes when he could have. Why?
+//	IRQ scroller on title screen
 
 program LightCycles;
 
@@ -52,9 +56,7 @@ end;
 
 // Init
 begin
-	// Disable interrupts
 	Interrupts::Disable();
-
 	DefineScreen();
 	screen_loc := #SCREEN_CHAR_LOC;
 	set_uppercase();

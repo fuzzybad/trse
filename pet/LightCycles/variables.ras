@@ -7,6 +7,7 @@ var
 	const	MYSCREEN_HEIGHT: byte = 24;
 	const	SCORE_TO_WIN: byte = 5;
 	const	DEF_GAME_SPEED: byte = 50;
+	const	DEF_ANIM_SPEED: byte = 6;
 	// Keyboard Locations
 	const	LOC_KEYB: address = 151;	// Keys being pressed
 	const	LOC_KEYBUF: address = 158;	// Keyboard buffer
@@ -91,6 +92,7 @@ var
 	score_p2:		byte = 0;
 	scroll_speed: 	byte = 16;	// Speed of scrolling - lower is faster
 	game_speed:		byte = DEF_GAME_SPEED;	// Speed of game - lower is faster
+	anim_speed:		byte = DEF_ANIM_SPEED;	// Speed of animation
 	music_idx:		byte = 0;
 	music_sust_idx:	byte = 0;
 	sound_pitch:		byte = 255;
@@ -122,7 +124,7 @@ var
 	scroll_input:	boolean = 0;
 
 	// Message Strings
-	title_msg_0:		string = (CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
+	title_msg_0:		string = (CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
 							,"PROGRAMS!");
 	title_msg_1:		string = (CRSR_DN,CHR_CURVED_TOP_LT_CORNER,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
@@ -139,16 +141,15 @@ var
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
 							,CHR_MID3_HORIZ_LN,CHR_CURVED_BOT_RT_CORNER);
-	title_msg_4:		string = (CRSR_DN,RVS_ON,"FIRST",RVS_OFF," ",RVS_ON,"PLAYER",RVS_OFF," "
-							,RVS_ON,"TO",RVS_OFF," ",RVS_ON,"SCORE",RVS_OFF," ",RVS_ON
-							,"FIVE",RVS_OFF," ",RVS_ON,"WINS");
-	title_msg_5:		string = (CRSR_DN,"PLAYER 1       PLAYER 2");
-	title_msg_6:		string = (CRSR_DN,CHR_DIAMOND,CHR_DIAMOND,"             "
-							,CHR_CIRCLE,CHR_CIRCLE);
-	title_msg_7:		string = (CRSR_DN,"USE SPT DUAL JOYSTICKS");
-	title_msg_8:		string = (CRSR_DN,"OR             OR");
-	title_msg_9:		string = ("WASD+SPC       8456+RSH");
-	title_msg_10:	string = (CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"PRESS FIRE TO BEGIN");
+	title_msg_4:		string = (CRSR_DN,"FIRST PLAYER TO SCORE FIVE WINS");
+	title_msg_5:		string = ("TURNS DISABLED DURING BOOST");
+	title_msg_6:		string = (CRSR_DN,"2023 FUZZYBAD");
+	title_msg_7:		string = (CRSR_DN,"PLAYER 1       PLAYER 2");
+	title_msg_8:		string = (CHR_DIAMOND,CHR_DIAMOND,"             ",CHR_CIRCLE,CHR_CIRCLE);
+	title_msg_9:		string = (CRSR_DN,"USE DUAL JOYSTICK ADAPTER");
+	title_msg_10:		string = ("OR             OR");
+	title_msg_11:	string = ("WASD+SPC       8456+RSH");
+	title_msg_12:	string = (CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"PRESS FIRE TO BEGIN");
 
 	score_msg_0:		string = ("PLAYER 1:                    :PLAYER 2");
 	score_msg_1:		string = ("  PLAYER:                    :SARK");
@@ -168,7 +169,7 @@ var
 	msg_two_player:	string = ("<<< ",RVS_ON,"TWO PLAYER",RVS_OFF," <<<");
 
 	// Music notes
-	const CONST_NOTE_B:	byte = 251;
+	const CONST_NOTE_B:	byte = 251;	
 	const CONST_NOTE_BS:	byte = 245;	// Improvised
 	const CONST_NOTE_C:	byte = 238;
 	const CONST_NOTE_CS:	byte = 224;
@@ -180,14 +181,14 @@ var
 	const CONST_NOTE_FS:	byte = 168;
 	const CONST_NOTE_G:	byte = 158;
 	const CONST_NOTE_GS:	byte = 149;
-	const CONST_NOTE_A:	byte = 140;
-	const CONST_NOTE_AS:	byte = 133;
+	const CONST_NOTE_A:	byte = 140;	// start of next octave
+	const CONST_NOTE_AS:	byte = 133;	// start of next octave
 	
 	// Intro to "Anthem for Keyboard Solo" Tron theme - 7/4 time
 	// Transcribed from sheet music: https://www.sheetmusicplus.com/title/tron-theme-digital-sheet-music/22158340
 	// How to read sheet music: https://theonlinemetronome.com/blogs/8/treble-clef
 	// Array structure - pitch, octave, sustain value 
-	theme_music_arr: array[100] of byte = (
+	theme_music_arr: array[] of byte = (
 		0,0,7, 	// half measure rst
 		0,0,2,  CONST_NOTE_C,1,1,  CONST_NOTE_D,1,1,  CONST_NOTE_E,1,3,  0,0,1,  CONST_NOTE_C,1,1,  CONST_NOTE_D,1,1,  CONST_NOTE_E,1,2,  CONST_NOTE_C,1,2,
 		CONST_NOTE_G,1,4,  CONST_NOTE_D,1,4,  CONST_NOTE_B,1,4,  CONST_NOTE_G,0,3,
@@ -201,37 +202,79 @@ var
 		0,0,0	// End
 		);
 		
-	// Tron Scherzo - DAA, dah, da-DA, daa. DA-da-DA-DAAA!
-	// Need sheet music - did it by ear
-	// https://www.reddit.com/r/piano/comments/14zix4y/tron_scherzo_wendy_carlos/
+	// Tron Scherzo hook - DAA, dah, da-DA, daa. DA-da-DA-DAAA!
 	//
-	// AccordionPianist -
-	//	"I think the riff you are referring to is that repeating “build up” to the
+	// Need sheet music - notes suggested here:
+	//  https://www.reddit.com/r/piano/comments/14zix4y/tron_scherzo_wendy_carlos/
+	//
+	// Redditor "AccordionPianist" -
+	//	"I think the riff you are referring to is that repeating "build up" to the
 	//	first ascending pattern? Right hand plays B F C repeatedly (fingers 5,3,1) 
-	//	while left plays A,B,A,B…. Then it jumps to first “ascension” which left 
+	//	while left plays A,B,A,B…. Then it jumps to first "ascension" which left 
 	//	hand bass is G then G# then A while right plays D G C , C# G#, B A B E, 
-	//	respectively, then bass does a G# before the next “ascension”. Similar pattern 
-	//	just playing up from A (instead of G) same kind of thing.
+	//	respectively, then bass does a G# before the next "ascension". Similar pattern 
+	//	just playing up from A (instead of G) same kind of thing."
 	//
 	// Array structure - pitch, octave, sustain value 
-	// D#, D, D#, E, C
-	// C#, C, D#, F
-	game_end_music_arr: array[50] of byte = (
-		// Take 1 - by ear
-		//CONST_NOTE_G,0,2,  CONST_NOTE_FS,0,2,  CONST_NOTE_G,0,1,  CONST_NOTE_A,0,2,  CONST_NOTE_FS,0,3,
-		//CONST_NOTE_G,0,1,  CONST_NOTE_FS,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_C,1,4, 
-		//0,0,7,	// half measure rst
-		// Take 2 - using pitch analyser
-		//CONST_NOTE_DS,1,2,  CONST_NOTE_D,1,2,  CONST_NOTE_DS,1,1,  CONST_NOTE_E,1,2,  CONST_NOTE_C,1,3,
-		//CONST_NOTE_CS,1,1,  CONST_NOTE_C,1,1,  CONST_NOTE_DS,1,1,  CONST_NOTE_F,1,4, 
+	game_end_music_arr: array[] of byte = (
 		0,0,7,	// half measure rst
-		// Take 3 - Redditor AccordionPianist
-		CONST_NOTE_D,1,2,  CONST_NOTE_G,0,2,
-		CONST_NOTE_C,1,1,  CONST_NOTE_CS,1,2,  CONST_NOTE_GS,1,2, 0,0,1,
-		CONST_NOTE_B,1,1,  CONST_NOTE_A,1,1,  CONST_NOTE_B,1,1,  CONST_NOTE_E,1,4,
+		CONST_NOTE_D,0,2,  CONST_NOTE_G,0,2,
+		CONST_NOTE_C,0,1,  CONST_NOTE_CS,0,2,  CONST_NOTE_GS,0,2,  0,0,1,
+		CONST_NOTE_B,1,1,  CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_E,1,4,
 		0,0,14,	// full measure rst
 		0,0,0	// End
 		);
 
-
+/*
+	// Scale for testing
+	music_scale_arr: array[20] of byte = (
+		CONST_NOTE_B,0,2,
+		CONST_NOTE_BS,0,2,
+		CONST_NOTE_C,0,2,
+		CONST_NOTE_CS,0,2,
+		CONST_NOTE_D,0,2,
+		CONST_NOTE_DS,0,2,
+		CONST_NOTE_E,0,2,
+		CONST_NOTE_ES,0,2,
+		CONST_NOTE_F,0,2,
+		CONST_NOTE_FS,0,2,
+		CONST_NOTE_G,0,2,
+		CONST_NOTE_GS,0,2,
+		CONST_NOTE_A,0,2,
+		CONST_NOTE_AS,0,2,
+		0,0,4,	// rst
+		CONST_NOTE_B,1,2,
+		CONST_NOTE_BS,1,2,
+		CONST_NOTE_C,1,2,
+		CONST_NOTE_CS,1,2,
+		CONST_NOTE_D,1,2,
+		CONST_NOTE_DS,1,2,
+		CONST_NOTE_E,1,2,
+		CONST_NOTE_ES,1,2,
+		CONST_NOTE_F,1,2,
+		CONST_NOTE_FS,1,2,
+		CONST_NOTE_G,1,2,
+		CONST_NOTE_GS,1,2,
+		CONST_NOTE_A,1,2,
+		CONST_NOTE_AS,1,2,
+		0,0,4,	// rst
+		CONST_NOTE_B,2,2,	// these get painfully high
+		CONST_NOTE_BS,2,2,
+		CONST_NOTE_C,2,2,
+		CONST_NOTE_CS,2,2,
+		CONST_NOTE_D,2,2,
+		CONST_NOTE_DS,2,2,
+		CONST_NOTE_E,2,2,
+		CONST_NOTE_ES,2,2,
+		CONST_NOTE_F,2,2,
+		CONST_NOTE_FS,2,2,
+		CONST_NOTE_G,2,2,
+		CONST_NOTE_GS,2,2,
+		CONST_NOTE_A,2,2,
+		CONST_NOTE_AS,2,2,
+		0,0,4,	// rst
+		0,0,0	// end
+		);
+*/
+	
 // eof
