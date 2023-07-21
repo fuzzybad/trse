@@ -137,26 +137,26 @@ begin
 	tmp := (MYSCREEN_WIDTH - 18) / 2;
 	if game_mode = 0 then basic_printat(#msg_one_player,tmp,20);
 	if game_mode = 1 then basic_printat(#msg_two_player,tmp,20);
-	if game_mode = 2 then basic_printat(#msg_tvs_player,tmp,20);
+	//if game_mode = 2 then basic_printat(#msg_tvs_player,tmp,20);
 end;
 
 // Handle additional input during cycle text routine
 procedure cycle_text_input_handler();
 begin
 	if (player_1_input = 1 or player_2_input = 1) then begin
-		game_mode := 0; 	// two player
+		game_mode := 0; 	// one player
 		display_game_mode();
 	end;
 	if (player_1_input = 2 or player_2_input = 2) then begin
-		game_mode := 1;	// one player
+		game_mode := 1;	// two player
 		display_game_mode();
 	end;	
 
-//	if (player_1_input = 1 or player_2_input = 1) then game_mode := game_mode -1;
-//	if (player_1_input = 2 or player_2_input = 2) then game_mode := game_mode +1;
-//	if (game_mode = 255) then game_mode := 0;
-//	if (game_mode > 2) then game_mode := 2;
-//	display_game_mode();
+	//	if (player_1_input = 1 or player_2_input = 1) then game_mode := game_mode -1;
+	//	if (player_1_input = 2 or player_2_input = 2) then game_mode := game_mode +1;
+	//	if (game_mode = 255) then game_mode := 0;
+	//	if (game_mode > 2) then game_mode := 2;
+	//	display_game_mode();
 	
 	// Animate the scroll around title screen
 	// Ideally this would run by IRQ, but not able to solve crash..
@@ -267,7 +267,7 @@ begin
 	song_ptr := #theme_music_arr;
 	// Adjust scroll speed to compensate additional
 	// CPU load for music & animation
-	scroll_speed := scroll_speed - 4;
+	scroll_speed := scroll_speed - 8;
 	// Center scroll message
 	tmp := (MYSCREEN_WIDTH - 19) / 2;
 	
@@ -372,9 +372,9 @@ begin
 
 	// Adjust game speed
 	if( score_p1 = 1 or score_p2 = 1 ) then game_speed := DEF_GAME_SPEED - 10;
-	if( score_p1 = 2 or score_p2 = 2 ) then game_speed := DEF_GAME_SPEED - 20;
-	if( score_p1 = 3 or score_p2 = 3 ) then game_speed := DEF_GAME_SPEED - 25;
-	if( score_p1 = 4 or score_p2 = 4 ) then game_speed := DEF_GAME_SPEED - 30;
+	if( score_p1 = 2 or score_p2 = 2 ) then game_speed := DEF_GAME_SPEED - 15;
+	if( score_p1 = 3 or score_p2 = 3 ) then game_speed := DEF_GAME_SPEED - 20;
+	if( score_p1 = 4 or score_p2 = 4 ) then game_speed := DEF_GAME_SPEED - 25;
 
 	// Redraw game screen
 	game_screen();
@@ -480,15 +480,24 @@ procedure check_collisions();
 begin
 	player_1_crash := 0;
 	player_2_crash := 0;
+
+	// Both crashed before trail is drawn. This solves edge case 
+	// when both players try to occupy the same location.
+	if (player_1_xy = player_2_xy) then begin
+		player_1_crash := 1;
+		player_2_crash := 1;
+	end;
 	
+	// P1 crashed
 	if (turn_counter or player_1_fire) then begin
 		screen_loc_work := screen_loc + player_1_xy;
 		if ( peek(screen_loc_work, 0) <> CHR_SPC ) then player_1_crash := 1;
 	end;
 
+	// P2 crashed
 	if (turn_counter or player_2_fire) then begin
 		screen_loc_work := screen_loc + player_2_xy;
-		if ( peek(screen_loc_work, 0) <> CHR_SPC ) then player_2_crash := 1;		
+		if ( peek(screen_loc_work, 0) <> CHR_SPC ) then player_2_crash := 1;
 	end;
 end;
 
@@ -506,7 +515,13 @@ begin
 	while (scd_crash = 0) do
 	begin
 		scd_i := scd_i + 1;	// number of moves until crash
-		scd_tmp_int := scd_tmp_int + dir_map_arr[scd_head]; // increment pos
+		
+		if( Model::Is_40Col() ) then begin
+			scd_tmp_int := scd_tmp_int + dir_map_arr[scd_head]; // increment pos
+		end else begin
+			scd_tmp_int := scd_tmp_int + dir_map_arr80[scd_head]; // increment pos			
+		end;
+		
 		screen_loc_work := screen_loc + scd_tmp_int;
 		if (peek(screen_loc_work, 0) <> CHR_SPC) then scd_crash := 1;
 	end;
@@ -721,7 +736,11 @@ begin
 		player_1_trail[0]	:= screen_loc + player_1_xy;
 		
 		// Update Player 1 Position
-		if (player_1_head) then player_1_xy := player_1_xy + dir_map_arr[player_1_head];
+		if( Model::Is_40Col() ) then begin
+			if (player_1_head) then player_1_xy := player_1_xy + dir_map_arr[player_1_head];
+		end else begin
+			if (player_1_head) then player_1_xy := player_1_xy + dir_map_arr80[player_1_head];
+		end;
 	end;
 
 	// Move P2 if normal move is available or turbo engaged
@@ -743,7 +762,11 @@ begin
 		player_2_trail[0]	:= screen_loc + player_2_xy;
 
 		// Update Player 2 Position
-		if (player_2_head) then player_2_xy := player_2_xy + dir_map_arr[player_2_head];
+		if (Model::Is_40Col()) then begin
+			if (player_2_head) then player_2_xy := player_2_xy + dir_map_arr[player_2_head];
+		end else begin
+			if (player_2_head) then player_2_xy := player_2_xy + dir_map_arr80[player_2_head];
+		end;
 	end;
 end;
 

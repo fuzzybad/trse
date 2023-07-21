@@ -3,12 +3,12 @@ Tron Light Cycles - Functions
 */
 var
 	// Game Constants
-	const	MYSCREEN_WIDTH: byte = 40;
+	MYSCREEN_WIDTH: byte = 40;
 	const	MYSCREEN_HEIGHT: byte = 24;
 	const	SCORE_TO_WIN: byte = 5;
-	const	DEF_GAME_SPEED: byte = 50;	// Speed of game - lower is faster
-	const	DEF_ANIM_SPEED: byte = 6;	// Speed of animation - lower is faster
-	const	DEF_SCROLL_SPEED: byte = 16; 	// Speed of scrolling - lower is faster
+	DEF_GAME_SPEED: byte = 50;	// Speed of game - lower is faster
+	DEF_ANIM_SPEED: byte = 6;	// Speed of animation - lower is faster
+	DEF_SCROLL_SPEED: byte = 16; 	// Speed of scrolling - lower is faster
 
 	// Keyboard Locations
 	const	LOC_KEYB: address = 151;	// Keys being pressed
@@ -92,16 +92,18 @@ var
 	game_over_flag:	byte = 0;
 	score_p1: 		byte = 0;
 	score_p2:		byte = 0;
-	scroll_speed: 	byte = DEF_SCROLL_SPEED;	// Speed of scrolling - lower is faster
-	game_speed:		byte = DEF_GAME_SPEED;	// Speed of game - lower is faster
-	anim_speed:		byte = DEF_ANIM_SPEED;	// Speed of animation
+	scroll_speed: 	byte = 16;	// Speed of scrolling - lower is faster
+	game_speed:		byte = 50;	// Speed of game - lower is faster
+	anim_speed:		byte = 6;	// Speed of animation
 	music_idx:		byte = 0;
 	music_sust_idx:	byte = 0;
 	sound_pitch:		byte = 255;
 	sound_oct_idx:	byte = 0;
 	sound_oct_arr:	array[3] of byte = (15, 51, 85);
 	crash_anim_arr:	array[3] of byte = (42, 87, 81);
-	dir_map_arr:		array[5] of integer = (0, -1, 1, -40, 40);	// L, R, U, D
+	// dir_map_arr:	1=L, 2=R, 3=U, 4=D
+	dir_map_arr:		array[5] of integer = (0, -1, 1, -40, 40);
+	dir_map_arr80:	array[5] of integer = (0, -1, 1, -80, 80);
 	dir_opp_arr:		array[5] of byte = (0, 2, 1, 4, 3);
 	turn_counter:	byte = 0;
 	player_1_input:	byte = 0;
@@ -130,7 +132,7 @@ var
 
 	// Message Strings
 	title_msg_0:		string = (CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
-							,"PROGRAMS!");
+							,"PROGRAMS!!");
 	title_msg_1:		string = (CRSR_DN,CHR_CURVED_TOP_LT_CORNER,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN

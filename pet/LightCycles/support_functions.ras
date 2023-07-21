@@ -9,6 +9,32 @@ procedure cycle_text_left();
 procedure cycle_text_right();
 procedure cycle_text_input_handler();
 
+// Check PET model this is running on
+procedure check_model();
+begin
+	Model::Detect();
+
+	// Model::Is_ROM4() values:
+	// 8096, 8032, 4032, 3032: 1
+	// 2001: 0
+
+	// Reset constants for 80-col PET
+	// 
+	// 	Model::Is_40Col() values:
+	// 		8096, 8032: 0
+	// 		4032, 3032, 2001: 1
+	if (Model::Is_40Col() = 0) then
+	begin
+		MYSCREEN_WIDTH := 80;
+		DEF_GAME_SPEED := 25;
+		DEF_ANIM_SPEED := 6;
+		DEF_SCROLL_SPEED := 8;
+		game_speed := DEF_GAME_SPEED;
+		anim_speed := DEF_ANIM_SPEED;
+		scroll_speed := DEF_SCROLL_SPEED;
+	end;
+end;
+
 // Clear Screen
 procedure cls();
 begin
