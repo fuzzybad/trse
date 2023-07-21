@@ -6,8 +6,10 @@ var
 	const	MYSCREEN_WIDTH: byte = 40;
 	const	MYSCREEN_HEIGHT: byte = 24;
 	const	SCORE_TO_WIN: byte = 5;
-	const	DEF_GAME_SPEED: byte = 50;
-	const	DEF_ANIM_SPEED: byte = 6;
+	const	DEF_GAME_SPEED: byte = 50;	// Speed of game - lower is faster
+	const	DEF_ANIM_SPEED: byte = 6;	// Speed of animation - lower is faster
+	const	DEF_SCROLL_SPEED: byte = 16; 	// Speed of scrolling - lower is faster
+
 	// Keyboard Locations
 	const	LOC_KEYB: address = 151;	// Keys being pressed
 	const	LOC_KEYBUF: address = 158;	// Keyboard buffer
@@ -86,11 +88,11 @@ var
 	temp_byte:		byte = 0;
 	
 	// Game vars
-	game_mode:		boolean = 0;	// 0=One Player, 1=Two Player
+	game_mode:		byte = 0;	// 0=One Player, 1=Two Player, 2=Two V.Sark
 	game_over_flag:	byte = 0;
 	score_p1: 		byte = 0;
 	score_p2:		byte = 0;
-	scroll_speed: 	byte = 16;	// Speed of scrolling - lower is faster
+	scroll_speed: 	byte = DEF_SCROLL_SPEED;	// Speed of scrolling - lower is faster
 	game_speed:		byte = DEF_GAME_SPEED;	// Speed of game - lower is faster
 	anim_speed:		byte = DEF_ANIM_SPEED;	// Speed of animation
 	music_idx:		byte = 0;
@@ -101,7 +103,6 @@ var
 	crash_anim_arr:	array[3] of byte = (42, 87, 81);
 	dir_map_arr:		array[5] of integer = (0, -1, 1, -40, 40);	// L, R, U, D
 	dir_opp_arr:		array[5] of byte = (0, 2, 1, 4, 3);
-	enter_pressed:	boolean = 0;
 	turn_counter:	byte = 0;
 	player_1_input:	byte = 0;
 	player_2_input:	byte = 0;
@@ -122,6 +123,10 @@ var
 	scroll_inp_brk:	boolean = 0;
 	scroll_step:		byte = 0;
 	scroll_input:	boolean = 0;
+	sark_near_player_x_dist: byte = 0;
+	sark_near_player_x_neg:	boolean = 0;
+	sark_near_player_y_dist:	byte = 0;
+	sark_near_player_y_neg:	boolean = 0;
 
 	// Message Strings
 	title_msg_0:		string = (CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
@@ -141,18 +146,20 @@ var
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
 							,CHR_MID3_HORIZ_LN,CHR_CURVED_BOT_RT_CORNER);
-	title_msg_4:		string = (CRSR_DN,"FIRST PLAYER TO SCORE FIVE WINS");
-	title_msg_5:		string = ("TURNS DISABLED DURING BOOST");
-	title_msg_6:		string = (CRSR_DN,"2023 FUZZYBAD");
+	title_msg_4:		string = (CRSR_DN,"2023 FUZZYBAD");
+	title_msg_5:		string = (CRSR_DN,"FIRST PLAYER TO SCORE FIVE WINS");
+	title_msg_6:		string = ("TURNS DISABLED DURING BOOST");
 	title_msg_7:		string = (CRSR_DN,"PLAYER 1       PLAYER 2");
 	title_msg_8:		string = (CHR_DIAMOND,CHR_DIAMOND,"             ",CHR_CIRCLE,CHR_CIRCLE);
 	title_msg_9:		string = (CRSR_DN,"USE DUAL JOYSTICK ADAPTER");
-	title_msg_10:		string = ("OR             OR");
+	title_msg_10:	string = ("OR             OR");
 	title_msg_11:	string = ("WASD+SPC       8456+RSH");
 	title_msg_12:	string = (CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"PRESS FIRE TO BEGIN");
 
-	score_msg_0:		string = ("PLAYER 1:                    :PLAYER 2");
-	score_msg_1:		string = ("  PLAYER:                    :SARK");
+	score_msg_0:		string = ("PLAYER 1:");
+	score_msg_1:		string = (":PLAYER 2");
+	score_msg_2:		string = ("  PLAYER:");
+	score_msg_3:		string = (":SARK");
 	
 	msg_both_crash:	string = ("BOTH CRASHED, REDO");
 	msg_p1_crash:	string = ("PLAYER 1 CRASHED");
@@ -167,6 +174,7 @@ var
 	
 	msg_one_player:	string = (">>> ",RVS_ON,"ONE PLAYER",RVS_OFF," >>>");
 	msg_two_player:	string = ("<<< ",RVS_ON,"TWO PLAYER",RVS_OFF," <<<");
+	msg_tvs_player:	string = ("<<< ",RVS_ON,"TWO V.SARK",RVS_OFF," <<<");
 
 	// Music notes
 	const CONST_NOTE_B:	byte = 251;	

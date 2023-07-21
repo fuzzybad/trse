@@ -4,9 +4,12 @@
  *	JLP 2023 (fuzzybad@gmail.com)
  */
  
-// TODO:
-//	Sark doesn't turn sometimes when he could have. Why?
-//	IRQ scroller on title screen
+// TODO: 
+//	Fix lack of collision when both players cross at same position
+//	Add support for 80-col 
+//	Add support for business keyboard
+//	Add third game mode: TWO VS SARK - deferred
+//	IRQ scroller on title screen - fuck it
 
 program LightCycles;
 
@@ -49,7 +52,6 @@ begin
 	  	if( game_over_flag = 1 ) then return;
 	  	
 	  	// Slow it down
-		// @@TODO: Replace with interrupt routine
 	  	do_delay(game_speed);
 	end;
 end;
