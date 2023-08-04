@@ -16,7 +16,7 @@ program LightCycles;
 @use "os/interrupts"
 @use "os/model"
 //@use "output/pbm"	- fatal error - needs PBM file
-//@use "input/key"	- compiler error when I try to use Held or Pressed
+@use "input/key"	//	- compiler error when I try to use Held or Pressed
 //@use "compression/compression"	- Only use for large files - small ones INCREASE in size with this
 //@use "str"
 //@use "crt"

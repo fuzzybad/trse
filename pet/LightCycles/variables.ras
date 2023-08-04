@@ -90,6 +90,7 @@ var
 	// Game vars
 	game_mode:		byte = 0;	// 0=One Player, 1=Two Player, 2=Two V.Sark
 	game_over_flag:	byte = 0;
+	game_run_flag:	byte = 0;
 	score_p1: 		byte = 0;
 	score_p2:		byte = 0;
 	scroll_speed: 	byte = 16;	// Speed of scrolling - lower is faster
