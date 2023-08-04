@@ -26,12 +26,13 @@ begin
 	if (Model::Is_40Col() = 0) then
 	begin
 		MYSCREEN_WIDTH := 80;
-		DEF_GAME_SPEED := 25;
-		DEF_ANIM_SPEED := 6;
-		DEF_SCROLL_SPEED := 8;
+//		DEF_GAME_SPEED := 25;
+//		DEF_ANIM_SPEED := 6;
+//		DEF_SCROLL_SPEED := 8;
 		game_speed := DEF_GAME_SPEED;
 		anim_speed := DEF_ANIM_SPEED;
 		scroll_speed := DEF_SCROLL_SPEED;
+		keybd_type_flag := 1; 	// Business keyboard
 	end;
 end;
 

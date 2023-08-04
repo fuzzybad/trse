@@ -15,8 +15,8 @@ program LightCycles;
 
 @use "os/interrupts"
 @use "os/model"
+@use "input/key"	
 //@use "output/pbm"	- fatal error - needs PBM file
-@use "input/key"	//	- compiler error when I try to use Held or Pressed
 //@use "compression/compression"	- Only use for large files - small ones INCREASE in size with this
 //@use "str"
 //@use "crt"
@@ -59,8 +59,8 @@ end;
 // Init
 begin
 	// Check PET model being used
-	check_model();
-
+	check_model();		// Check if 40 or 80 column screen
+	cursor_graphic();	// Eliminates space between rows
 	Interrupts::Disable();
 	DefineScreen();
 	screen_loc := #SCREEN_CHAR_LOC;

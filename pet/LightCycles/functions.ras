@@ -17,10 +17,11 @@ var
 	check_input_val : byte;
 begin
 	// Initialize	
-	player_1_input := 0;
-	player_2_input := 0;
-	player_1_fire := 0;
-	player_2_fire := 0;
+	player_1_input	:= 0;
+	player_2_input	:= 0;
+	player_1_fire	:= 0;
+	player_2_fire	:= 0;
+	keybd_input		:= 0;
 
 	// Read controller values from Port B
 	check_input_val := LOC_PORT_B;
@@ -48,21 +49,39 @@ begin
 	// Read PET Keyboard
 	Key::Read();
 
-	//@TODO: Read these values from array.
-	//		 Use separate arrays for business/personal keyboards
-	//		 Have player press a key to determine keyboard type,
-	//		 using a startup screen on load.
-	//
-	if Key::Held($0104) then player_1_input := 1;	// A - P1 Left
-	if Key::Held($4004) then player_2_input := 1;	// 4 - P2 Left
-	if Key::Held($0204) then player_1_input := 2;	// D - P1 Right
-	if Key::Held($8004) then player_2_input := 2;	// 6 - P2 Right
-	if Key::Held($0103) then player_1_input := 3;	// W - P1 Up
-	if Key::Held($4003) then player_2_input := 3;	// 8 - P2 Up
-	if Key::Held($0105) then player_1_input := 4;	// S - P1 Down
-	if Key::Held($4005) then player_2_input := 4;	// 5 - P2 Down
-	if Key::Held($0409) then player_1_fire := 1;	// Space - P1 Fire
-	if Key::Held($2008) then player_2_fire := 1;	// RShift - P2 Fire
+	if (not keybd_type_flag)	then
+	begin
+		// Values for "graphics" keyboard
+		if Key::Held($0104) then player_1_input := 1;	// A - P1 Left
+		if Key::Held($4004) then player_2_input := 1;	// 4 - P2 Left
+		if Key::Held($0204) then player_1_input := 2;	// D - P1 Right
+		if Key::Held($8004) then player_2_input := 2;	// 6 - P2 Right
+		if Key::Held($0103) then player_1_input := 3;	// W - P1 Up
+		if Key::Held($4003) then player_2_input := 3;	// 8 - P2 Up
+		if Key::Held($0105) then player_1_input := 4;	// S - P1 Down
+		if Key::Held($4005) then player_2_input := 4;	// 5 - P2 Down
+		if Key::Held($0409) then player_1_fire := 1;	// Space - P1 Fire
+		if Key::Held($2008) then player_2_fire := 1;	// RShift - P2 Fire
+		if Key::Held($4006) then keybd_input := 1;	// 1 Key
+		if Key::Held($4007) then keybd_input := 2;	// 2 Key
+		if Key::Held($8006) then keybd_input := 3;	// 3 Key
+	end else
+	begin
+		// Values for "business" keyboard
+		if Key::Held($0103) then player_1_input := 1;	// A - P1 Left
+		if Key::Held($0201) then player_2_input := 1;	// 4 - P2 Left
+		if Key::Held($0203) then player_1_input := 2;	// D - P1 Right
+		if Key::Held($0409) then player_2_input := 2;	// 6 - P2 Right
+		if Key::Held($0204) then player_1_input := 3;	// W - P1 Up
+		if Key::Held($0400) then player_2_input := 3;	// 8 - P2 Up
+		if Key::Held($0202) then player_1_input := 4;	// S - P1 Down
+		if Key::Held($0200) then player_2_input := 4;	// 5 - P2 Down
+		if Key::Held($0408) then player_1_fire := 1;	// Space - P1 Fire
+		if Key::Held($4006) then player_2_fire := 1;	// RShift - P2 Fire
+		if Key::Held($0101) then keybd_input := 1;	// 1 Key
+		if Key::Held($0100) then keybd_input := 2;	// 2 Key
+		if Key::Held($0209) then keybd_input := 3;	// 3 Key
+	end;
 
 	// Get Sark's move when in single-player mode
 	if (game_mode = 0 and game_run_flag) then begin
@@ -79,31 +98,60 @@ end;
 // Displays game mode
 procedure display_game_mode();
 begin
-	moveto(11,10,hi(screen_char_loc));
 	tmp := (MYSCREEN_WIDTH - 18) / 2;
-	if game_mode = 0 then basic_printat(#msg_one_player,tmp,20);
-	if game_mode = 1 then basic_printat(#msg_two_player,tmp,20);
+	if game_mode = 0 then basic_printat(#msg_one_player,tmp,18);
+	if game_mode = 1 then basic_printat(#msg_two_player,tmp,18);
 	//if game_mode = 2 then basic_printat(#msg_tvs_player,tmp,20);
+end;
+
+// Displays game mode
+procedure display_game_difficulty();
+begin
+	tmp := (MYSCREEN_WIDTH - 23) / 2;
+	basic_printat(#msg_diff_select, tmp, 20);
+	
+	if (game_difficulty = 1) then basic_printat(#msg_diff_one, tmp+12, 20);
+	if (game_difficulty = 2) then basic_printat(#msg_diff_two, tmp+12, 20);
+	if (game_difficulty = 3) then basic_printat(#msg_diff_three, tmp+12, 20);
 end;
 
 // Handle additional input during cycle text routine
 procedure cycle_text_input_handler();
 begin
-	if (player_1_input = 1 or player_2_input = 1) then begin
+	if ((player_1_input = 1 or player_2_input = 1) and game_mode = 1) then begin
 		game_mode := 0; 	// one player
+		game_mode_changed := 1;
 		display_game_mode();
 	end;
-	if (player_1_input = 2 or player_2_input = 2) then begin
+	if ((player_1_input = 2 or player_2_input = 2) and game_mode = 0) then begin
 		game_mode := 1;	// two player
+		game_mode_changed := 1;
 		display_game_mode();
 	end;	
 
-	//	if (player_1_input = 1 or player_2_input = 1) then game_mode := game_mode -1;
-	//	if (player_1_input = 2 or player_2_input = 2) then game_mode := game_mode +1;
-	//	if (game_mode = 255) then game_mode := 0;
-	//	if (game_mode > 2) then game_mode := 2;
-	//	display_game_mode();
-	
+	// one player mode difficulty selection
+	if (keybd_input <> 0 and (keybd_input <> game_difficulty)) then 
+	begin
+		game_mode_changed := 1;
+		
+		if ((keybd_input = 1 or keybd_input = 2) or keybd_input = 3) then begin
+			game_difficulty := keybd_input;
+		end;
+	end;
+
+	// update display for difficulty selection
+	if (game_mode_changed) then
+	begin
+		game_mode_changed := 0;
+		
+		if (game_mode = 0) then begin
+			display_game_difficulty();
+		end else begin
+			tmp := (MYSCREEN_WIDTH - 30) / 2;
+			basic_printat("                              ", tmp, 20);
+		end;
+	end;
+
 	// Animate the scroll around title screen
 	// Ideally this would run by IRQ, but not able to solve crash..
 	play_title_animation();
@@ -184,7 +232,7 @@ begin
 	cursor_clear();
 
 	// Print title strings
-	basic_print(#title_msg_0, 1, 19);
+	//basic_print(#title_msg_0, 1, 19);
 	basic_print(#title_msg_1, 1, 20);
 	basic_print(#title_msg_2, 1, 20);
 	basic_print(#title_msg_3, 1, 20);
@@ -293,7 +341,6 @@ begin
 	update_score(0);
 	init_engine_sound();
 	init_gamestate();
-	game_run_flag := 1;
 end;
 
 // Start new round
@@ -599,52 +646,58 @@ begin
 		end;
 	end;
 
-	//	If opponent less than 'n' moves away, engage turbo boost 
-	//	unless it would cause a crash.
-	if (sm_cr_dist > 1) then
+	if( game_difficulty = 2 or game_difficulty = 3 ) then
 	begin
-		if (sark_near_player_x_dist < sm_boost_th and 
-			sark_near_player_y_dist < sm_boost_th) then
+		//	If opponent less than 'n' moves away, engage turbo boost 
+		//	unless it would cause a crash.
+		if (sm_cr_dist > 1) then
 		begin
-			player_2_fire := 1;
+			if (sark_near_player_x_dist < sm_boost_th and 
+				sark_near_player_y_dist < sm_boost_th) then
+			begin
+				player_2_fire := 1;
+			end;
 		end;
 	end;
-		
-	//	If within player proximity, both have same heading, AND
-	//	player's row/col is open at Sark's row/col position,
-	//	then cut off the player 
-	if (sark_near_player_x_dist <= sm_prox_th and sark_near_player_y_dist <= sm_prox_th) then
-	begin
-		// Sark is moving left/right
-		if (player_2_head = 1 or player_2_head = 2) then
-		begin
-			if (sark_near_player_y_neg and sm_cr_dist_u > 1) then 
-			begin
-				// Player is above Sark, and move available
-				player_2_input := 3; // move up
-				player_2_fire := 0;  // can't boost & turn
-			end else if (sark_near_player_y_neg = 0 and sm_cr_dist_d > 1) then 
-			begin
-				// Player is below Sark, and move available
-				player_2_input := 4; // move down
-				player_2_fire := 0;  // can't boost & turn
-			end;	
-		end;
 
-		// Sark is moving up/down
-		if (player_2_head = 3 or player_2_head = 4) then
+	if( game_difficulty = 3 ) then
+	begin
+		//	If within player proximity, both have same heading, AND
+		//	player's row/col is open at Sark's row/col position,
+		//	then cut off the player 
+		if (sark_near_player_x_dist <= sm_prox_th and sark_near_player_y_dist <= sm_prox_th) then
 		begin
-			if (sark_near_player_x_neg and sm_cr_dist_l > 1) then 
+			// Sark is moving left/right
+			if (player_2_head = 1 or player_2_head = 2) then
 			begin
-				// Player is left of Sark, and move available
-				player_2_input := 1; // move left
-				player_2_fire := 0;  // can't boost & turn
-			end else if (sark_near_player_x_neg = 0 and sm_cr_dist_r > 1) then 
+				if (sark_near_player_y_neg and sm_cr_dist_u > 1) then 
+				begin
+					// Player is above Sark, and move available
+					player_2_input := 3; // move up
+					player_2_fire := 0;  // can't boost & turn
+				end else if (sark_near_player_y_neg = 0 and sm_cr_dist_d > 1) then 
+				begin
+					// Player is below Sark, and move available
+					player_2_input := 4; // move down
+					player_2_fire := 0;  // can't boost & turn
+				end;	
+			end;
+	
+			// Sark is moving up/down
+			if (player_2_head = 3 or player_2_head = 4) then
 			begin
-				// Player is below Sark, and move available
-				player_2_input := 2; // move right
-				player_2_fire := 0;  // can't boost & turn
-			end;			
+				if (sark_near_player_x_neg and sm_cr_dist_l > 1) then 
+				begin
+					// Player is left of Sark, and move available
+					player_2_input := 1; // move left
+					player_2_fire := 0;  // can't boost & turn
+				end else if (sark_near_player_x_neg = 0 and sm_cr_dist_r > 1) then 
+				begin
+					// Player is below Sark, and move available
+					player_2_input := 2; // move right
+					player_2_fire := 0;  // can't boost & turn
+				end;			
+			end;
 		end;
 	end;
 
@@ -754,6 +807,8 @@ begin
 	player_1_fire		:= 0;
 	player_2_fire		:= 0;
 	turn_counter			:= 0;
+	game_run_flag		:= 1;
+	game_mode_changed	:= 1;
 end;
 
 // Play title screen animation 

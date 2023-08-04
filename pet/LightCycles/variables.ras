@@ -89,8 +89,11 @@ var
 	
 	// Game vars
 	game_mode:		byte = 0;	// 0=One Player, 1=Two Player, 2=Two V.Sark
+	game_difficulty:	byte = 2;	// 1=Easy, 2=Moderate, 3=Hard
+	game_mode_changed: boolean = 1;
 	game_over_flag:	byte = 0;
 	game_run_flag:	byte = 0;
+	keybd_type_flag:	boolean = 0;	// 0 = "graphics", 1 = "business"
 	score_p1: 		byte = 0;
 	score_p2:		byte = 0;
 	scroll_speed: 	byte = 16;	// Speed of scrolling - lower is faster
@@ -109,6 +112,7 @@ var
 	turn_counter:	byte = 0;
 	player_1_input:	byte = 0;
 	player_2_input:	byte = 0;
+	keybd_input:		byte = 0;
 	player_1_head:	byte = 0;
 	player_2_head:	byte = 0;
 	player_1_fire:	boolean = 0;
@@ -132,9 +136,9 @@ var
 	sark_near_player_y_neg:	boolean = 0;
 
 	// Message Strings
-	title_msg_0:		string = (CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
-							,"PROGRAMS!!");
-	title_msg_1:		string = (CRSR_DN,CHR_CURVED_TOP_LT_CORNER,CHR_MID2_HORIZ_LN
+	//title_msg_0:		string = (CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
+	//						,"PROGRAMS!!");
+	title_msg_1:		string = (CRSR_DN,CRSR_DN,CHR_CURVED_TOP_LT_CORNER,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
@@ -157,7 +161,7 @@ var
 	title_msg_9:		string = (CRSR_DN,"USE DUAL JOYSTICK ADAPTER");
 	title_msg_10:	string = ("OR             OR");
 	title_msg_11:	string = ("WASD+SPC       8456+RSH");
-	title_msg_12:	string = (CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"PRESS FIRE TO BEGIN");
+	title_msg_12:	string = (CRSR_DN,CRSR_DN,CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"PRESS FIRE TO BEGIN");
 
 	score_msg_0:		string = ("PLAYER 1:");
 	score_msg_1:		string = (":PLAYER 2");
@@ -177,7 +181,11 @@ var
 	
 	msg_one_player:	string = (">>> ",RVS_ON,"ONE PLAYER",RVS_OFF," >>>");
 	msg_two_player:	string = ("<<< ",RVS_ON,"TWO PLAYER",RVS_OFF," <<<");
-	msg_tvs_player:	string = ("<<< ",RVS_ON,"TWO V.SARK",RVS_OFF," <<<");
+	//msg_tvs_player:	string = ("<<< ",RVS_ON,"TWO V.SARK",RVS_OFF," <<<");
+	msg_diff_select:	string = ("DIFFICULTY:");	// 12 chars
+	msg_diff_one:	string = (RVS_ON,"1",RVS_OFF," 2 3: EASY  ");
+	msg_diff_two:	string = ("1 ",RVS_ON,"2",RVS_OFF," 3: MEDIUM"); // 13 chars
+	msg_diff_three:	string = ("1 2 ",RVS_ON,"3",RVS_OFF,": HARD  ");
 
 	// Music notes
 	const CONST_NOTE_B:	byte = 251;	
