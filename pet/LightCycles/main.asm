@@ -436,6 +436,31 @@ init_printdecimal_skip
 	bne init_printdecimal_loop
 	rts
 end_procedure_initprintdecimal
+	; NodeProcedureDecl -1
+	; ***********  Defining procedure : initprintstring
+	;    Procedure type : User-defined procedure
+print_text = $80
+print_number_text: .dc "    ",0
+printstring
+	ldy #0
+printstringloop
+	lda (print_text),y
+	cmp #0 ;keep
+	beq printstring_done
+	cmp #64
+	bcc printstring_skip
+	sec
+	sbc #64
+printstring_skip
+	sta (screenmemory),y
+	iny
+	dex
+	cpx #0
+	beq printstring_done
+	jmp printstringloop
+printstring_done
+	rts
+end_procedure_initprintstring
 	;*
 ; //<p>Disables interrupts. This prevents a number of things from running 
 ; //including the kernal's keyboard scan and the jiffy clock TI$. 
@@ -1378,7 +1403,7 @@ cycle_text
 	sta scroll_num_char
 	; Right is PURE NUMERIC : Is word =0
 	; 8 bit mul of power 2
-	; Forcetype:  INTEGER
+	; Forcetype:  BYTE
 	lsr
 	; Calling storevariable on generic assign expression
 	sta scroll_num_trail
@@ -2118,10 +2143,14 @@ check_input_ConditionalTrueBlock569: ;Main true block ;keep
 check_input_elsedoneblock571
 	
 ; // Down
+; // uncomment function in support_functions to debug keyboard codes
+; //check_keyboard_codes();
 ; // Read PET Keyboard
 	jsr Key_Read
 	
-; // 3 Key
+; // K Key (graphics)
+; //if Key::Held($0401) then keybd_input := 5;	
+; // Left Arrow Key - Abort game
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; 8 bit binop
@@ -2132,9 +2161,9 @@ check_input_elsedoneblock571
 	 ; end add / sub var with constant
 	and #1
 	; cmp #$00 ignored
-	beq check_input_localfailed736
+	beq check_input_localfailed760
 	jmp check_input_ConditionalTrueBlock575
-check_input_localfailed736
+check_input_localfailed760
 	jmp check_input_elseblock576
 check_input_ConditionalTrueBlock575: ;Main true block ;keep 
 	; Binary clause Simplified: NOTEQUALS
@@ -2145,15 +2174,15 @@ check_input_ConditionalTrueBlock575: ;Main true block ;keep
 	ldy #$01
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock741
-check_input_ConditionalTrueBlock739: ;Main true block ;keep 
+	beq check_input_elsedoneblock765
+check_input_ConditionalTrueBlock763: ;Main true block ;keep 
 	
 ; // Values for "graphics" keyboard
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_1_input
-check_input_elsedoneblock741
+check_input_elsedoneblock765
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2162,15 +2191,15 @@ check_input_elsedoneblock741
 	ldy #$40
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock747
-check_input_ConditionalTrueBlock745: ;Main true block ;keep 
+	beq check_input_elsedoneblock771
+check_input_ConditionalTrueBlock769: ;Main true block ;keep 
 	
 ; // A - P1 Left
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-check_input_elsedoneblock747
+check_input_elsedoneblock771
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2179,15 +2208,15 @@ check_input_elsedoneblock747
 	ldy #$02
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock753
-check_input_ConditionalTrueBlock751: ;Main true block ;keep 
+	beq check_input_elsedoneblock777
+check_input_ConditionalTrueBlock775: ;Main true block ;keep 
 	
 ; // 4 - P2 Left
 	; Forcetype: NADA
 	lda #$2
 	; Calling storevariable on generic assign expression
 	sta player_1_input
-check_input_elsedoneblock753
+check_input_elsedoneblock777
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2196,15 +2225,15 @@ check_input_elsedoneblock753
 	ldy #$80
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock759
-check_input_ConditionalTrueBlock757: ;Main true block ;keep 
+	beq check_input_elsedoneblock783
+check_input_ConditionalTrueBlock781: ;Main true block ;keep 
 	
 ; // D - P1 Right
 	; Forcetype: NADA
 	lda #$2
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-check_input_elsedoneblock759
+check_input_elsedoneblock783
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2213,15 +2242,15 @@ check_input_elsedoneblock759
 	ldy #$01
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock765
-check_input_ConditionalTrueBlock763: ;Main true block ;keep 
+	beq check_input_elsedoneblock789
+check_input_ConditionalTrueBlock787: ;Main true block ;keep 
 	
 ; // 6 - P2 Right
 	; Forcetype: NADA
 	lda #$3
 	; Calling storevariable on generic assign expression
 	sta player_1_input
-check_input_elsedoneblock765
+check_input_elsedoneblock789
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2230,15 +2259,15 @@ check_input_elsedoneblock765
 	ldy #$40
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock771
-check_input_ConditionalTrueBlock769: ;Main true block ;keep 
+	beq check_input_elsedoneblock795
+check_input_ConditionalTrueBlock793: ;Main true block ;keep 
 	
 ; // W - P1 Up
 	; Forcetype: NADA
 	lda #$3
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-check_input_elsedoneblock771
+check_input_elsedoneblock795
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2247,15 +2276,15 @@ check_input_elsedoneblock771
 	ldy #$01
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock777
-check_input_ConditionalTrueBlock775: ;Main true block ;keep 
+	beq check_input_elsedoneblock801
+check_input_ConditionalTrueBlock799: ;Main true block ;keep 
 	
 ; // 8 - P2 Up
 	; Forcetype: NADA
 	lda #$4
 	; Calling storevariable on generic assign expression
 	sta player_1_input
-check_input_elsedoneblock777
+check_input_elsedoneblock801
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2264,15 +2293,15 @@ check_input_elsedoneblock777
 	ldy #$40
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock783
-check_input_ConditionalTrueBlock781: ;Main true block ;keep 
+	beq check_input_elsedoneblock807
+check_input_ConditionalTrueBlock805: ;Main true block ;keep 
 	
 ; // S - P1 Down
 	; Forcetype: NADA
 	lda #$4
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-check_input_elsedoneblock783
+check_input_elsedoneblock807
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2281,15 +2310,15 @@ check_input_elsedoneblock783
 	ldy #$04
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock789
-check_input_ConditionalTrueBlock787: ;Main true block ;keep 
+	beq check_input_elsedoneblock813
+check_input_ConditionalTrueBlock811: ;Main true block ;keep 
 	
 ; // 5 - P2 Down
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_1_fire
-check_input_elsedoneblock789
+check_input_elsedoneblock813
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2298,15 +2327,15 @@ check_input_elsedoneblock789
 	ldy #$20
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock795
-check_input_ConditionalTrueBlock793: ;Main true block ;keep 
+	beq check_input_elsedoneblock819
+check_input_ConditionalTrueBlock817: ;Main true block ;keep 
 	
 ; // Space - P1 Fire
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_2_fire
-check_input_elsedoneblock795
+check_input_elsedoneblock819
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2315,15 +2344,15 @@ check_input_elsedoneblock795
 	ldy #$40
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock801
-check_input_ConditionalTrueBlock799: ;Main true block ;keep 
+	beq check_input_elsedoneblock825
+check_input_ConditionalTrueBlock823: ;Main true block ;keep 
 	
 ; // RShift - P2 Fire
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta keybd_input
-check_input_elsedoneblock801
+check_input_elsedoneblock825
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2332,15 +2361,15 @@ check_input_elsedoneblock801
 	ldy #$40
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock807
-check_input_ConditionalTrueBlock805: ;Main true block ;keep 
+	beq check_input_elsedoneblock831
+check_input_ConditionalTrueBlock829: ;Main true block ;keep 
 	
 ; // 1 Key
 	; Forcetype: NADA
 	lda #$2
 	; Calling storevariable on generic assign expression
 	sta keybd_input
-check_input_elsedoneblock807
+check_input_elsedoneblock831
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2349,15 +2378,49 @@ check_input_elsedoneblock807
 	ldy #$80
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock813
-check_input_ConditionalTrueBlock811: ;Main true block ;keep 
+	beq check_input_elsedoneblock837
+check_input_ConditionalTrueBlock835: ;Main true block ;keep 
 	
 ; // 2 Key
 	; Forcetype: NADA
 	lda #$3
 	; Calling storevariable on generic assign expression
 	sta keybd_input
-check_input_elsedoneblock813
+check_input_elsedoneblock837
+	; Binary clause Simplified: NOTEQUALS
+	clc
+	; Assigning to register
+	; Assigning register : _xy
+	ldx #$02
+	ldy #$20
+	jsr Key_Held
+	; cmp #$00 ignored
+	beq check_input_elsedoneblock843
+check_input_ConditionalTrueBlock841: ;Main true block ;keep 
+	
+; // 3 Key
+	; Forcetype: NADA
+	lda #$4
+	; Calling storevariable on generic assign expression
+	sta keybd_input
+check_input_elsedoneblock843
+	; Binary clause Simplified: NOTEQUALS
+	clc
+	; Assigning to register
+	; Assigning register : _xy
+	ldx #$05
+	ldy #$08
+	jsr Key_Held
+	; cmp #$00 ignored
+	beq check_input_elsedoneblock849
+check_input_ConditionalTrueBlock847: ;Main true block ;keep 
+	
+; // K Key (business)
+	; Forcetype: NADA
+	lda #$4
+	; Calling storevariable on generic assign expression
+	sta keybd_input
+check_input_elsedoneblock849
 	jmp check_input_elsedoneblock577
 check_input_elseblock576
 	; Binary clause Simplified: NOTEQUALS
@@ -2368,16 +2431,18 @@ check_input_elseblock576
 	ldy #$01
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock820
-check_input_ConditionalTrueBlock818: ;Main true block ;keep 
+	beq check_input_elsedoneblock856
+check_input_ConditionalTrueBlock854: ;Main true block ;keep 
 	
-; // 3 Key
+; // K Key (graphics)
+; //if Key::Held($2000) then keybd_input := 5;	
+; // Left Arrow Key - Abort game
 ; // Values for "business" keyboard
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_1_input
-check_input_elsedoneblock820
+check_input_elsedoneblock856
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2386,15 +2451,15 @@ check_input_elsedoneblock820
 	ldy #$02
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock826
-check_input_ConditionalTrueBlock824: ;Main true block ;keep 
+	beq check_input_elsedoneblock862
+check_input_ConditionalTrueBlock860: ;Main true block ;keep 
 	
 ; // A - P1 Left
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-check_input_elsedoneblock826
+check_input_elsedoneblock862
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2403,15 +2468,15 @@ check_input_elsedoneblock826
 	ldy #$02
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock832
-check_input_ConditionalTrueBlock830: ;Main true block ;keep 
+	beq check_input_elsedoneblock868
+check_input_ConditionalTrueBlock866: ;Main true block ;keep 
 	
 ; // 4 - P2 Left
 	; Forcetype: NADA
 	lda #$2
 	; Calling storevariable on generic assign expression
 	sta player_1_input
-check_input_elsedoneblock832
+check_input_elsedoneblock868
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2420,15 +2485,15 @@ check_input_elsedoneblock832
 	ldy #$04
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock838
-check_input_ConditionalTrueBlock836: ;Main true block ;keep 
+	beq check_input_elsedoneblock874
+check_input_ConditionalTrueBlock872: ;Main true block ;keep 
 	
 ; // D - P1 Right
 	; Forcetype: NADA
 	lda #$2
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-check_input_elsedoneblock838
+check_input_elsedoneblock874
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2437,15 +2502,15 @@ check_input_elsedoneblock838
 	ldy #$02
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock844
-check_input_ConditionalTrueBlock842: ;Main true block ;keep 
+	beq check_input_elsedoneblock880
+check_input_ConditionalTrueBlock878: ;Main true block ;keep 
 	
 ; // 6 - P2 Right
 	; Forcetype: NADA
 	lda #$3
 	; Calling storevariable on generic assign expression
 	sta player_1_input
-check_input_elsedoneblock844
+check_input_elsedoneblock880
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2454,15 +2519,15 @@ check_input_elsedoneblock844
 	ldy #$04
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock850
-check_input_ConditionalTrueBlock848: ;Main true block ;keep 
+	beq check_input_elsedoneblock886
+check_input_ConditionalTrueBlock884: ;Main true block ;keep 
 	
 ; // W - P1 Up
 	; Forcetype: NADA
 	lda #$3
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-check_input_elsedoneblock850
+check_input_elsedoneblock886
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2471,15 +2536,15 @@ check_input_elsedoneblock850
 	ldy #$02
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock856
-check_input_ConditionalTrueBlock854: ;Main true block ;keep 
+	beq check_input_elsedoneblock892
+check_input_ConditionalTrueBlock890: ;Main true block ;keep 
 	
 ; // 8 - P2 Up
 	; Forcetype: NADA
 	lda #$4
 	; Calling storevariable on generic assign expression
 	sta player_1_input
-check_input_elsedoneblock856
+check_input_elsedoneblock892
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2488,15 +2553,15 @@ check_input_elsedoneblock856
 	ldy #$02
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock862
-check_input_ConditionalTrueBlock860: ;Main true block ;keep 
+	beq check_input_elsedoneblock898
+check_input_ConditionalTrueBlock896: ;Main true block ;keep 
 	
 ; // S - P1 Down
 	; Forcetype: NADA
 	lda #$4
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-check_input_elsedoneblock862
+check_input_elsedoneblock898
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2505,15 +2570,15 @@ check_input_elsedoneblock862
 	ldy #$04
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock868
-check_input_ConditionalTrueBlock866: ;Main true block ;keep 
+	beq check_input_elsedoneblock904
+check_input_ConditionalTrueBlock902: ;Main true block ;keep 
 	
 ; // 5 - P2 Down
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_1_fire
-check_input_elsedoneblock868
+check_input_elsedoneblock904
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2522,15 +2587,15 @@ check_input_elsedoneblock868
 	ldy #$40
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock874
-check_input_ConditionalTrueBlock872: ;Main true block ;keep 
+	beq check_input_elsedoneblock910
+check_input_ConditionalTrueBlock908: ;Main true block ;keep 
 	
 ; // Space - P1 Fire
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_2_fire
-check_input_elsedoneblock874
+check_input_elsedoneblock910
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2539,15 +2604,15 @@ check_input_elsedoneblock874
 	ldy #$01
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock880
-check_input_ConditionalTrueBlock878: ;Main true block ;keep 
+	beq check_input_elsedoneblock916
+check_input_ConditionalTrueBlock914: ;Main true block ;keep 
 	
 ; // RShift - P2 Fire
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta keybd_input
-check_input_elsedoneblock880
+check_input_elsedoneblock916
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2556,15 +2621,15 @@ check_input_elsedoneblock880
 	ldy #$01
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock886
-check_input_ConditionalTrueBlock884: ;Main true block ;keep 
+	beq check_input_elsedoneblock922
+check_input_ConditionalTrueBlock920: ;Main true block ;keep 
 	
-; // 1 Key
+; // 1 Key -
 	; Forcetype: NADA
 	lda #$2
 	; Calling storevariable on generic assign expression
 	sta keybd_input
-check_input_elsedoneblock886
+check_input_elsedoneblock922
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Assigning to register
@@ -2573,56 +2638,90 @@ check_input_elsedoneblock886
 	ldy #$02
 	jsr Key_Held
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock892
-check_input_ConditionalTrueBlock890: ;Main true block ;keep 
+	beq check_input_elsedoneblock928
+check_input_ConditionalTrueBlock926: ;Main true block ;keep 
 	
 ; // 2 Key
 	; Forcetype: NADA
 	lda #$3
 	; Calling storevariable on generic assign expression
 	sta keybd_input
-check_input_elsedoneblock892
+check_input_elsedoneblock928
+	; Binary clause Simplified: NOTEQUALS
+	clc
+	; Assigning to register
+	; Assigning register : _xy
+	ldx #$02
+	ldy #$20
+	jsr Key_Held
+	; cmp #$00 ignored
+	beq check_input_elsedoneblock934
+check_input_ConditionalTrueBlock932: ;Main true block ;keep 
+	
+; // 3 Key
+	; Forcetype: NADA
+	lda #$4
+	; Calling storevariable on generic assign expression
+	sta keybd_input
+check_input_elsedoneblock934
+	; Binary clause Simplified: NOTEQUALS
+	clc
+	; Assigning to register
+	; Assigning register : _xy
+	ldx #$05
+	ldy #$08
+	jsr Key_Held
+	; cmp #$00 ignored
+	beq check_input_elsedoneblock940
+check_input_ConditionalTrueBlock938: ;Main true block ;keep 
+	
+; // K Key (business)
+	; Forcetype: NADA
+	lda #$4
+	; Calling storevariable on generic assign expression
+	sta keybd_input
+check_input_elsedoneblock940
 check_input_elsedoneblock577
 	; Binary clause Simplified: EQUALS
 	clc
 	lda game_mode
 	; cmp #$00 ignored
-	bne check_input_elsedoneblock898
-check_input_localsuccess900: ;keep
+	bne check_input_elsedoneblock946
+check_input_localsuccess948: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda game_run_flag
 	; cmp #$00 ignored
-	beq check_input_elsedoneblock898
-check_input_ConditionalTrueBlock896: ;Main true block ;keep 
+	beq check_input_elsedoneblock946
+check_input_ConditionalTrueBlock944: ;Main true block ;keep 
 	
 ; // Get Sark's move when in single-player mode
 	jsr sark_move
-check_input_elsedoneblock898
+check_input_elsedoneblock946
 	; Binary clause Simplified: EQUALS
 	lda player_1_fire
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne check_input_localfailed908
-	jmp check_input_ConditionalTrueBlock903
-check_input_localfailed908: ;keep
+	bne check_input_localfailed956
+	jmp check_input_ConditionalTrueBlock951
+check_input_localfailed956: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_2_fire
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne check_input_elseblock904
-check_input_ConditionalTrueBlock903: ;Main true block ;keep 
+	bne check_input_elseblock952
+check_input_ConditionalTrueBlock951: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$1
 	rts
-	jmp check_input_elsedoneblock905
-check_input_elseblock904
+	jmp check_input_elsedoneblock953
+check_input_elseblock952
 	; Forcetype: NADA
 	lda #$0
 	rts
-check_input_elsedoneblock905
+check_input_elsedoneblock953
 	rts
 end_procedure_check_input
 	
@@ -2646,14 +2745,14 @@ display_game_mode
 	sbc #$00
 	tay 
 	pla 
-display_game_mode_int_shift_var913 = $54
-	sta display_game_mode_int_shift_var913
-	sty display_game_mode_int_shift_var913+1
-		lsr display_game_mode_int_shift_var913+1
-	ror display_game_mode_int_shift_var913+0
+display_game_mode_int_shift_var961 = $54
+	sta display_game_mode_int_shift_var961
+	sty display_game_mode_int_shift_var961+1
+		lsr display_game_mode_int_shift_var961+1
+	ror display_game_mode_int_shift_var961+0
 
-	lda display_game_mode_int_shift_var913
-	ldy display_game_mode_int_shift_var913+1
+	lda display_game_mode_int_shift_var961
+	ldy display_game_mode_int_shift_var961+1
 	; Calling storevariable on generic assign expression
 	sta tmp
 	sty tmp+1
@@ -2661,8 +2760,8 @@ display_game_mode_int_shift_var913 = $54
 	clc
 	lda game_mode
 	; cmp #$00 ignored
-	bne display_game_mode_elsedoneblock917
-display_game_mode_ConditionalTrueBlock915: ;Main true block ;keep 
+	bne display_game_mode_elsedoneblock965
+display_game_mode_ConditionalTrueBlock963: ;Main true block ;keep 
 	lda #<msg_one_player
 	ldx #>msg_one_player
 	sta _pa_ptr
@@ -2676,13 +2775,13 @@ display_game_mode_ConditionalTrueBlock915: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta _pa_myy
 	jsr basic_printat
-display_game_mode_elsedoneblock917
+display_game_mode_elsedoneblock965
 	; Binary clause Simplified: EQUALS
 	lda game_mode
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne display_game_mode_elsedoneblock923
-display_game_mode_ConditionalTrueBlock921: ;Main true block ;keep 
+	bne display_game_mode_elsedoneblock971
+display_game_mode_ConditionalTrueBlock969: ;Main true block ;keep 
 	lda #<msg_two_player
 	ldx #>msg_two_player
 	sta _pa_ptr
@@ -2696,7 +2795,7 @@ display_game_mode_ConditionalTrueBlock921: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta _pa_myy
 	jsr basic_printat
-display_game_mode_elsedoneblock923
+display_game_mode_elsedoneblock971
 	rts
 end_procedure_display_game_mode
 	
@@ -2721,14 +2820,14 @@ display_game_difficulty
 	sbc #$00
 	tay 
 	pla 
-display_game_difficulty_int_shift_var928 = $54
-	sta display_game_difficulty_int_shift_var928
-	sty display_game_difficulty_int_shift_var928+1
-		lsr display_game_difficulty_int_shift_var928+1
-	ror display_game_difficulty_int_shift_var928+0
+display_game_difficulty_int_shift_var976 = $54
+	sta display_game_difficulty_int_shift_var976
+	sty display_game_difficulty_int_shift_var976+1
+		lsr display_game_difficulty_int_shift_var976+1
+	ror display_game_difficulty_int_shift_var976+0
 
-	lda display_game_difficulty_int_shift_var928
-	ldy display_game_difficulty_int_shift_var928+1
+	lda display_game_difficulty_int_shift_var976
+	ldy display_game_difficulty_int_shift_var976+1
 	; Calling storevariable on generic assign expression
 	sta tmp
 	sty tmp+1
@@ -2749,8 +2848,8 @@ display_game_difficulty_int_shift_var928 = $54
 	lda game_difficulty
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne display_game_difficulty_elsedoneblock932
-display_game_difficulty_ConditionalTrueBlock930: ;Main true block ;keep 
+	bne display_game_difficulty_elsedoneblock980
+display_game_difficulty_ConditionalTrueBlock978: ;Main true block ;keep 
 	lda #<msg_diff_one
 	ldx #>msg_diff_one
 	sta _pa_ptr
@@ -2768,13 +2867,13 @@ display_game_difficulty_ConditionalTrueBlock930: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta _pa_myy
 	jsr basic_printat
-display_game_difficulty_elsedoneblock932
+display_game_difficulty_elsedoneblock980
 	; Binary clause Simplified: EQUALS
 	lda game_difficulty
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bne display_game_difficulty_elsedoneblock938
-display_game_difficulty_ConditionalTrueBlock936: ;Main true block ;keep 
+	bne display_game_difficulty_elsedoneblock986
+display_game_difficulty_ConditionalTrueBlock984: ;Main true block ;keep 
 	lda #<msg_diff_two
 	ldx #>msg_diff_two
 	sta _pa_ptr
@@ -2792,13 +2891,13 @@ display_game_difficulty_ConditionalTrueBlock936: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta _pa_myy
 	jsr basic_printat
-display_game_difficulty_elsedoneblock938
+display_game_difficulty_elsedoneblock986
 	; Binary clause Simplified: EQUALS
 	lda game_difficulty
 	; Compare with pure num / var optimization
 	cmp #$3;keep
-	bne display_game_difficulty_elsedoneblock944
-display_game_difficulty_ConditionalTrueBlock942: ;Main true block ;keep 
+	bne display_game_difficulty_elsedoneblock992
+display_game_difficulty_ConditionalTrueBlock990: ;Main true block ;keep 
 	lda #<msg_diff_three
 	ldx #>msg_diff_three
 	sta _pa_ptr
@@ -2816,7 +2915,7 @@ display_game_difficulty_ConditionalTrueBlock942: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta _pa_myy
 	jsr basic_printat
-display_game_difficulty_elsedoneblock944
+display_game_difficulty_elsedoneblock992
 	rts
 end_procedure_display_game_difficulty
 	
@@ -2829,23 +2928,23 @@ cycle_text_input_handler
 	lda player_1_input
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne cycle_text_input_handler_localfailed954
-	jmp cycle_text_input_handler_localsuccess953
-cycle_text_input_handler_localfailed954: ;keep
+	bne cycle_text_input_handler_localfailed1002
+	jmp cycle_text_input_handler_localsuccess1001
+cycle_text_input_handler_localfailed1002: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_2_input
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne cycle_text_input_handler_elsedoneblock951
-cycle_text_input_handler_localsuccess953: ;keep
+	bne cycle_text_input_handler_elsedoneblock999
+cycle_text_input_handler_localsuccess1001: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: EQUALS
 	lda game_mode
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne cycle_text_input_handler_elsedoneblock951
-cycle_text_input_handler_ConditionalTrueBlock949: ;Main true block ;keep 
+	bne cycle_text_input_handler_elsedoneblock999
+cycle_text_input_handler_ConditionalTrueBlock997: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
@@ -2857,28 +2956,28 @@ cycle_text_input_handler_ConditionalTrueBlock949: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta game_mode_changed
 	jsr display_game_mode
-cycle_text_input_handler_elsedoneblock951
+cycle_text_input_handler_elsedoneblock999
 	; Binary clause Simplified: EQUALS
 	lda player_1_input
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bne cycle_text_input_handler_localfailed962
-	jmp cycle_text_input_handler_localsuccess961
-cycle_text_input_handler_localfailed962: ;keep
+	bne cycle_text_input_handler_localfailed1010
+	jmp cycle_text_input_handler_localsuccess1009
+cycle_text_input_handler_localfailed1010: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_2_input
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bne cycle_text_input_handler_elsedoneblock959
-cycle_text_input_handler_localsuccess961: ;keep
+	bne cycle_text_input_handler_elsedoneblock1007
+cycle_text_input_handler_localsuccess1009: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: EQUALS
 	clc
 	lda game_mode
 	; cmp #$00 ignored
-	bne cycle_text_input_handler_elsedoneblock959
-cycle_text_input_handler_ConditionalTrueBlock957: ;Main true block ;keep 
+	bne cycle_text_input_handler_elsedoneblock1007
+cycle_text_input_handler_ConditionalTrueBlock1005: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
@@ -2889,20 +2988,20 @@ cycle_text_input_handler_ConditionalTrueBlock957: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta game_mode_changed
 	jsr display_game_mode
-cycle_text_input_handler_elsedoneblock959
+cycle_text_input_handler_elsedoneblock1007
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda keybd_input
 	; cmp #$00 ignored
-	beq cycle_text_input_handler_elsedoneblock967
-cycle_text_input_handler_localsuccess977: ;keep
+	beq cycle_text_input_handler_elsedoneblock1015
+cycle_text_input_handler_localsuccess1025: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: NOTEQUALS
 	lda keybd_input
 	; Compare with pure num / var optimization
 	cmp game_difficulty;keep
-	beq cycle_text_input_handler_elsedoneblock967
-cycle_text_input_handler_ConditionalTrueBlock965: ;Main true block ;keep 
+	beq cycle_text_input_handler_elsedoneblock1015
+cycle_text_input_handler_ConditionalTrueBlock1013: ;Main true block ;keep 
 	
 ; // one player mode difficulty selection
 	; Forcetype: NADA
@@ -2913,35 +3012,35 @@ cycle_text_input_handler_ConditionalTrueBlock965: ;Main true block ;keep
 	lda keybd_input
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne cycle_text_input_handler_localfailed985
-	jmp cycle_text_input_handler_ConditionalTrueBlock980
-cycle_text_input_handler_localfailed985: ;keep
+	bne cycle_text_input_handler_localfailed1033
+	jmp cycle_text_input_handler_ConditionalTrueBlock1028
+cycle_text_input_handler_localfailed1033: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda keybd_input
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bne cycle_text_input_handler_localfailed984
-	jmp cycle_text_input_handler_ConditionalTrueBlock980
-cycle_text_input_handler_localfailed984: ;keep
+	bne cycle_text_input_handler_localfailed1032
+	jmp cycle_text_input_handler_ConditionalTrueBlock1028
+cycle_text_input_handler_localfailed1032: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda keybd_input
 	; Compare with pure num / var optimization
 	cmp #$3;keep
-	bne cycle_text_input_handler_elsedoneblock982
-cycle_text_input_handler_ConditionalTrueBlock980: ;Main true block ;keep 
+	bne cycle_text_input_handler_elsedoneblock1030
+cycle_text_input_handler_ConditionalTrueBlock1028: ;Main true block ;keep 
 	lda keybd_input
 	; Calling storevariable on generic assign expression
 	sta game_difficulty
-cycle_text_input_handler_elsedoneblock982
-cycle_text_input_handler_elsedoneblock967
+cycle_text_input_handler_elsedoneblock1030
+cycle_text_input_handler_elsedoneblock1015
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda game_mode_changed
 	; cmp #$00 ignored
-	beq cycle_text_input_handler_elsedoneblock990
-cycle_text_input_handler_ConditionalTrueBlock988: ;Main true block ;keep 
+	beq cycle_text_input_handler_elsedoneblock1038
+cycle_text_input_handler_ConditionalTrueBlock1036: ;Main true block ;keep 
 	
 ; // update display for difficulty selection
 	; Forcetype: NADA
@@ -2952,11 +3051,11 @@ cycle_text_input_handler_ConditionalTrueBlock988: ;Main true block ;keep
 	clc
 	lda game_mode
 	; cmp #$00 ignored
-	bne cycle_text_input_handler_elseblock1011
-cycle_text_input_handler_ConditionalTrueBlock1010: ;Main true block ;keep 
+	bne cycle_text_input_handler_elseblock1059
+cycle_text_input_handler_ConditionalTrueBlock1058: ;Main true block ;keep 
 	jsr display_game_difficulty
-	jmp cycle_text_input_handler_elsedoneblock1012
-cycle_text_input_handler_elseblock1011
+	jmp cycle_text_input_handler_elsedoneblock1060
+cycle_text_input_handler_elseblock1059
 	; Right is PURE NUMERIC : Is word =1
 	; 16 bit mul or div
 	; HandleVarBinopB16bit
@@ -2972,21 +3071,21 @@ cycle_text_input_handler_elseblock1011
 	sbc #$00
 	tay 
 	pla 
-cycle_text_input_handler_int_shift_var1022 = $54
-	sta cycle_text_input_handler_int_shift_var1022
-	sty cycle_text_input_handler_int_shift_var1022+1
-		lsr cycle_text_input_handler_int_shift_var1022+1
-	ror cycle_text_input_handler_int_shift_var1022+0
+cycle_text_input_handler_int_shift_var1070 = $54
+	sta cycle_text_input_handler_int_shift_var1070
+	sty cycle_text_input_handler_int_shift_var1070+1
+		lsr cycle_text_input_handler_int_shift_var1070+1
+	ror cycle_text_input_handler_int_shift_var1070+0
 
-	lda cycle_text_input_handler_int_shift_var1022
-	ldy cycle_text_input_handler_int_shift_var1022+1
+	lda cycle_text_input_handler_int_shift_var1070
+	ldy cycle_text_input_handler_int_shift_var1070+1
 	; Calling storevariable on generic assign expression
 	sta tmp
 	sty tmp+1
 	; Assigning a string : _pa_ptr
 	;has array index
-	lda #<cycle_text_input_handler_stringassignstr1024
-	ldy #>cycle_text_input_handler_stringassignstr1024
+	lda #<cycle_text_input_handler_stringassignstr1072
+	ldy #>cycle_text_input_handler_stringassignstr1072
 	sta _pa_ptr
 	sty _pa_ptr+1
 	ldy tmp+1 ;keep
@@ -2998,8 +3097,97 @@ cycle_text_input_handler_int_shift_var1022 = $54
 	; Calling storevariable on generic assign expression
 	sta _pa_myy
 	jsr basic_printat
-cycle_text_input_handler_elsedoneblock1012
-cycle_text_input_handler_elsedoneblock990
+cycle_text_input_handler_elsedoneblock1060
+cycle_text_input_handler_elsedoneblock1038
+	; Binary clause Simplified: EQUALS
+	lda keybd_input
+	; Compare with pure num / var optimization
+	cmp #$4;keep
+	bne cycle_text_input_handler_elsedoneblock1076
+cycle_text_input_handler_ConditionalTrueBlock1074: ;Main true block ;keep 
+	
+; // Check keyboard toggle
+	; MoveTo optimization
+	lda #$51
+	sta screenmemory
+	lda #>$8000
+	clc
+	adc #$00
+	sta screenmemory+1
+	; Binary clause Simplified: EQUALS
+	clc
+	lda keybd_type_flag
+	; cmp #$00 ignored
+	bne cycle_text_input_handler_elseblock1099
+cycle_text_input_handler_ConditionalTrueBlock1098: ;Main true block ;keep 
+	; Forcetype: NADA
+	lda #$1
+	; Calling storevariable on generic assign expression
+	sta keybd_type_flag
+	
+; // show message
+cycle_text_input_handler_printstring_call1108
+	clc
+	lda #<cycle_text_input_handler_printstring_text1109
+	; Forcetype: NADA
+	adc #$0
+	ldy #>cycle_text_input_handler_printstring_text1109
+	sta print_text+0
+	sty print_text+1
+	; Forcetype: NADA
+	ldx #$8 ; optimized, look out for bugs
+	jsr printstring
+	jmp cycle_text_input_handler_elsedoneblock1100
+cycle_text_input_handler_elseblock1099
+	; Forcetype: NADA
+	lda #$0
+	; Calling storevariable on generic assign expression
+	sta keybd_type_flag
+	
+; // show message
+cycle_text_input_handler_printstring_call1111
+	clc
+	lda #<cycle_text_input_handler_printstring_text1112
+	; Forcetype: NADA
+	adc #$0
+	ldy #>cycle_text_input_handler_printstring_text1112
+	sta print_text+0
+	sty print_text+1
+	; Forcetype: NADA
+	ldx #$8 ; optimized, look out for bugs
+	jsr printstring
+cycle_text_input_handler_elsedoneblock1100
+	; Forcetype: NADA
+	lda #$ff
+	; Calling storevariable on generic assign expression
+	sta delay_val
+	jsr do_delay
+	; Forcetype: NADA
+	lda #$ff
+	; Calling storevariable on generic assign expression
+	sta delay_val
+	jsr do_delay
+	
+; // erase message
+	; MoveTo optimization
+	lda #$51
+	sta screenmemory
+	lda #>$8000
+	clc
+	adc #$00
+	sta screenmemory+1
+cycle_text_input_handler_printstring_call1113
+	clc
+	lda #<cycle_text_input_handler_printstring_text1114
+	; Forcetype: NADA
+	adc #$0
+	ldy #>cycle_text_input_handler_printstring_text1114
+	sta print_text+0
+	sty print_text+1
+	; Forcetype: NADA
+	ldx #$8 ; optimized, look out for bugs
+	jsr printstring
+cycle_text_input_handler_elsedoneblock1076
 	
 ; // Animate the scroll around title screen
 ; // Ideally this would run by IRQ, but not able to solve crash..
@@ -3012,7 +3200,7 @@ end_procedure_cycle_text_input_handler
 	; ***********  Defining procedure : update_score
 	;    Procedure type : User-defined procedure
 us_do_beep	dc.b	0
-update_score_block1025
+update_score_block1115
 update_score
 	
 ; // position of rightmost score
@@ -3064,19 +3252,19 @@ update_score
 	clc
 	lda us_do_beep
 	; cmp #$00 ignored
-	beq update_score_elsedoneblock1029
-update_score_ConditionalTrueBlock1027: ;Main true block ;keep 
+	beq update_score_elsedoneblock1119
+update_score_ConditionalTrueBlock1117: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta i
-update_score_forloop1062
+update_score_forloop1152
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_1_crash
 	; cmp #$00 ignored
-	beq update_score_elsedoneblock1082
-update_score_ConditionalTrueBlock1080: ;Main true block ;keep 
+	beq update_score_elsedoneblock1172
+update_score_ConditionalTrueBlock1170: ;Main true block ;keep 
 	
 ; // Beep and flash score change
 ; // Flash changed score
@@ -3089,13 +3277,13 @@ update_score_ConditionalTrueBlock1080: ;Main true block ;keep
 	adc #$80
 	; Storing to a pointer
 	sta (screen_loc),y
-update_score_elsedoneblock1082
+update_score_elsedoneblock1172
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_2_crash
 	; cmp #$00 ignored
-	beq update_score_elsedoneblock1088
-update_score_ConditionalTrueBlock1086: ;Main true block ;keep 
+	beq update_score_elsedoneblock1178
+update_score_ConditionalTrueBlock1176: ;Main true block ;keep 
 	; Optimizer: a = a +/- b
 	; Load pointer array
 	ldy #$b
@@ -3106,7 +3294,7 @@ update_score_ConditionalTrueBlock1086: ;Main true block ;keep
 	; Storing to a pointer
 	; Forcetype: NADA
 	sta (screen_loc),y
-update_score_elsedoneblock1088
+update_score_elsedoneblock1178
 	
 ; // Enable sound
 	; Forcetype: NADA
@@ -3146,17 +3334,17 @@ update_score_elsedoneblock1088
 	; Calling storevariable on generic assign expression
 	sta delay_val
 	jsr do_delay
-update_score_loopstart1063
+update_score_loopstart1153
 	; Compare is onpage
 	; Test Inc dec D
 	inc i
 	; Forcetype: NADA
 	lda #$6
 	cmp i ;keep
-	bne update_score_forloop1062
-update_score_loopdone1091: ;keep
-update_score_loopend1064
-update_score_elsedoneblock1029
+	bne update_score_forloop1152
+update_score_loopdone1181: ;keep
+update_score_loopend1154
+update_score_elsedoneblock1119
 	rts
 end_procedure_update_score
 	
@@ -3166,16 +3354,16 @@ end_procedure_update_score
 	;    Procedure type : User-defined procedure
 dtsb_tmp	dc.b	0
 dtsb_i	dc.b	0
-draw_title_screen_box_block1092
+draw_title_screen_box_block1182
 draw_title_screen_box
 	
 ; // Draw top and bottom	
 	; Generic 16 bit op
 	ldy screen_loc+1 ;keep
 	lda screen_loc
-draw_title_screen_box_rightvarInteger_var1095 = $54
-	sta draw_title_screen_box_rightvarInteger_var1095
-	sty draw_title_screen_box_rightvarInteger_var1095+1
+draw_title_screen_box_rightvarInteger_var1185 = $54
+	sta draw_title_screen_box_rightvarInteger_var1185
+	sty draw_title_screen_box_rightvarInteger_var1185+1
 	; Right is PURE NUMERIC : Is word =1
 	; 16 bit mul or div
 	; Mul 16x8 setup
@@ -3190,21 +3378,21 @@ draw_title_screen_box_rightvarInteger_var1095 = $54
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc draw_title_screen_box_rightvarInteger_var1095
-draw_title_screen_box_wordAdd1093
-	sta draw_title_screen_box_rightvarInteger_var1095
+	adc draw_title_screen_box_rightvarInteger_var1185
+draw_title_screen_box_wordAdd1183
+	sta draw_title_screen_box_rightvarInteger_var1185
 	; High-bit binop
 	tya
-	adc draw_title_screen_box_rightvarInteger_var1095+1
+	adc draw_title_screen_box_rightvarInteger_var1185+1
 	tay
-	lda draw_title_screen_box_rightvarInteger_var1095
+	lda draw_title_screen_box_rightvarInteger_var1185
 	sta screen_loc_work
 	sty screen_loc_work+1
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta dtsb_i
-draw_title_screen_box_forloop1096
+draw_title_screen_box_forloop1186
 	; Forcetype: NADA
 	lda #$a0
 	; Calling storevariable on generic assign expression
@@ -3245,7 +3433,7 @@ draw_title_screen_box_forloop1096
 	tay
 	pla
 	sta (screen_loc_work),y
-draw_title_screen_box_loopstart1097
+draw_title_screen_box_loopstart1187
 	; Compare is onpage
 	; Optimizer: a = a +/- b
 	; Forcetype:  BYTE
@@ -3256,14 +3444,14 @@ draw_title_screen_box_loopstart1097
 	sta dtsb_i
 	lda MYSCREEN_WIDTH
 	cmp dtsb_i ;keep
-	bne draw_title_screen_box_forloop1096
-draw_title_screen_box_loopdone1101: ;keep
-draw_title_screen_box_loopend1098
+	bne draw_title_screen_box_forloop1186
+draw_title_screen_box_loopdone1191: ;keep
+draw_title_screen_box_loopend1188
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta dtsb_i
-draw_title_screen_box_forloop1102
+draw_title_screen_box_forloop1192
 	
 ; // Draw sides
 	; 8 bit binop
@@ -3278,9 +3466,9 @@ draw_title_screen_box_forloop1102
 	; Generic 16 bit op
 	ldy screen_loc+1 ;keep
 	lda screen_loc
-draw_title_screen_box_rightvarInteger_var1112 = $54
-	sta draw_title_screen_box_rightvarInteger_var1112
-	sty draw_title_screen_box_rightvarInteger_var1112+1
+draw_title_screen_box_rightvarInteger_var1202 = $54
+	sta draw_title_screen_box_rightvarInteger_var1202
+	sty draw_title_screen_box_rightvarInteger_var1202+1
 	; Mul 16x8 setup
 	; Forcetype:  INTEGER
 	ldy #0
@@ -3293,14 +3481,14 @@ draw_title_screen_box_rightvarInteger_var1112 = $54
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc draw_title_screen_box_rightvarInteger_var1112
-draw_title_screen_box_wordAdd1110
-	sta draw_title_screen_box_rightvarInteger_var1112
+	adc draw_title_screen_box_rightvarInteger_var1202
+draw_title_screen_box_wordAdd1200
+	sta draw_title_screen_box_rightvarInteger_var1202
 	; High-bit binop
 	tya
-	adc draw_title_screen_box_rightvarInteger_var1112+1
+	adc draw_title_screen_box_rightvarInteger_var1202+1
 	tay
-	lda draw_title_screen_box_rightvarInteger_var1112
+	lda draw_title_screen_box_rightvarInteger_var1202
 	sta screen_loc_work
 	sty screen_loc_work+1
 	; Forcetype: NADA
@@ -3356,7 +3544,7 @@ draw_title_screen_box_wordAdd1110
 	tay
 	pla
 	sta (screen_loc_work),y
-draw_title_screen_box_loopstart1103
+draw_title_screen_box_loopstart1193
 	; Optimizer: a = a +/- b
 	; Forcetype:  BYTE
 	lda dtsb_i
@@ -3367,11 +3555,11 @@ draw_title_screen_box_loopstart1103
 	; Forcetype: NADA
 	lda #$18
 	cmp dtsb_i ;keep
-	beq draw_title_screen_box_loopdone1113
-draw_title_screen_box_loopnotdone1114
-	jmp draw_title_screen_box_forloop1102
-draw_title_screen_box_loopdone1113
-draw_title_screen_box_loopend1104
+	beq draw_title_screen_box_loopdone1203
+draw_title_screen_box_loopnotdone1204
+	jmp draw_title_screen_box_forloop1192
+draw_title_screen_box_loopdone1203
+draw_title_screen_box_loopend1194
 	rts
 end_procedure_draw_title_screen_box
 	
@@ -3589,14 +3777,14 @@ title_screen
 	sbc #$00
 	tay 
 	pla 
-title_screen_int_shift_var1117 = $54
-	sta title_screen_int_shift_var1117
-	sty title_screen_int_shift_var1117+1
-		lsr title_screen_int_shift_var1117+1
-	ror title_screen_int_shift_var1117+0
+title_screen_int_shift_var1207 = $54
+	sta title_screen_int_shift_var1207
+	sty title_screen_int_shift_var1207+1
+		lsr title_screen_int_shift_var1207+1
+	ror title_screen_int_shift_var1207+0
 
-	lda title_screen_int_shift_var1117
-	ldy title_screen_int_shift_var1117+1
+	lda title_screen_int_shift_var1207
+	ldy title_screen_int_shift_var1207+1
 	; Calling storevariable on generic assign expression
 	sta tmp
 	sty tmp+1
@@ -3667,30 +3855,30 @@ draw_game_screen_box
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta i
-draw_game_screen_box_forloop1120
+draw_game_screen_box_forloop1210
 	; Forcetype: NADA
 	lda #$40
 	; Calling storevariable on generic assign expression
 	; Storing to a pointer
 	ldy i ; optimized, look out for bugs
 	sta (screen_loc_work),y
-draw_game_screen_box_loopstart1121
+draw_game_screen_box_loopstart1211
 	; Compare is onpage
 	; Test Inc dec D
 	inc i
 	lda MYSCREEN_WIDTH
 	cmp i ;keep
-	bne draw_game_screen_box_forloop1120
-draw_game_screen_box_loopdone1125: ;keep
-draw_game_screen_box_loopend1122
+	bne draw_game_screen_box_forloop1210
+draw_game_screen_box_loopdone1215: ;keep
+draw_game_screen_box_loopend1212
 	
 ; // Draw bottom line
 	; Generic 16 bit op
 	ldy screen_loc+1 ;keep
 	lda screen_loc
-draw_game_screen_box_rightvarInteger_var1128 = $54
-	sta draw_game_screen_box_rightvarInteger_var1128
-	sty draw_game_screen_box_rightvarInteger_var1128+1
+draw_game_screen_box_rightvarInteger_var1218 = $54
+	sta draw_game_screen_box_rightvarInteger_var1218
+	sty draw_game_screen_box_rightvarInteger_var1218+1
 	; Right is PURE NUMERIC : Is word =1
 	; 16 bit mul or div
 	; Mul 16x8 setup
@@ -3705,41 +3893,41 @@ draw_game_screen_box_rightvarInteger_var1128 = $54
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc draw_game_screen_box_rightvarInteger_var1128
-draw_game_screen_box_wordAdd1126
-	sta draw_game_screen_box_rightvarInteger_var1128
+	adc draw_game_screen_box_rightvarInteger_var1218
+draw_game_screen_box_wordAdd1216
+	sta draw_game_screen_box_rightvarInteger_var1218
 	; High-bit binop
 	tya
-	adc draw_game_screen_box_rightvarInteger_var1128+1
+	adc draw_game_screen_box_rightvarInteger_var1218+1
 	tay
-	lda draw_game_screen_box_rightvarInteger_var1128
+	lda draw_game_screen_box_rightvarInteger_var1218
 	sta screen_loc_work
 	sty screen_loc_work+1
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta i
-draw_game_screen_box_forloop1129
+draw_game_screen_box_forloop1219
 	; Forcetype: NADA
 	lda #$40
 	; Calling storevariable on generic assign expression
 	; Storing to a pointer
 	ldy i ; optimized, look out for bugs
 	sta (screen_loc_work),y
-draw_game_screen_box_loopstart1130
+draw_game_screen_box_loopstart1220
 	; Compare is onpage
 	; Test Inc dec D
 	inc i
 	lda MYSCREEN_WIDTH
 	cmp i ;keep
-	bne draw_game_screen_box_forloop1129
-draw_game_screen_box_loopdone1134: ;keep
-draw_game_screen_box_loopend1131
+	bne draw_game_screen_box_forloop1219
+draw_game_screen_box_loopdone1224: ;keep
+draw_game_screen_box_loopend1221
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta i
-draw_game_screen_box_forloop1135
+draw_game_screen_box_forloop1225
 	
 ; // Draw sides
 	; INTEGER optimization: a=b+c 
@@ -3753,9 +3941,9 @@ draw_game_screen_box_forloop1135
 	; Generic 16 bit op
 	ldy screen_loc+1 ;keep
 	lda screen_loc
-draw_game_screen_box_rightvarInteger_var1148 = $54
-	sta draw_game_screen_box_rightvarInteger_var1148
-	sty draw_game_screen_box_rightvarInteger_var1148+1
+draw_game_screen_box_rightvarInteger_var1238 = $54
+	sta draw_game_screen_box_rightvarInteger_var1238
+	sty draw_game_screen_box_rightvarInteger_var1238+1
 	; Mul 16x8 setup
 	; Forcetype:  INTEGER
 	ldy tmp+1
@@ -3769,14 +3957,14 @@ draw_game_screen_box_rightvarInteger_var1148 = $54
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc draw_game_screen_box_rightvarInteger_var1148
-draw_game_screen_box_wordAdd1146
-	sta draw_game_screen_box_rightvarInteger_var1148
+	adc draw_game_screen_box_rightvarInteger_var1238
+draw_game_screen_box_wordAdd1236
+	sta draw_game_screen_box_rightvarInteger_var1238
 	; High-bit binop
 	tya
-	adc draw_game_screen_box_rightvarInteger_var1148+1
+	adc draw_game_screen_box_rightvarInteger_var1238+1
 	tay
-	lda draw_game_screen_box_rightvarInteger_var1148
+	lda draw_game_screen_box_rightvarInteger_var1238
 	sta screen_loc_work
 	sty screen_loc_work+1
 	; Forcetype: NADA
@@ -3805,16 +3993,16 @@ draw_game_screen_box_wordAdd1146
 	tay
 	pla
 	sta (screen_loc_work),y
-draw_game_screen_box_loopstart1136
+draw_game_screen_box_loopstart1226
 	; Compare is onpage
 	; Test Inc dec D
 	inc i
 	; Forcetype: NADA
 	lda #$18
 	cmp i ;keep
-	bne draw_game_screen_box_forloop1135
-draw_game_screen_box_loopdone1150: ;keep
-draw_game_screen_box_loopend1137
+	bne draw_game_screen_box_forloop1225
+draw_game_screen_box_loopdone1240: ;keep
+draw_game_screen_box_loopend1227
 	
 ; // top left mid box corner
 	; INTEGER optimization: a=b+c 
@@ -3838,15 +4026,15 @@ draw_game_screen_box_loopend1137
 	ldy #0
 	; Forcetype: INTEGER
 	lda #$1
-draw_game_screen_box_rightvarInteger_var1154 = $54
-	sta draw_game_screen_box_rightvarInteger_var1154
-	sty draw_game_screen_box_rightvarInteger_var1154+1
+draw_game_screen_box_rightvarInteger_var1244 = $54
+	sta draw_game_screen_box_rightvarInteger_var1244
+	sty draw_game_screen_box_rightvarInteger_var1244+1
 	; Generic 16 bit op
 	ldy screen_loc+1 ;keep
 	lda screen_loc
-draw_game_screen_box_rightvarInteger_var1157 = $56
-	sta draw_game_screen_box_rightvarInteger_var1157
-	sty draw_game_screen_box_rightvarInteger_var1157+1
+draw_game_screen_box_rightvarInteger_var1247 = $56
+	sta draw_game_screen_box_rightvarInteger_var1247
+	sty draw_game_screen_box_rightvarInteger_var1247+1
 	; Right is PURE NUMERIC : Is word =1
 	; 16 bit mul or div
 	; Mul 16x8 setup
@@ -3861,24 +4049,24 @@ draw_game_screen_box_rightvarInteger_var1157 = $56
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc draw_game_screen_box_rightvarInteger_var1157
-draw_game_screen_box_wordAdd1155
-	sta draw_game_screen_box_rightvarInteger_var1157
+	adc draw_game_screen_box_rightvarInteger_var1247
+draw_game_screen_box_wordAdd1245
+	sta draw_game_screen_box_rightvarInteger_var1247
 	; High-bit binop
 	tya
-	adc draw_game_screen_box_rightvarInteger_var1157+1
+	adc draw_game_screen_box_rightvarInteger_var1247+1
 	tay
-	lda draw_game_screen_box_rightvarInteger_var1157
+	lda draw_game_screen_box_rightvarInteger_var1247
 	; Low bit binop:
 	sec
-	sbc draw_game_screen_box_rightvarInteger_var1154
-draw_game_screen_box_wordAdd1152
-	sta draw_game_screen_box_rightvarInteger_var1154
+	sbc draw_game_screen_box_rightvarInteger_var1244
+draw_game_screen_box_wordAdd1242
+	sta draw_game_screen_box_rightvarInteger_var1244
 	; High-bit binop
 	tya
-	sbc draw_game_screen_box_rightvarInteger_var1154+1
+	sbc draw_game_screen_box_rightvarInteger_var1244+1
 	tay
-	lda draw_game_screen_box_rightvarInteger_var1154
+	lda draw_game_screen_box_rightvarInteger_var1244
 	sta screen_loc_work
 	sty screen_loc_work+1
 	; Forcetype: NADA
@@ -3893,9 +4081,9 @@ draw_game_screen_box_wordAdd1152
 	; Generic 16 bit op
 	ldy screen_loc+1 ;keep
 	lda screen_loc
-draw_game_screen_box_rightvarInteger_var1160 = $54
-	sta draw_game_screen_box_rightvarInteger_var1160
-	sty draw_game_screen_box_rightvarInteger_var1160+1
+draw_game_screen_box_rightvarInteger_var1250 = $54
+	sta draw_game_screen_box_rightvarInteger_var1250
+	sty draw_game_screen_box_rightvarInteger_var1250+1
 	; Swapping nodes :  num * expr -> exp*num (mul only)
 	; Right is PURE NUMERIC : Is word =1
 	; 16 bit mul or div
@@ -3911,14 +4099,14 @@ draw_game_screen_box_rightvarInteger_var1160 = $54
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc draw_game_screen_box_rightvarInteger_var1160
-draw_game_screen_box_wordAdd1158
-	sta draw_game_screen_box_rightvarInteger_var1160
+	adc draw_game_screen_box_rightvarInteger_var1250
+draw_game_screen_box_wordAdd1248
+	sta draw_game_screen_box_rightvarInteger_var1250
 	; High-bit binop
 	tya
-	adc draw_game_screen_box_rightvarInteger_var1160+1
+	adc draw_game_screen_box_rightvarInteger_var1250+1
 	tay
-	lda draw_game_screen_box_rightvarInteger_var1160
+	lda draw_game_screen_box_rightvarInteger_var1250
 	sta screen_loc_work
 	sty screen_loc_work+1
 	; Forcetype: NADA
@@ -3934,22 +4122,22 @@ draw_game_screen_box_wordAdd1158
 	ldy #0
 	; Forcetype: INTEGER
 	lda #$1
-draw_game_screen_box_rightvarInteger_var1163 = $54
-	sta draw_game_screen_box_rightvarInteger_var1163
-	sty draw_game_screen_box_rightvarInteger_var1163+1
+draw_game_screen_box_rightvarInteger_var1253 = $54
+	sta draw_game_screen_box_rightvarInteger_var1253
+	sty draw_game_screen_box_rightvarInteger_var1253+1
 	; Generic 16 bit op
 	ldy #0
 	ldx #0 ; Fake 24 bit
 	lda MYSCREEN_WIDTH
-draw_game_screen_box_rightvarInteger_var1166 = $56
-	sta draw_game_screen_box_rightvarInteger_var1166
-	sty draw_game_screen_box_rightvarInteger_var1166+1
+draw_game_screen_box_rightvarInteger_var1256 = $56
+	sta draw_game_screen_box_rightvarInteger_var1256
+	sty draw_game_screen_box_rightvarInteger_var1256+1
 	; Generic 16 bit op
 	ldy screen_loc+1 ;keep
 	lda screen_loc
-draw_game_screen_box_rightvarInteger_var1169 = $58
-	sta draw_game_screen_box_rightvarInteger_var1169
-	sty draw_game_screen_box_rightvarInteger_var1169+1
+draw_game_screen_box_rightvarInteger_var1259 = $58
+	sta draw_game_screen_box_rightvarInteger_var1259
+	sty draw_game_screen_box_rightvarInteger_var1259+1
 	; Swapping nodes :  num * expr -> exp*num (mul only)
 	; Right is PURE NUMERIC : Is word =1
 	; 16 bit mul or div
@@ -3965,34 +4153,34 @@ draw_game_screen_box_rightvarInteger_var1169 = $58
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc draw_game_screen_box_rightvarInteger_var1169
-draw_game_screen_box_wordAdd1167
-	sta draw_game_screen_box_rightvarInteger_var1169
+	adc draw_game_screen_box_rightvarInteger_var1259
+draw_game_screen_box_wordAdd1257
+	sta draw_game_screen_box_rightvarInteger_var1259
 	; High-bit binop
 	tya
-	adc draw_game_screen_box_rightvarInteger_var1169+1
+	adc draw_game_screen_box_rightvarInteger_var1259+1
 	tay
-	lda draw_game_screen_box_rightvarInteger_var1169
+	lda draw_game_screen_box_rightvarInteger_var1259
 	; Low bit binop:
 	clc
-	adc draw_game_screen_box_rightvarInteger_var1166
-draw_game_screen_box_wordAdd1164
-	sta draw_game_screen_box_rightvarInteger_var1166
+	adc draw_game_screen_box_rightvarInteger_var1256
+draw_game_screen_box_wordAdd1254
+	sta draw_game_screen_box_rightvarInteger_var1256
 	; High-bit binop
 	tya
-	adc draw_game_screen_box_rightvarInteger_var1166+1
+	adc draw_game_screen_box_rightvarInteger_var1256+1
 	tay
-	lda draw_game_screen_box_rightvarInteger_var1166
+	lda draw_game_screen_box_rightvarInteger_var1256
 	; Low bit binop:
 	sec
-	sbc draw_game_screen_box_rightvarInteger_var1163
-draw_game_screen_box_wordAdd1161
-	sta draw_game_screen_box_rightvarInteger_var1163
+	sbc draw_game_screen_box_rightvarInteger_var1253
+draw_game_screen_box_wordAdd1251
+	sta draw_game_screen_box_rightvarInteger_var1253
 	; High-bit binop
 	tya
-	sbc draw_game_screen_box_rightvarInteger_var1163+1
+	sbc draw_game_screen_box_rightvarInteger_var1253+1
 	tay
-	lda draw_game_screen_box_rightvarInteger_var1163
+	lda draw_game_screen_box_rightvarInteger_var1253
 	sta screen_loc_work
 	sty screen_loc_work+1
 	; Forcetype: NADA
@@ -4022,8 +4210,8 @@ game_screen
 	clc
 	lda game_mode
 	; cmp #$00 ignored
-	bne game_screen_elsedoneblock1174
-game_screen_ConditionalTrueBlock1172: ;Main true block ;keep 
+	bne game_screen_elsedoneblock1264
+game_screen_ConditionalTrueBlock1262: ;Main true block ;keep 
 	
 ; // Draw score display (text, not score values)
 	; INTEGER optimization: a=b+c 
@@ -4062,15 +4250,15 @@ game_screen_ConditionalTrueBlock1172: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta _pa_myy
 	jsr basic_printat
-game_screen_elsedoneblock1174
+game_screen_elsedoneblock1264
 	
 ; // string, x, y
 	; Binary clause Simplified: EQUALS
 	lda game_mode
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne game_screen_elsedoneblock1182
-game_screen_ConditionalTrueBlock1180: ;Main true block ;keep 
+	bne game_screen_elsedoneblock1272
+game_screen_ConditionalTrueBlock1270: ;Main true block ;keep 
 	; INTEGER optimization: a=b+c 
 	lda MYSCREEN_WIDTH
 	sec
@@ -4107,7 +4295,7 @@ game_screen_ConditionalTrueBlock1180: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta _pa_myy
 	jsr basic_printat
-game_screen_elsedoneblock1182
+game_screen_elsedoneblock1272
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
@@ -4140,17 +4328,17 @@ new_round
 	sbc message_len
 	; Testing for byte:  #0
 	; RHS is byte, optimization
-	bcs new_round_skip1189
+	bcs new_round_skip1279
 	dey
-new_round_skip1189
-new_round_int_shift_var1190 = $54
-	sta new_round_int_shift_var1190
-	sty new_round_int_shift_var1190+1
-		lsr new_round_int_shift_var1190+1
-	ror new_round_int_shift_var1190+0
+new_round_skip1279
+new_round_int_shift_var1280 = $54
+	sta new_round_int_shift_var1280
+	sty new_round_int_shift_var1280+1
+		lsr new_round_int_shift_var1280+1
+	ror new_round_int_shift_var1280+0
 
-	lda new_round_int_shift_var1190
-	ldy new_round_int_shift_var1190+1
+	lda new_round_int_shift_var1280
+	ldy new_round_int_shift_var1280+1
 	; Calling storevariable on generic assign expression
 	sta tmp
 	sty tmp+1
@@ -4225,17 +4413,17 @@ new_round_int_shift_var1190 = $54
 	sbc message_len
 	; Testing for byte:  #0
 	; RHS is byte, optimization
-	bcs new_round_skip1192
+	bcs new_round_skip1282
 	dey
-new_round_skip1192
-new_round_int_shift_var1193 = $54
-	sta new_round_int_shift_var1193
-	sty new_round_int_shift_var1193+1
-		lsr new_round_int_shift_var1193+1
-	ror new_round_int_shift_var1193+0
+new_round_skip1282
+new_round_int_shift_var1283 = $54
+	sta new_round_int_shift_var1283
+	sty new_round_int_shift_var1283+1
+		lsr new_round_int_shift_var1283+1
+	ror new_round_int_shift_var1283+0
 
-	lda new_round_int_shift_var1193
-	ldy new_round_int_shift_var1193+1
+	lda new_round_int_shift_var1283
+	ldy new_round_int_shift_var1283+1
 	; Calling storevariable on generic assign expression
 	sta tmp
 	sty tmp+1
@@ -4285,16 +4473,16 @@ new_round_int_shift_var1193 = $54
 	lda score_p1
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne new_round_localfailed1199
-	jmp new_round_ConditionalTrueBlock1195
-new_round_localfailed1199: ;keep
+	bne new_round_localfailed1289
+	jmp new_round_ConditionalTrueBlock1285
+new_round_localfailed1289: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda score_p2
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne new_round_elsedoneblock1197
-new_round_ConditionalTrueBlock1195: ;Main true block ;keep 
+	bne new_round_elsedoneblock1287
+new_round_ConditionalTrueBlock1285: ;Main true block ;keep 
 	
 ; // Adjust game speed
 	; Optimizer: a = a +/- b
@@ -4304,21 +4492,21 @@ new_round_ConditionalTrueBlock1195: ;Main true block ;keep
 	; Forcetype: NADA
 	sbc #$a
 	sta game_speed
-new_round_elsedoneblock1197
+new_round_elsedoneblock1287
 	; Binary clause Simplified: EQUALS
 	lda score_p1
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bne new_round_localfailed1206
-	jmp new_round_ConditionalTrueBlock1202
-new_round_localfailed1206: ;keep
+	bne new_round_localfailed1296
+	jmp new_round_ConditionalTrueBlock1292
+new_round_localfailed1296: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda score_p2
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bne new_round_elsedoneblock1204
-new_round_ConditionalTrueBlock1202: ;Main true block ;keep 
+	bne new_round_elsedoneblock1294
+new_round_ConditionalTrueBlock1292: ;Main true block ;keep 
 	; Optimizer: a = a +/- b
 	; Forcetype:  BYTE
 	lda DEF_GAME_SPEED
@@ -4326,21 +4514,21 @@ new_round_ConditionalTrueBlock1202: ;Main true block ;keep
 	; Forcetype: NADA
 	sbc #$f
 	sta game_speed
-new_round_elsedoneblock1204
+new_round_elsedoneblock1294
 	; Binary clause Simplified: EQUALS
 	lda score_p1
 	; Compare with pure num / var optimization
 	cmp #$3;keep
-	bne new_round_localfailed1213
-	jmp new_round_ConditionalTrueBlock1209
-new_round_localfailed1213: ;keep
+	bne new_round_localfailed1303
+	jmp new_round_ConditionalTrueBlock1299
+new_round_localfailed1303: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda score_p2
 	; Compare with pure num / var optimization
 	cmp #$3;keep
-	bne new_round_elsedoneblock1211
-new_round_ConditionalTrueBlock1209: ;Main true block ;keep 
+	bne new_round_elsedoneblock1301
+new_round_ConditionalTrueBlock1299: ;Main true block ;keep 
 	; Optimizer: a = a +/- b
 	; Forcetype:  BYTE
 	lda DEF_GAME_SPEED
@@ -4348,21 +4536,21 @@ new_round_ConditionalTrueBlock1209: ;Main true block ;keep
 	; Forcetype: NADA
 	sbc #$14
 	sta game_speed
-new_round_elsedoneblock1211
+new_round_elsedoneblock1301
 	; Binary clause Simplified: EQUALS
 	lda score_p1
 	; Compare with pure num / var optimization
 	cmp #$4;keep
-	bne new_round_localfailed1220
-	jmp new_round_ConditionalTrueBlock1216
-new_round_localfailed1220: ;keep
+	bne new_round_localfailed1310
+	jmp new_round_ConditionalTrueBlock1306
+new_round_localfailed1310: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda score_p2
 	; Compare with pure num / var optimization
 	cmp #$4;keep
-	bne new_round_elsedoneblock1218
-new_round_ConditionalTrueBlock1216: ;Main true block ;keep 
+	bne new_round_elsedoneblock1308
+new_round_ConditionalTrueBlock1306: ;Main true block ;keep 
 	; Optimizer: a = a +/- b
 	; Forcetype:  BYTE
 	lda DEF_GAME_SPEED
@@ -4370,7 +4558,7 @@ new_round_ConditionalTrueBlock1216: ;Main true block ;keep
 	; Forcetype: NADA
 	sbc #$19
 	sta game_speed
-new_round_elsedoneblock1218
+new_round_elsedoneblock1308
 	
 ; // Redraw game screen
 	jsr game_screen
@@ -4399,17 +4587,17 @@ end_game
 	sbc message_len
 	; Testing for byte:  #0
 	; RHS is byte, optimization
-	bcs end_game_skip1224
+	bcs end_game_skip1314
 	dey
-end_game_skip1224
-end_game_int_shift_var1225 = $54
-	sta end_game_int_shift_var1225
-	sty end_game_int_shift_var1225+1
-		lsr end_game_int_shift_var1225+1
-	ror end_game_int_shift_var1225+0
+end_game_skip1314
+end_game_int_shift_var1315 = $54
+	sta end_game_int_shift_var1315
+	sty end_game_int_shift_var1315+1
+		lsr end_game_int_shift_var1315+1
+	ror end_game_int_shift_var1315+0
 
-	lda end_game_int_shift_var1225
-	ldy end_game_int_shift_var1225+1
+	lda end_game_int_shift_var1315
+	ldy end_game_int_shift_var1315+1
 	; Calling storevariable on generic assign expression
 	sta tmp
 	sty tmp+1
@@ -4490,17 +4678,26 @@ check_game_state
 	lda player_1_crash
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne check_game_state_localfailed1232
-	jmp check_game_state_ConditionalTrueBlock1228
-check_game_state_localfailed1232: ;keep
+	bne check_game_state_localfailed1322
+	jmp check_game_state_ConditionalTrueBlock1318
+check_game_state_localfailed1322: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_2_crash
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne check_game_state_elsedoneblock1230
-check_game_state_ConditionalTrueBlock1228: ;Main true block ;keep 
+	bne check_game_state_elsedoneblock1320
+check_game_state_ConditionalTrueBlock1318: ;Main true block ;keep 
 	
+; // Check quit game hotkey 
+; //if (keybd_input = 5) then 
+; //begin
+; //	game_over_flag := 1;
+; //	stop_sound();
+; //	do_delay(255);
+; //	do_delay(255);
+; //	return;
+; //end;	
 ; // Check for player crashed
 	jsr player_crash
 	jsr stop_sound
@@ -4508,23 +4705,23 @@ check_game_state_ConditionalTrueBlock1228: ;Main true block ;keep
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta game_run_flag
-check_game_state_elsedoneblock1230
+check_game_state_elsedoneblock1320
 	; Binary clause Simplified: EQUALS
 	lda player_1_crash
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne check_game_state_localfailed1392
-check_game_state_localsuccess1393: ;keep
+	bne check_game_state_localfailed1482
+check_game_state_localsuccess1483: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: EQUALS
 	lda player_2_crash
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne check_game_state_localfailed1392
-	jmp check_game_state_ConditionalTrueBlock1235
-check_game_state_localfailed1392
-	jmp check_game_state_elseblock1236
-check_game_state_ConditionalTrueBlock1235: ;Main true block ;keep 
+	bne check_game_state_localfailed1482
+	jmp check_game_state_ConditionalTrueBlock1325
+check_game_state_localfailed1482
+	jmp check_game_state_elseblock1326
+check_game_state_ConditionalTrueBlock1325: ;Main true block ;keep 
 	lda #<msg_both_crash
 	ldx #>msg_both_crash
 	sta message_ptr
@@ -4534,14 +4731,14 @@ check_game_state_ConditionalTrueBlock1235: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta message_len
 	jsr new_round
-	jmp check_game_state_elsedoneblock1237
-check_game_state_elseblock1236
+	jmp check_game_state_elsedoneblock1327
+check_game_state_elseblock1326
 	; Binary clause Simplified: EQUALS
 	lda player_1_crash
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne check_game_state_elseblock1398
-check_game_state_ConditionalTrueBlock1397: ;Main true block ;keep 
+	bne check_game_state_elseblock1488
+check_game_state_ConditionalTrueBlock1487: ;Main true block ;keep 
 	
 ; // Increment score 
 	; Test Inc dec D
@@ -4550,14 +4747,14 @@ check_game_state_ConditionalTrueBlock1397: ;Main true block ;keep
 	lda score_p2
 	; Compare with pure num / var optimization
 	cmp #$5;keep
-	bcs check_game_state_elsedoneblock1478
-check_game_state_ConditionalTrueBlock1476: ;Main true block ;keep 
+	bcs check_game_state_elsedoneblock1568
+check_game_state_ConditionalTrueBlock1566: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	clc
 	lda game_mode
 	; cmp #$00 ignored
-	bne check_game_state_elseblock1491
-check_game_state_ConditionalTrueBlock1490: ;Main true block ;keep 
+	bne check_game_state_elseblock1581
+check_game_state_ConditionalTrueBlock1580: ;Main true block ;keep 
 	lda #<msg_plr_crash
 	ldx #>msg_plr_crash
 	sta message_ptr
@@ -4566,8 +4763,8 @@ check_game_state_ConditionalTrueBlock1490: ;Main true block ;keep
 	lda #$e
 	; Calling storevariable on generic assign expression
 	sta message_len
-	jmp check_game_state_elsedoneblock1492
-check_game_state_elseblock1491
+	jmp check_game_state_elsedoneblock1582
+check_game_state_elseblock1581
 	lda #<msg_p1_crash
 	ldx #>msg_p1_crash
 	sta message_ptr
@@ -4576,17 +4773,17 @@ check_game_state_elseblock1491
 	lda #$10
 	; Calling storevariable on generic assign expression
 	sta message_len
-check_game_state_elsedoneblock1492
+check_game_state_elsedoneblock1582
 	jsr new_round
-check_game_state_elsedoneblock1478
-	jmp check_game_state_elsedoneblock1399
-check_game_state_elseblock1398
+check_game_state_elsedoneblock1568
+	jmp check_game_state_elsedoneblock1489
+check_game_state_elseblock1488
 	; Binary clause Simplified: EQUALS
 	lda player_2_crash
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne check_game_state_elsedoneblock1501
-check_game_state_ConditionalTrueBlock1499: ;Main true block ;keep 
+	bne check_game_state_elsedoneblock1591
+check_game_state_ConditionalTrueBlock1589: ;Main true block ;keep 
 	
 ; // Increment score 
 	; Test Inc dec D
@@ -4595,14 +4792,14 @@ check_game_state_ConditionalTrueBlock1499: ;Main true block ;keep
 	lda score_p1
 	; Compare with pure num / var optimization
 	cmp #$5;keep
-	bcs check_game_state_elsedoneblock1529
-check_game_state_ConditionalTrueBlock1527: ;Main true block ;keep 
+	bcs check_game_state_elsedoneblock1619
+check_game_state_ConditionalTrueBlock1617: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	clc
 	lda game_mode
 	; cmp #$00 ignored
-	bne check_game_state_elseblock1542
-check_game_state_ConditionalTrueBlock1541: ;Main true block ;keep 
+	bne check_game_state_elseblock1632
+check_game_state_ConditionalTrueBlock1631: ;Main true block ;keep 
 	lda #<msg_sark_crash
 	ldx #>msg_sark_crash
 	sta message_ptr
@@ -4611,8 +4808,8 @@ check_game_state_ConditionalTrueBlock1541: ;Main true block ;keep
 	lda #$c
 	; Calling storevariable on generic assign expression
 	sta message_len
-	jmp check_game_state_elsedoneblock1543
-check_game_state_elseblock1542
+	jmp check_game_state_elsedoneblock1633
+check_game_state_elseblock1632
 	lda #<msg_p2_crash
 	ldx #>msg_p2_crash
 	sta message_ptr
@@ -4621,24 +4818,24 @@ check_game_state_elseblock1542
 	lda #$10
 	; Calling storevariable on generic assign expression
 	sta message_len
-check_game_state_elsedoneblock1543
+check_game_state_elsedoneblock1633
 	jsr new_round
-check_game_state_elsedoneblock1529
-check_game_state_elsedoneblock1501
-check_game_state_elsedoneblock1399
-check_game_state_elsedoneblock1237
+check_game_state_elsedoneblock1619
+check_game_state_elsedoneblock1591
+check_game_state_elsedoneblock1489
+check_game_state_elsedoneblock1327
 	; Binary clause Simplified: GREATEREQUAL
 	lda score_p1
 	; Compare with pure num / var optimization
 	cmp #$5;keep
-	bcc check_game_state_elseblock1550
-check_game_state_ConditionalTrueBlock1549: ;Main true block ;keep 
+	bcc check_game_state_elseblock1640
+check_game_state_ConditionalTrueBlock1639: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	clc
 	lda game_mode
 	; cmp #$00 ignored
-	bne check_game_state_elseblock1587
-check_game_state_ConditionalTrueBlock1586: ;Main true block ;keep 
+	bne check_game_state_elseblock1677
+check_game_state_ConditionalTrueBlock1676: ;Main true block ;keep 
 	
 ; // Check for end of game
 	lda #<msg_plr_wins
@@ -4649,8 +4846,8 @@ check_game_state_ConditionalTrueBlock1586: ;Main true block ;keep
 	lda #$b
 	; Calling storevariable on generic assign expression
 	sta message_len
-	jmp check_game_state_elsedoneblock1588
-check_game_state_elseblock1587
+	jmp check_game_state_elsedoneblock1678
+check_game_state_elseblock1677
 	lda #<msg_p1_wins
 	ldx #>msg_p1_wins
 	sta message_ptr
@@ -4659,22 +4856,22 @@ check_game_state_elseblock1587
 	lda #$d
 	; Calling storevariable on generic assign expression
 	sta message_len
-check_game_state_elsedoneblock1588
+check_game_state_elsedoneblock1678
 	jsr end_game
-	jmp check_game_state_elsedoneblock1551
-check_game_state_elseblock1550
+	jmp check_game_state_elsedoneblock1641
+check_game_state_elseblock1640
 	; Binary clause Simplified: GREATEREQUAL
 	lda score_p2
 	; Compare with pure num / var optimization
 	cmp #$5;keep
-	bcc check_game_state_elsedoneblock1597
-check_game_state_ConditionalTrueBlock1595: ;Main true block ;keep 
+	bcc check_game_state_elsedoneblock1687
+check_game_state_ConditionalTrueBlock1685: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	clc
 	lda game_mode
 	; cmp #$00 ignored
-	bne check_game_state_elseblock1610
-check_game_state_ConditionalTrueBlock1609: ;Main true block ;keep 
+	bne check_game_state_elseblock1700
+check_game_state_ConditionalTrueBlock1699: ;Main true block ;keep 
 	lda #<msg_sark_wins
 	ldx #>msg_sark_wins
 	sta message_ptr
@@ -4683,8 +4880,8 @@ check_game_state_ConditionalTrueBlock1609: ;Main true block ;keep
 	lda #$9
 	; Calling storevariable on generic assign expression
 	sta message_len
-	jmp check_game_state_elsedoneblock1611
-check_game_state_elseblock1610
+	jmp check_game_state_elsedoneblock1701
+check_game_state_elseblock1700
 	lda #<msg_p2_wins
 	ldx #>msg_p2_wins
 	sta message_ptr
@@ -4693,10 +4890,10 @@ check_game_state_elseblock1610
 	lda #$d
 	; Calling storevariable on generic assign expression
 	sta message_len
-check_game_state_elsedoneblock1611
+check_game_state_elsedoneblock1701
 	jsr end_game
-check_game_state_elsedoneblock1597
-check_game_state_elsedoneblock1551
+check_game_state_elsedoneblock1687
+check_game_state_elsedoneblock1641
 	rts
 end_procedure_check_game_state
 	
@@ -4717,12 +4914,12 @@ check_collisions
 	; Binary clause INTEGER: EQUALS
 	lda player_1_xy+1   ; compare high bytes
 	cmp player_2_xy+1 ;keep
-	bne check_collisions_elsedoneblock1620
+	bne check_collisions_elsedoneblock1710
 	lda player_1_xy
 	cmp player_2_xy ;keep
-	bne check_collisions_elsedoneblock1620
-	jmp check_collisions_ConditionalTrueBlock1618
-check_collisions_ConditionalTrueBlock1618: ;Main true block ;keep 
+	bne check_collisions_elsedoneblock1710
+	jmp check_collisions_ConditionalTrueBlock1708
+check_collisions_ConditionalTrueBlock1708: ;Main true block ;keep 
 	
 ; // Both crashed before trail is drawn. This solves edge case 
 ; // when both players try to occupy the same location.
@@ -4733,21 +4930,21 @@ check_collisions_ConditionalTrueBlock1618: ;Main true block ;keep
 	; Forcetype: NADA
 	; Calling storevariable on generic assign expression
 	sta player_2_crash
-check_collisions_elsedoneblock1620
+check_collisions_elsedoneblock1710
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda turn_counter
 	; cmp #$00 ignored
-	beq check_collisions_localfailed1635
-	jmp check_collisions_ConditionalTrueBlock1624
-check_collisions_localfailed1635: ;keep
+	beq check_collisions_localfailed1725
+	jmp check_collisions_ConditionalTrueBlock1714
+check_collisions_localfailed1725: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_1_fire
 	; cmp #$00 ignored
-	beq check_collisions_elsedoneblock1626
-check_collisions_ConditionalTrueBlock1624: ;Main true block ;keep 
+	beq check_collisions_elsedoneblock1716
+check_collisions_ConditionalTrueBlock1714: ;Main true block ;keep 
 	
 ; // P1 crashed
 	; INTEGER optimization: a=b+c 
@@ -4765,28 +4962,28 @@ check_collisions_ConditionalTrueBlock1624: ;Main true block ;keep
 	lda (screen_loc_work),y
 	; Compare with pure num / var optimization
 	cmp #$20;keep
-	beq check_collisions_elsedoneblock1641
-check_collisions_ConditionalTrueBlock1639: ;Main true block ;keep 
+	beq check_collisions_elsedoneblock1731
+check_collisions_ConditionalTrueBlock1729: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_1_crash
-check_collisions_elsedoneblock1641
-check_collisions_elsedoneblock1626
+check_collisions_elsedoneblock1731
+check_collisions_elsedoneblock1716
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda turn_counter
 	; cmp #$00 ignored
-	beq check_collisions_localfailed1656
-	jmp check_collisions_ConditionalTrueBlock1645
-check_collisions_localfailed1656: ;keep
+	beq check_collisions_localfailed1746
+	jmp check_collisions_ConditionalTrueBlock1735
+check_collisions_localfailed1746: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_2_fire
 	; cmp #$00 ignored
-	beq check_collisions_elsedoneblock1647
-check_collisions_ConditionalTrueBlock1645: ;Main true block ;keep 
+	beq check_collisions_elsedoneblock1737
+check_collisions_ConditionalTrueBlock1735: ;Main true block ;keep 
 	
 ; // P2 crashed
 	; INTEGER optimization: a=b+c 
@@ -4804,14 +5001,14 @@ check_collisions_ConditionalTrueBlock1645: ;Main true block ;keep
 	lda (screen_loc_work),y
 	; Compare with pure num / var optimization
 	cmp #$20;keep
-	beq check_collisions_elsedoneblock1662
-check_collisions_ConditionalTrueBlock1660: ;Main true block ;keep 
+	beq check_collisions_elsedoneblock1752
+check_collisions_ConditionalTrueBlock1750: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_2_crash
-check_collisions_elsedoneblock1662
-check_collisions_elsedoneblock1647
+check_collisions_elsedoneblock1752
+check_collisions_elsedoneblock1737
 	rts
 end_procedure_check_collisions
 	
@@ -4823,7 +5020,7 @@ scd_i	dc.b	0
 scd_crash	dc.b	0
 scd_tmp_int	dc.w	0
 scd_head	dc.b	0
-sark_crash_distance_block1665
+sark_crash_distance_block1755
 sark_crash_distance
 	; Forcetype: NADA
 	lda #$0
@@ -4837,14 +5034,14 @@ sark_crash_distance
 	; Calling storevariable on generic assign expression
 	sta scd_tmp_int
 	sty scd_tmp_int+1
-sark_crash_distance_while1666
-sark_crash_distance_loopstart1670
+sark_crash_distance_while1756
+sark_crash_distance_loopstart1760
 	; Binary clause Simplified: EQUALS
 	clc
 	lda scd_crash
 	; cmp #$00 ignored
-	bne sark_crash_distance_elsedoneblock1669
-sark_crash_distance_ConditionalTrueBlock1667: ;Main true block ;keep 
+	bne sark_crash_distance_elsedoneblock1759
+sark_crash_distance_ConditionalTrueBlock1757: ;Main true block ;keep 
 	; Test Inc dec D
 	inc scd_i
 	
@@ -4853,8 +5050,8 @@ sark_crash_distance_ConditionalTrueBlock1667: ;Main true block ;keep
 	clc
 	jsr Model_Is_40Col
 	; cmp #$00 ignored
-	beq sark_crash_distance_elseblock1695
-sark_crash_distance_ConditionalTrueBlock1694: ;Main true block ;keep 
+	beq sark_crash_distance_elseblock1785
+sark_crash_distance_ConditionalTrueBlock1784: ;Main true block ;keep 
 	
 ; // number of moves until crash
 	; HandleVarBinopB16bit
@@ -4878,8 +5075,8 @@ sark_crash_distance_ConditionalTrueBlock1694: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta scd_tmp_int
 	sty scd_tmp_int+1
-	jmp sark_crash_distance_elsedoneblock1696
-sark_crash_distance_elseblock1695
+	jmp sark_crash_distance_elsedoneblock1786
+sark_crash_distance_elseblock1785
 	
 ; // increment pos
 	; HandleVarBinopB16bit
@@ -4903,7 +5100,7 @@ sark_crash_distance_elseblock1695
 	; Calling storevariable on generic assign expression
 	sta scd_tmp_int
 	sty scd_tmp_int+1
-sark_crash_distance_elsedoneblock1696
+sark_crash_distance_elsedoneblock1786
 	; INTEGER optimization: a=b+c 
 	lda screen_loc
 	clc
@@ -4919,16 +5116,16 @@ sark_crash_distance_elsedoneblock1696
 	lda (screen_loc_work),y
 	; Compare with pure num / var optimization
 	cmp #$20;keep
-	beq sark_crash_distance_elsedoneblock1709
-sark_crash_distance_ConditionalTrueBlock1707: ;Main true block ;keep 
+	beq sark_crash_distance_elsedoneblock1799
+sark_crash_distance_ConditionalTrueBlock1797: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta scd_crash
-sark_crash_distance_elsedoneblock1709
-	jmp sark_crash_distance_while1666
-sark_crash_distance_elsedoneblock1669
-sark_crash_distance_loopend1671
+sark_crash_distance_elsedoneblock1799
+	jmp sark_crash_distance_while1756
+sark_crash_distance_elsedoneblock1759
+sark_crash_distance_loopend1761
 	lda scd_i
 	rts
 end_procedure_sark_crash_distance
@@ -4941,7 +5138,7 @@ scpd_sark_x	dc.b	0
 scpd_sark_y	dc.b	0
 scpd_player_x	dc.b	0
 scpd_player_y	dc.b	0
-sark_check_player_dist_block1712
+sark_check_player_dist_block1802
 sark_check_player_dist
 	
 ; //	sark_near_player_x_dist: byte;
@@ -4973,19 +5170,19 @@ sark_check_player_dist
 	jsr multiply_eightbit
 	txa
 	ldy #0 ; ::EightbitMul
-sark_check_player_dist_rightvarInteger_var1716 = $54
-	sta sark_check_player_dist_rightvarInteger_var1716
-	sty sark_check_player_dist_rightvarInteger_var1716+1
+sark_check_player_dist_rightvarInteger_var1806 = $54
+	sta sark_check_player_dist_rightvarInteger_var1806
+	sty sark_check_player_dist_rightvarInteger_var1806+1
 	lda player_2_xy+1
 	sec
-	sbc sark_check_player_dist_rightvarInteger_var1716+1
+	sbc sark_check_player_dist_rightvarInteger_var1806+1
 	tay
 	lda player_2_xy
 	sec
-	sbc sark_check_player_dist_rightvarInteger_var1716
-	bcs sark_check_player_dist_wordAdd1713
+	sbc sark_check_player_dist_rightvarInteger_var1806
+	bcs sark_check_player_dist_wordAdd1803
 	dey
-sark_check_player_dist_wordAdd1713
+sark_check_player_dist_wordAdd1803
 	; Calling storevariable on generic assign expression
 	sta scpd_sark_x
 	
@@ -5012,28 +5209,28 @@ sark_check_player_dist_wordAdd1713
 	jsr multiply_eightbit
 	txa
 	ldy #0 ; ::EightbitMul
-sark_check_player_dist_rightvarInteger_var1720 = $54
-	sta sark_check_player_dist_rightvarInteger_var1720
-	sty sark_check_player_dist_rightvarInteger_var1720+1
+sark_check_player_dist_rightvarInteger_var1810 = $54
+	sta sark_check_player_dist_rightvarInteger_var1810
+	sty sark_check_player_dist_rightvarInteger_var1810+1
 	lda player_1_xy+1
 	sec
-	sbc sark_check_player_dist_rightvarInteger_var1720+1
+	sbc sark_check_player_dist_rightvarInteger_var1810+1
 	tay
 	lda player_1_xy
 	sec
-	sbc sark_check_player_dist_rightvarInteger_var1720
-	bcs sark_check_player_dist_wordAdd1717
+	sbc sark_check_player_dist_rightvarInteger_var1810
+	bcs sark_check_player_dist_wordAdd1807
 	dey
-sark_check_player_dist_wordAdd1717
+sark_check_player_dist_wordAdd1807
 	; Calling storevariable on generic assign expression
 	sta scpd_player_x
 	; Binary clause Simplified: GREATER
 	lda scpd_sark_y
 	; Compare with pure num / var optimization
 	cmp scpd_player_y;keep
-	bcc sark_check_player_dist_elseblock1723
-	beq sark_check_player_dist_elseblock1723
-sark_check_player_dist_ConditionalTrueBlock1722: ;Main true block ;keep 
+	bcc sark_check_player_dist_elseblock1813
+	beq sark_check_player_dist_elseblock1813
+sark_check_player_dist_ConditionalTrueBlock1812: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
@@ -5048,8 +5245,8 @@ sark_check_player_dist_ConditionalTrueBlock1722: ;Main true block ;keep
 	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta sark_near_player_y_dist
-	jmp sark_check_player_dist_elsedoneblock1724
-sark_check_player_dist_elseblock1723
+	jmp sark_check_player_dist_elsedoneblock1814
+sark_check_player_dist_elseblock1813
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
@@ -5064,14 +5261,14 @@ sark_check_player_dist_elseblock1723
 	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta sark_near_player_y_dist
-sark_check_player_dist_elsedoneblock1724
+sark_check_player_dist_elsedoneblock1814
 	; Binary clause Simplified: GREATER
 	lda scpd_sark_x
 	; Compare with pure num / var optimization
 	cmp scpd_player_x;keep
-	bcc sark_check_player_dist_elseblock1731
-	beq sark_check_player_dist_elseblock1731
-sark_check_player_dist_ConditionalTrueBlock1730: ;Main true block ;keep 
+	bcc sark_check_player_dist_elseblock1821
+	beq sark_check_player_dist_elseblock1821
+sark_check_player_dist_ConditionalTrueBlock1820: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
@@ -5086,8 +5283,8 @@ sark_check_player_dist_ConditionalTrueBlock1730: ;Main true block ;keep
 	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta sark_near_player_x_dist
-	jmp sark_check_player_dist_elsedoneblock1732
-sark_check_player_dist_elseblock1731
+	jmp sark_check_player_dist_elsedoneblock1822
+sark_check_player_dist_elseblock1821
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
@@ -5102,7 +5299,7 @@ sark_check_player_dist_elseblock1731
 	 ; end add / sub var with constant
 	; Calling storevariable on generic assign expression
 	sta sark_near_player_x_dist
-sark_check_player_dist_elsedoneblock1732
+sark_check_player_dist_elsedoneblock1822
 	rts
 end_procedure_sark_check_player_dist
 	
@@ -5122,7 +5319,7 @@ sm_boost_th	dc.b	0
 sm_prox_th	dc.b	0
 sm_head	dc.b	0
 sm_i	dc.b	0
-sark_move_block1737
+sark_move_block1827
 sark_move
 	
 ; // crash threshold
@@ -5194,49 +5391,49 @@ sark_move
 	lda sm_cr_dist
 	; Compare with pure num / var optimization
 	cmp sm_cr_th;keep
-	bcs sark_move_localfailed2169
-	jmp sark_move_ConditionalTrueBlock1739
-sark_move_localfailed2169
-	jmp sark_move_elsedoneblock1741
-sark_move_ConditionalTrueBlock1739: ;Main true block ;keep 
+	bcs sark_move_localfailed2259
+	jmp sark_move_ConditionalTrueBlock1829
+sark_move_localfailed2259
+	jmp sark_move_elsedoneblock1831
+sark_move_ConditionalTrueBlock1829: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	lda player_2_head
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne sark_move_localfailed2386
-	jmp sark_move_ConditionalTrueBlock2172
-sark_move_localfailed2386: ;keep
+	bne sark_move_localfailed2476
+	jmp sark_move_ConditionalTrueBlock2262
+sark_move_localfailed2476: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_2_head
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bne sark_move_localfailed2385
-	jmp sark_move_ConditionalTrueBlock2172
-sark_move_localfailed2385
-	jmp sark_move_elseblock2173
-sark_move_ConditionalTrueBlock2172: ;Main true block ;keep 
+	bne sark_move_localfailed2475
+	jmp sark_move_ConditionalTrueBlock2262
+sark_move_localfailed2475
+	jmp sark_move_elseblock2263
+sark_move_ConditionalTrueBlock2262: ;Main true block ;keep 
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_u
 	; Compare with pure num / var optimization
 	cmp sm_cr_th;keep
-	bcc sark_move_elseblock2390
-	beq sark_move_elseblock2390
-sark_move_localsuccess2423: ;keep
+	bcc sark_move_elseblock2480
+	beq sark_move_elseblock2480
+sark_move_localsuccess2513: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_d
 	; Compare with pure num / var optimization
 	cmp sm_cr_th;keep
-	bcc sark_move_elseblock2390
-	beq sark_move_elseblock2390
-sark_move_ConditionalTrueBlock2389: ;Main true block ;keep 
+	bcc sark_move_elseblock2480
+	beq sark_move_elseblock2480
+sark_move_ConditionalTrueBlock2479: ;Main true block ;keep 
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda sark_near_player_y_neg
 	; cmp #$00 ignored
-	beq sark_move_elseblock2427
-sark_move_ConditionalTrueBlock2426: ;Main true block ;keep 
+	beq sark_move_elseblock2517
+sark_move_ConditionalTrueBlock2516: ;Main true block ;keep 
 	
 ; //	Check distance on current heading to obstacle.  
 ; //	If both turn options are elegible, turn towards player.
@@ -5249,89 +5446,89 @@ sark_move_ConditionalTrueBlock2426: ;Main true block ;keep
 	lda #$3
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-	jmp sark_move_elsedoneblock2428
-sark_move_elseblock2427
+	jmp sark_move_elsedoneblock2518
+sark_move_elseblock2517
 	; Forcetype: NADA
 	lda #$4
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-sark_move_elsedoneblock2428
-	jmp sark_move_elsedoneblock2391
-sark_move_elseblock2390
+sark_move_elsedoneblock2518
+	jmp sark_move_elsedoneblock2481
+sark_move_elseblock2480
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_u
 	; Compare with pure num / var optimization
 	cmp sm_cr_dist_d;keep
-	bcc sark_move_elseblock2436
-	beq sark_move_elseblock2436
-sark_move_localsuccess2446: ;keep
+	bcc sark_move_elseblock2526
+	beq sark_move_elseblock2526
+sark_move_localsuccess2536: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_u
 	; Compare with pure num / var optimization
 	cmp sm_cr_dist;keep
-	bcc sark_move_elseblock2436
-	beq sark_move_elseblock2436
-sark_move_ConditionalTrueBlock2435: ;Main true block ;keep 
+	bcc sark_move_elseblock2526
+	beq sark_move_elseblock2526
+sark_move_ConditionalTrueBlock2525: ;Main true block ;keep 
 	
 ; // Take direction with best crash distance
 	; Forcetype: NADA
 	lda #$3
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-	jmp sark_move_elsedoneblock2437
-sark_move_elseblock2436
+	jmp sark_move_elsedoneblock2527
+sark_move_elseblock2526
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_d
 	; Compare with pure num / var optimization
 	cmp sm_cr_dist;keep
-	bcc sark_move_elsedoneblock2452
-	beq sark_move_elsedoneblock2452
-sark_move_ConditionalTrueBlock2450: ;Main true block ;keep 
+	bcc sark_move_elsedoneblock2542
+	beq sark_move_elsedoneblock2542
+sark_move_ConditionalTrueBlock2540: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$4
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-sark_move_elsedoneblock2452
-sark_move_elsedoneblock2437
-sark_move_elsedoneblock2391
-	jmp sark_move_elsedoneblock2174
-sark_move_elseblock2173
+sark_move_elsedoneblock2542
+sark_move_elsedoneblock2527
+sark_move_elsedoneblock2481
+	jmp sark_move_elsedoneblock2264
+sark_move_elseblock2263
 	; Binary clause Simplified: EQUALS
 	lda player_2_head
 	; Compare with pure num / var optimization
 	cmp #$3;keep
-	bne sark_move_localfailed2528
-	jmp sark_move_ConditionalTrueBlock2457
-sark_move_localfailed2528: ;keep
+	bne sark_move_localfailed2618
+	jmp sark_move_ConditionalTrueBlock2547
+sark_move_localfailed2618: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_2_head
 	; Compare with pure num / var optimization
 	cmp #$4;keep
-	bne sark_move_elsedoneblock2459
-sark_move_ConditionalTrueBlock2457: ;Main true block ;keep 
+	bne sark_move_elsedoneblock2549
+sark_move_ConditionalTrueBlock2547: ;Main true block ;keep 
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_l
 	; Compare with pure num / var optimization
 	cmp sm_cr_th;keep
-	bcc sark_move_elseblock2532
-	beq sark_move_elseblock2532
-sark_move_localsuccess2565: ;keep
+	bcc sark_move_elseblock2622
+	beq sark_move_elseblock2622
+sark_move_localsuccess2655: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_r
 	; Compare with pure num / var optimization
 	cmp sm_cr_th;keep
-	bcc sark_move_elseblock2532
-	beq sark_move_elseblock2532
-sark_move_ConditionalTrueBlock2531: ;Main true block ;keep 
+	bcc sark_move_elseblock2622
+	beq sark_move_elseblock2622
+sark_move_ConditionalTrueBlock2621: ;Main true block ;keep 
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda sark_near_player_x_neg
 	; cmp #$00 ignored
-	beq sark_move_elseblock2569
-sark_move_ConditionalTrueBlock2568: ;Main true block ;keep 
+	beq sark_move_elseblock2659
+sark_move_ConditionalTrueBlock2658: ;Main true block ;keep 
 	
 ; // Sark is moving U or D. Check L/R
 ; // If both alternatives have 'good' crash distance,
@@ -5340,88 +5537,88 @@ sark_move_ConditionalTrueBlock2568: ;Main true block ;keep
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-	jmp sark_move_elsedoneblock2570
-sark_move_elseblock2569
+	jmp sark_move_elsedoneblock2660
+sark_move_elseblock2659
 	; Forcetype: NADA
 	lda #$2
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-sark_move_elsedoneblock2570
-	jmp sark_move_elsedoneblock2533
-sark_move_elseblock2532
+sark_move_elsedoneblock2660
+	jmp sark_move_elsedoneblock2623
+sark_move_elseblock2622
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_l
 	; Compare with pure num / var optimization
 	cmp sm_cr_dist_r;keep
-	bcc sark_move_elseblock2578
-	beq sark_move_elseblock2578
-sark_move_localsuccess2588: ;keep
+	bcc sark_move_elseblock2668
+	beq sark_move_elseblock2668
+sark_move_localsuccess2678: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_l
 	; Compare with pure num / var optimization
 	cmp sm_cr_dist;keep
-	bcc sark_move_elseblock2578
-	beq sark_move_elseblock2578
-sark_move_ConditionalTrueBlock2577: ;Main true block ;keep 
+	bcc sark_move_elseblock2668
+	beq sark_move_elseblock2668
+sark_move_ConditionalTrueBlock2667: ;Main true block ;keep 
 	
 ; // Take direction with best crash distance
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-	jmp sark_move_elsedoneblock2579
-sark_move_elseblock2578
+	jmp sark_move_elsedoneblock2669
+sark_move_elseblock2668
 	; Binary clause Simplified: GREATER
 	lda sm_cr_dist_r
 	; Compare with pure num / var optimization
 	cmp sm_cr_dist;keep
-	bcc sark_move_elsedoneblock2594
-	beq sark_move_elsedoneblock2594
-sark_move_ConditionalTrueBlock2592: ;Main true block ;keep 
+	bcc sark_move_elsedoneblock2684
+	beq sark_move_elsedoneblock2684
+sark_move_ConditionalTrueBlock2682: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$2
 	; Calling storevariable on generic assign expression
 	sta player_2_input
-sark_move_elsedoneblock2594
-sark_move_elsedoneblock2579
-sark_move_elsedoneblock2533
-sark_move_elsedoneblock2459
-sark_move_elsedoneblock2174
-sark_move_elsedoneblock1741
+sark_move_elsedoneblock2684
+sark_move_elsedoneblock2669
+sark_move_elsedoneblock2623
+sark_move_elsedoneblock2549
+sark_move_elsedoneblock2264
+sark_move_elsedoneblock1831
 	; Binary clause Simplified: EQUALS
 	lda game_difficulty
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bne sark_move_localfailed2622
-	jmp sark_move_ConditionalTrueBlock2598
-sark_move_localfailed2622: ;keep
+	bne sark_move_localfailed2712
+	jmp sark_move_ConditionalTrueBlock2688
+sark_move_localfailed2712: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda game_difficulty
 	; Compare with pure num / var optimization
 	cmp #$3;keep
-	bne sark_move_elsedoneblock2600
-sark_move_ConditionalTrueBlock2598: ;Main true block ;keep 
+	bne sark_move_elsedoneblock2690
+sark_move_ConditionalTrueBlock2688: ;Main true block ;keep 
 	; Binary clause Simplified: GREATEREQUAL
 	lda sm_cr_dist
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bcc sark_move_elsedoneblock2627
-sark_move_ConditionalTrueBlock2625: ;Main true block ;keep 
+	bcc sark_move_elsedoneblock2717
+sark_move_ConditionalTrueBlock2715: ;Main true block ;keep 
 	; Binary clause Simplified: LESS
 	lda sark_near_player_x_dist
 	; Compare with pure num / var optimization
 	cmp sm_boost_th;keep
-	bcs sark_move_elsedoneblock2640
-sark_move_localsuccess2642: ;keep
+	bcs sark_move_elsedoneblock2730
+sark_move_localsuccess2732: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: LESS
 	lda sark_near_player_y_dist
 	; Compare with pure num / var optimization
 	cmp sm_boost_th;keep
-	bcs sark_move_elsedoneblock2640
-sark_move_ConditionalTrueBlock2638: ;Main true block ;keep 
+	bcs sark_move_elsedoneblock2730
+sark_move_ConditionalTrueBlock2728: ;Main true block ;keep 
 	
 ; //	If opponent less than 'n' moves away, engage turbo boost 
 ; //	unless it would cause a crash.
@@ -5429,63 +5626,63 @@ sark_move_ConditionalTrueBlock2638: ;Main true block ;keep
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta player_2_fire
-sark_move_elsedoneblock2640
-sark_move_elsedoneblock2627
-sark_move_elsedoneblock2600
+sark_move_elsedoneblock2730
+sark_move_elsedoneblock2717
+sark_move_elsedoneblock2690
 	; Binary clause Simplified: EQUALS
 	lda game_difficulty
 	; Compare with pure num / var optimization
 	cmp #$3;keep
-	bne sark_move_localfailed2869
-	jmp sark_move_ConditionalTrueBlock2645
-sark_move_localfailed2869
-	jmp sark_move_elsedoneblock2647
-sark_move_ConditionalTrueBlock2645: ;Main true block ;keep 
+	bne sark_move_localfailed2959
+	jmp sark_move_ConditionalTrueBlock2735
+sark_move_localfailed2959
+	jmp sark_move_elsedoneblock2737
+sark_move_ConditionalTrueBlock2735: ;Main true block ;keep 
 	; Binary clause Simplified: LESSEQUAL
 	lda sark_near_player_x_dist
 	; Compare with pure num / var optimization
 	cmp sm_prox_th;keep
-	beq sark_move_localsuccess2983
-	bcs sark_move_localfailed2982
-sark_move_localsuccess2983: ;keep
+	beq sark_move_localsuccess3073
+	bcs sark_move_localfailed3072
+sark_move_localsuccess3073: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: LESSEQUAL
 	lda sark_near_player_y_dist
 	; Compare with pure num / var optimization
 	cmp sm_prox_th;keep
-	beq sark_move_ConditionalTrueBlock2872
-	bcs sark_move_localfailed2982
-	jmp sark_move_ConditionalTrueBlock2872
-sark_move_localfailed2982
-	jmp sark_move_elsedoneblock2874
-sark_move_ConditionalTrueBlock2872: ;Main true block ;keep 
+	beq sark_move_ConditionalTrueBlock2962
+	bcs sark_move_localfailed3072
+	jmp sark_move_ConditionalTrueBlock2962
+sark_move_localfailed3072
+	jmp sark_move_elsedoneblock2964
+sark_move_ConditionalTrueBlock2962: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	lda player_2_head
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne sark_move_localfailed3013
-	jmp sark_move_ConditionalTrueBlock2986
-sark_move_localfailed3013: ;keep
+	bne sark_move_localfailed3103
+	jmp sark_move_ConditionalTrueBlock3076
+sark_move_localfailed3103: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_2_head
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bne sark_move_elsedoneblock2988
-sark_move_ConditionalTrueBlock2986: ;Main true block ;keep 
+	bne sark_move_elsedoneblock3078
+sark_move_ConditionalTrueBlock3076: ;Main true block ;keep 
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda sark_near_player_y_neg
 	; cmp #$00 ignored
-	beq sark_move_elseblock3017
-sark_move_localsuccess3028: ;keep
+	beq sark_move_elseblock3107
+sark_move_localsuccess3118: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: GREATEREQUAL
 	lda sm_cr_dist_u
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bcc sark_move_elseblock3017
-sark_move_ConditionalTrueBlock3016: ;Main true block ;keep 
+	bcc sark_move_elseblock3107
+sark_move_ConditionalTrueBlock3106: ;Main true block ;keep 
 	
 ; //	If within player proximity, both have same heading, AND
 ; //	player's row/col is open at Sark's row/col position,
@@ -5502,23 +5699,23 @@ sark_move_ConditionalTrueBlock3016: ;Main true block ;keep
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta player_2_fire
-	jmp sark_move_elsedoneblock3018
-sark_move_elseblock3017
+	jmp sark_move_elsedoneblock3108
+sark_move_elseblock3107
 	
 ; // can't boost & turn
 	; Binary clause Simplified: EQUALS
 	clc
 	lda sark_near_player_y_neg
 	; cmp #$00 ignored
-	bne sark_move_elsedoneblock3034
-sark_move_localsuccess3036: ;keep
+	bne sark_move_elsedoneblock3124
+sark_move_localsuccess3126: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: GREATEREQUAL
 	lda sm_cr_dist_d
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bcc sark_move_elsedoneblock3034
-sark_move_ConditionalTrueBlock3032: ;Main true block ;keep 
+	bcc sark_move_elsedoneblock3124
+sark_move_ConditionalTrueBlock3122: ;Main true block ;keep 
 	
 ; // can't boost & turn
 ; // Player is below Sark, and move available
@@ -5532,36 +5729,36 @@ sark_move_ConditionalTrueBlock3032: ;Main true block ;keep
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta player_2_fire
-sark_move_elsedoneblock3034
-sark_move_elsedoneblock3018
-sark_move_elsedoneblock2988
+sark_move_elsedoneblock3124
+sark_move_elsedoneblock3108
+sark_move_elsedoneblock3078
 	; Binary clause Simplified: EQUALS
 	lda player_2_head
 	; Compare with pure num / var optimization
 	cmp #$3;keep
-	bne sark_move_localfailed3066
-	jmp sark_move_ConditionalTrueBlock3039
-sark_move_localfailed3066: ;keep
+	bne sark_move_localfailed3156
+	jmp sark_move_ConditionalTrueBlock3129
+sark_move_localfailed3156: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_2_head
 	; Compare with pure num / var optimization
 	cmp #$4;keep
-	bne sark_move_elsedoneblock3041
-sark_move_ConditionalTrueBlock3039: ;Main true block ;keep 
+	bne sark_move_elsedoneblock3131
+sark_move_ConditionalTrueBlock3129: ;Main true block ;keep 
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda sark_near_player_x_neg
 	; cmp #$00 ignored
-	beq sark_move_elseblock3070
-sark_move_localsuccess3081: ;keep
+	beq sark_move_elseblock3160
+sark_move_localsuccess3171: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: GREATEREQUAL
 	lda sm_cr_dist_l
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bcc sark_move_elseblock3070
-sark_move_ConditionalTrueBlock3069: ;Main true block ;keep 
+	bcc sark_move_elseblock3160
+sark_move_ConditionalTrueBlock3159: ;Main true block ;keep 
 	
 ; // Sark is moving up/down
 ; // Player is left of Sark, and move available
@@ -5575,23 +5772,23 @@ sark_move_ConditionalTrueBlock3069: ;Main true block ;keep
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta player_2_fire
-	jmp sark_move_elsedoneblock3071
-sark_move_elseblock3070
+	jmp sark_move_elsedoneblock3161
+sark_move_elseblock3160
 	
 ; // can't boost & turn
 	; Binary clause Simplified: EQUALS
 	clc
 	lda sark_near_player_x_neg
 	; cmp #$00 ignored
-	bne sark_move_elsedoneblock3087
-sark_move_localsuccess3089: ;keep
+	bne sark_move_elsedoneblock3177
+sark_move_localsuccess3179: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: GREATEREQUAL
 	lda sm_cr_dist_r
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bcc sark_move_elsedoneblock3087
-sark_move_ConditionalTrueBlock3085: ;Main true block ;keep 
+	bcc sark_move_elsedoneblock3177
+sark_move_ConditionalTrueBlock3175: ;Main true block ;keep 
 	
 ; // can't boost & turn
 ; // Player is below Sark, and move available
@@ -5605,11 +5802,11 @@ sark_move_ConditionalTrueBlock3085: ;Main true block ;keep
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta player_2_fire
-sark_move_elsedoneblock3087
-sark_move_elsedoneblock3071
-sark_move_elsedoneblock3041
-sark_move_elsedoneblock2874
-sark_move_elsedoneblock2647
+sark_move_elsedoneblock3177
+sark_move_elsedoneblock3161
+sark_move_elsedoneblock3131
+sark_move_elsedoneblock2964
+sark_move_elsedoneblock2737
 	rts
 end_procedure_sark_move
 	
@@ -5634,42 +5831,42 @@ update_positions
 	lda turn_counter
 	; Compare with pure num / var optimization
 	cmp #$2;keep
-	bcc update_positions_elsedoneblock3095
-update_positions_ConditionalTrueBlock3093: ;Main true block ;keep 
+	bcc update_positions_elsedoneblock3185
+update_positions_ConditionalTrueBlock3183: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta turn_counter
-update_positions_elsedoneblock3095
+update_positions_elsedoneblock3185
 	; Binary clause Simplified: EQUALS
 	lda turn_counter
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne update_positions_localfailed3165
-	jmp update_positions_ConditionalTrueBlock3099
-update_positions_localfailed3165: ;keep
+	bne update_positions_localfailed3255
+	jmp update_positions_ConditionalTrueBlock3189
+update_positions_localfailed3255: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_1_fire
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne update_positions_localfailed3164
-	jmp update_positions_ConditionalTrueBlock3099
-update_positions_localfailed3164
-	jmp update_positions_elsedoneblock3101
-update_positions_ConditionalTrueBlock3099: ;Main true block ;keep 
+	bne update_positions_localfailed3254
+	jmp update_positions_ConditionalTrueBlock3189
+update_positions_localfailed3254
+	jmp update_positions_elsedoneblock3191
+update_positions_ConditionalTrueBlock3189: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	clc
 	lda player_1_fire
 	; cmp #$00 ignored
-	bne update_positions_elsedoneblock3170
-update_positions_ConditionalTrueBlock3168: ;Main true block ;keep 
+	bne update_positions_elsedoneblock3260
+update_positions_ConditionalTrueBlock3258: ;Main true block ;keep 
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_1_input
 	; cmp #$00 ignored
-	beq update_positions_elsedoneblock3183
-update_positions_localsuccess3185: ;keep
+	beq update_positions_elsedoneblock3273
+update_positions_localsuccess3275: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: NOTEQUALS
 	; Load Byte array
@@ -5678,8 +5875,8 @@ update_positions_localsuccess3185: ;keep
 	lda dir_opp_arr,x 
 	; Compare with pure num / var optimization
 	cmp player_1_input;keep
-	beq update_positions_elsedoneblock3183
-update_positions_ConditionalTrueBlock3181: ;Main true block ;keep 
+	beq update_positions_elsedoneblock3273
+update_positions_ConditionalTrueBlock3271: ;Main true block ;keep 
 	
 ; // May need to tweak this value
 ; // Move P1 if normal move is available or turbo engaged
@@ -5689,8 +5886,8 @@ update_positions_ConditionalTrueBlock3181: ;Main true block ;keep
 	lda player_1_input
 	; Calling storevariable on generic assign expression
 	sta player_1_head
-update_positions_elsedoneblock3183
-update_positions_elsedoneblock3170
+update_positions_elsedoneblock3273
+update_positions_elsedoneblock3260
 	
 ; // Draw Trail
 	; Load Integer array
@@ -5721,14 +5918,14 @@ update_positions_elsedoneblock3170
 	clc
 	jsr Model_Is_40Col
 	; cmp #$00 ignored
-	beq update_positions_elseblock3190
-update_positions_ConditionalTrueBlock3189: ;Main true block ;keep 
+	beq update_positions_elseblock3280
+update_positions_ConditionalTrueBlock3279: ;Main true block ;keep 
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_1_head
 	; cmp #$00 ignored
-	beq update_positions_elsedoneblock3214
-update_positions_ConditionalTrueBlock3212: ;Main true block ;keep 
+	beq update_positions_elsedoneblock3304
+update_positions_ConditionalTrueBlock3302: ;Main true block ;keep 
 	
 ; // Update Player 1 Position
 	; HandleVarBinopB16bit
@@ -5752,15 +5949,15 @@ update_positions_ConditionalTrueBlock3212: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta player_1_xy
 	sty player_1_xy+1
-update_positions_elsedoneblock3214
-	jmp update_positions_elsedoneblock3191
-update_positions_elseblock3190
+update_positions_elsedoneblock3304
+	jmp update_positions_elsedoneblock3281
+update_positions_elseblock3280
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_1_head
 	; cmp #$00 ignored
-	beq update_positions_elsedoneblock3223
-update_positions_ConditionalTrueBlock3221: ;Main true block ;keep 
+	beq update_positions_elsedoneblock3313
+update_positions_ConditionalTrueBlock3311: ;Main true block ;keep 
 	; HandleVarBinopB16bit
 	; RHS is pure, optimization
 	; Load Integer array
@@ -5782,38 +5979,38 @@ update_positions_ConditionalTrueBlock3221: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta player_1_xy
 	sty player_1_xy+1
-update_positions_elsedoneblock3223
+update_positions_elsedoneblock3313
+update_positions_elsedoneblock3281
 update_positions_elsedoneblock3191
-update_positions_elsedoneblock3101
 	; Binary clause Simplified: EQUALS
 	lda turn_counter
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne update_positions_localfailed3295
-	jmp update_positions_ConditionalTrueBlock3229
-update_positions_localfailed3295: ;keep
+	bne update_positions_localfailed3385
+	jmp update_positions_ConditionalTrueBlock3319
+update_positions_localfailed3385: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: EQUALS
 	lda player_2_fire
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne update_positions_localfailed3294
-	jmp update_positions_ConditionalTrueBlock3229
-update_positions_localfailed3294
-	jmp update_positions_elsedoneblock3231
-update_positions_ConditionalTrueBlock3229: ;Main true block ;keep 
+	bne update_positions_localfailed3384
+	jmp update_positions_ConditionalTrueBlock3319
+update_positions_localfailed3384
+	jmp update_positions_elsedoneblock3321
+update_positions_ConditionalTrueBlock3319: ;Main true block ;keep 
 	; Binary clause Simplified: EQUALS
 	clc
 	lda player_2_fire
 	; cmp #$00 ignored
-	bne update_positions_elsedoneblock3300
-update_positions_ConditionalTrueBlock3298: ;Main true block ;keep 
+	bne update_positions_elsedoneblock3390
+update_positions_ConditionalTrueBlock3388: ;Main true block ;keep 
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_2_input
 	; cmp #$00 ignored
-	beq update_positions_elsedoneblock3313
-update_positions_localsuccess3315: ;keep
+	beq update_positions_elsedoneblock3403
+update_positions_localsuccess3405: ;keep
 	; ; logical AND, second requirement
 	; Binary clause Simplified: NOTEQUALS
 	; Load Byte array
@@ -5822,8 +6019,8 @@ update_positions_localsuccess3315: ;keep
 	lda dir_opp_arr,x 
 	; Compare with pure num / var optimization
 	cmp player_2_input;keep
-	beq update_positions_elsedoneblock3313
-update_positions_ConditionalTrueBlock3311: ;Main true block ;keep 
+	beq update_positions_elsedoneblock3403
+update_positions_ConditionalTrueBlock3401: ;Main true block ;keep 
 	
 ; // Move P2 if normal move is available or turbo engaged
 ; // Direction change only allowed when turbo not engaged
@@ -5832,8 +6029,8 @@ update_positions_ConditionalTrueBlock3311: ;Main true block ;keep
 	lda player_2_input
 	; Calling storevariable on generic assign expression
 	sta player_2_head
-update_positions_elsedoneblock3313
-update_positions_elsedoneblock3300
+update_positions_elsedoneblock3403
+update_positions_elsedoneblock3390
 	
 ; // Draw Trail
 	; Load Integer array
@@ -5864,14 +6061,14 @@ update_positions_elsedoneblock3300
 	clc
 	jsr Model_Is_40Col
 	; cmp #$00 ignored
-	beq update_positions_elseblock3320
-update_positions_ConditionalTrueBlock3319: ;Main true block ;keep 
+	beq update_positions_elseblock3410
+update_positions_ConditionalTrueBlock3409: ;Main true block ;keep 
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_2_head
 	; cmp #$00 ignored
-	beq update_positions_elsedoneblock3344
-update_positions_ConditionalTrueBlock3342: ;Main true block ;keep 
+	beq update_positions_elsedoneblock3434
+update_positions_ConditionalTrueBlock3432: ;Main true block ;keep 
 	
 ; // Update Player 2 Position
 	; HandleVarBinopB16bit
@@ -5895,15 +6092,15 @@ update_positions_ConditionalTrueBlock3342: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta player_2_xy
 	sty player_2_xy+1
-update_positions_elsedoneblock3344
-	jmp update_positions_elsedoneblock3321
-update_positions_elseblock3320
+update_positions_elsedoneblock3434
+	jmp update_positions_elsedoneblock3411
+update_positions_elseblock3410
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_2_head
 	; cmp #$00 ignored
-	beq update_positions_elsedoneblock3353
-update_positions_ConditionalTrueBlock3351: ;Main true block ;keep 
+	beq update_positions_elsedoneblock3443
+update_positions_ConditionalTrueBlock3441: ;Main true block ;keep 
 	; HandleVarBinopB16bit
 	; RHS is pure, optimization
 	; Load Integer array
@@ -5925,9 +6122,9 @@ update_positions_ConditionalTrueBlock3351: ;Main true block ;keep
 	; Calling storevariable on generic assign expression
 	sta player_2_xy
 	sty player_2_xy+1
-update_positions_elsedoneblock3353
+update_positions_elsedoneblock3443
+update_positions_elsedoneblock3411
 update_positions_elsedoneblock3321
-update_positions_elsedoneblock3231
 	rts
 end_procedure_update_positions
 	
@@ -6010,9 +6207,9 @@ init_gamestate
 	ldy #0
 	; Forcetype: INTEGER
 	lda #$5
-init_gamestate_rightvarInteger_var3364 = $54
-	sta init_gamestate_rightvarInteger_var3364
-	sty init_gamestate_rightvarInteger_var3364+1
+init_gamestate_rightvarInteger_var3454 = $54
+	sta init_gamestate_rightvarInteger_var3454
+	sty init_gamestate_rightvarInteger_var3454+1
 	; Swapping nodes :  num * expr -> exp*num (mul only)
 	; Right is PURE NUMERIC : Is word =1
 	; 16 bit mul or div
@@ -6028,14 +6225,14 @@ init_gamestate_rightvarInteger_var3364 = $54
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc init_gamestate_rightvarInteger_var3364
-init_gamestate_wordAdd3362
-	sta init_gamestate_rightvarInteger_var3364
+	adc init_gamestate_rightvarInteger_var3454
+init_gamestate_wordAdd3452
+	sta init_gamestate_rightvarInteger_var3454
 	; High-bit binop
 	tya
-	adc init_gamestate_rightvarInteger_var3364+1
+	adc init_gamestate_rightvarInteger_var3454+1
 	tay
-	lda init_gamestate_rightvarInteger_var3364
+	lda init_gamestate_rightvarInteger_var3454
 	; Calling storevariable on generic assign expression
 	sta player_1_xy
 	sty player_1_xy+1
@@ -6053,9 +6250,9 @@ init_gamestate_wordAdd3362
 	lda MYSCREEN_WIDTH
 	sta mul16x8_num2
 	jsr mul16x8_procedure
-init_gamestate_rightvarInteger_var3367 = $54
-	sta init_gamestate_rightvarInteger_var3367
-	sty init_gamestate_rightvarInteger_var3367+1
+init_gamestate_rightvarInteger_var3457 = $54
+	sta init_gamestate_rightvarInteger_var3457
+	sty init_gamestate_rightvarInteger_var3457+1
 	; HandleVarBinopB16bit
 	ldy #0 ; ::HandleVarBinopB16bit 0
 	; RHS is pure, optimization
@@ -6071,14 +6268,14 @@ init_gamestate_rightvarInteger_var3367 = $54
 	pla 
 	; Low bit binop:
 	clc
-	adc init_gamestate_rightvarInteger_var3367
-init_gamestate_wordAdd3365
-	sta init_gamestate_rightvarInteger_var3367
+	adc init_gamestate_rightvarInteger_var3457
+init_gamestate_wordAdd3455
+	sta init_gamestate_rightvarInteger_var3457
 	; High-bit binop
 	tya
-	adc init_gamestate_rightvarInteger_var3367+1
+	adc init_gamestate_rightvarInteger_var3457+1
 	tay
-	lda init_gamestate_rightvarInteger_var3367
+	lda init_gamestate_rightvarInteger_var3457
 	; Calling storevariable on generic assign expression
 	sta player_2_xy
 	sty player_2_xy+1
@@ -6150,22 +6347,22 @@ end_procedure_init_gamestate
 pta_tmp	dc.b	0
 pta_i	dc.b	0
 pta_screen_loc	= $72
-play_title_animation_block3369
+play_title_animation_block3459
 play_title_animation
 	; Binary clause Simplified: EQUALS
 	clc
 	lda anim_speed
 	; cmp #$00 ignored
-	bne play_title_animation_localfailed3489
-	jmp play_title_animation_ConditionalTrueBlock3371
-play_title_animation_localfailed3489
-	jmp play_title_animation_elsedoneblock3373
-play_title_animation_ConditionalTrueBlock3371: ;Main true block ;keep 
+	bne play_title_animation_localfailed3579
+	jmp play_title_animation_ConditionalTrueBlock3461
+play_title_animation_localfailed3579
+	jmp play_title_animation_elsedoneblock3463
+play_title_animation_ConditionalTrueBlock3461: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta pta_i
-play_title_animation_forloop3491
+play_title_animation_forloop3581
 	
 ; // Top/bottom sides
 ; // Top
@@ -6184,8 +6381,8 @@ play_title_animation_forloop3491
 	lda (pta_screen_loc),y
 	; Compare with pure num / var optimization
 	cmp #$a0;keep
-	bne play_title_animation_elseblock3521
-play_title_animation_ConditionalTrueBlock3520: ;Main true block ;keep 
+	bne play_title_animation_elseblock3611
+play_title_animation_ConditionalTrueBlock3610: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$66
 	; Calling storevariable on generic assign expression
@@ -6193,8 +6390,8 @@ play_title_animation_ConditionalTrueBlock3520: ;Main true block ;keep
 	; Forcetype: NADA
 	ldy #$0
 	sta (pta_screen_loc),y
-	jmp play_title_animation_elsedoneblock3522
-play_title_animation_elseblock3521
+	jmp play_title_animation_elsedoneblock3612
+play_title_animation_elseblock3611
 	; Forcetype: NADA
 	lda #$a0
 	; Calling storevariable on generic assign expression
@@ -6202,7 +6399,7 @@ play_title_animation_elseblock3521
 	; Forcetype: NADA
 	ldy #$0
 	sta (pta_screen_loc),y
-play_title_animation_elsedoneblock3522
+play_title_animation_elsedoneblock3612
 	
 ; // Bottom
 	; Generic 16 bit op
@@ -6218,9 +6415,9 @@ play_title_animation_elsedoneblock3522
 	lda #$18
 	sta mul16x8_num2
 	jsr mul16x8_procedure
-play_title_animation_rightvarInteger_var3529 = $54
-	sta play_title_animation_rightvarInteger_var3529
-	sty play_title_animation_rightvarInteger_var3529+1
+play_title_animation_rightvarInteger_var3619 = $54
+	sta play_title_animation_rightvarInteger_var3619
+	sty play_title_animation_rightvarInteger_var3619+1
 	; HandleVarBinopB16bit
 	; RHS is pure, optimization
 	ldy screen_loc+1 ;keep
@@ -6229,19 +6426,19 @@ play_title_animation_rightvarInteger_var3529 = $54
 	adc pta_i
 	; Testing for byte:  #0
 	; RHS is byte, optimization
-	bcc play_title_animation_skip3531
+	bcc play_title_animation_skip3621
 	iny
-play_title_animation_skip3531
+play_title_animation_skip3621
 	; Low bit binop:
 	clc
-	adc play_title_animation_rightvarInteger_var3529
-play_title_animation_wordAdd3527
-	sta play_title_animation_rightvarInteger_var3529
+	adc play_title_animation_rightvarInteger_var3619
+play_title_animation_wordAdd3617
+	sta play_title_animation_rightvarInteger_var3619
 	; High-bit binop
 	tya
-	adc play_title_animation_rightvarInteger_var3529+1
+	adc play_title_animation_rightvarInteger_var3619+1
 	tay
-	lda play_title_animation_rightvarInteger_var3529
+	lda play_title_animation_rightvarInteger_var3619
 	sta pta_screen_loc
 	sty pta_screen_loc+1
 	; Binary clause Simplified: EQUALS
@@ -6251,8 +6448,8 @@ play_title_animation_wordAdd3527
 	lda (pta_screen_loc),y
 	; Compare with pure num / var optimization
 	cmp #$a0;keep
-	bne play_title_animation_elseblock3534
-play_title_animation_ConditionalTrueBlock3533: ;Main true block ;keep 
+	bne play_title_animation_elseblock3624
+play_title_animation_ConditionalTrueBlock3623: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$66
 	; Calling storevariable on generic assign expression
@@ -6260,8 +6457,8 @@ play_title_animation_ConditionalTrueBlock3533: ;Main true block ;keep
 	; Forcetype: NADA
 	ldy #$0
 	sta (pta_screen_loc),y
-	jmp play_title_animation_elsedoneblock3535
-play_title_animation_elseblock3534
+	jmp play_title_animation_elsedoneblock3625
+play_title_animation_elseblock3624
 	; Forcetype: NADA
 	lda #$a0
 	; Calling storevariable on generic assign expression
@@ -6269,31 +6466,31 @@ play_title_animation_elseblock3534
 	; Forcetype: NADA
 	ldy #$0
 	sta (pta_screen_loc),y
-play_title_animation_elsedoneblock3535
-play_title_animation_loopstart3492
+play_title_animation_elsedoneblock3625
+play_title_animation_loopstart3582
 	; Test Inc dec D
 	inc pta_i
 	lda MYSCREEN_WIDTH
 	cmp pta_i ;keep
-	beq play_title_animation_loopdone3540
-play_title_animation_loopnotdone3541
-	jmp play_title_animation_forloop3491
-play_title_animation_loopdone3540
-play_title_animation_loopend3493
+	beq play_title_animation_loopdone3630
+play_title_animation_loopnotdone3631
+	jmp play_title_animation_forloop3581
+play_title_animation_loopdone3630
+play_title_animation_loopend3583
 	; Forcetype: NADA
 	lda #$1
 	; Calling storevariable on generic assign expression
 	sta pta_i
-play_title_animation_forloop3542
+play_title_animation_forloop3632
 	
 ; // Left/Right sides
 ; // Left
 	; Generic 16 bit op
 	ldy screen_loc+1 ;keep
 	lda screen_loc
-play_title_animation_rightvarInteger_var3577 = $54
-	sta play_title_animation_rightvarInteger_var3577
-	sty play_title_animation_rightvarInteger_var3577+1
+play_title_animation_rightvarInteger_var3667 = $54
+	sta play_title_animation_rightvarInteger_var3667
+	sty play_title_animation_rightvarInteger_var3667+1
 	; Mul 16x8 setup
 	; Forcetype:  INTEGER
 	ldy #0
@@ -6306,14 +6503,14 @@ play_title_animation_rightvarInteger_var3577 = $54
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc play_title_animation_rightvarInteger_var3577
-play_title_animation_wordAdd3575
-	sta play_title_animation_rightvarInteger_var3577
+	adc play_title_animation_rightvarInteger_var3667
+play_title_animation_wordAdd3665
+	sta play_title_animation_rightvarInteger_var3667
 	; High-bit binop
 	tya
-	adc play_title_animation_rightvarInteger_var3577+1
+	adc play_title_animation_rightvarInteger_var3667+1
 	tay
-	lda play_title_animation_rightvarInteger_var3577
+	lda play_title_animation_rightvarInteger_var3667
 	sta pta_screen_loc
 	sty pta_screen_loc+1
 	; Binary clause Simplified: EQUALS
@@ -6323,8 +6520,8 @@ play_title_animation_wordAdd3575
 	lda (pta_screen_loc),y
 	; Compare with pure num / var optimization
 	cmp #$a0;keep
-	bne play_title_animation_elseblock3580
-play_title_animation_ConditionalTrueBlock3579: ;Main true block ;keep 
+	bne play_title_animation_elseblock3670
+play_title_animation_ConditionalTrueBlock3669: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$66
 	; Calling storevariable on generic assign expression
@@ -6332,8 +6529,8 @@ play_title_animation_ConditionalTrueBlock3579: ;Main true block ;keep
 	; Forcetype: NADA
 	ldy #$0
 	sta (pta_screen_loc),y
-	jmp play_title_animation_elsedoneblock3581
-play_title_animation_elseblock3580
+	jmp play_title_animation_elsedoneblock3671
+play_title_animation_elseblock3670
 	; Forcetype: NADA
 	lda #$a0
 	; Calling storevariable on generic assign expression
@@ -6341,29 +6538,29 @@ play_title_animation_elseblock3580
 	; Forcetype: NADA
 	ldy #$0
 	sta (pta_screen_loc),y
-play_title_animation_elsedoneblock3581
+play_title_animation_elsedoneblock3671
 	
 ; // Right
 	; Generic 16 bit op
 	ldy #0
 	; Forcetype: INTEGER
 	lda #$1
-play_title_animation_rightvarInteger_var3588 = $54
-	sta play_title_animation_rightvarInteger_var3588
-	sty play_title_animation_rightvarInteger_var3588+1
+play_title_animation_rightvarInteger_var3678 = $54
+	sta play_title_animation_rightvarInteger_var3678
+	sty play_title_animation_rightvarInteger_var3678+1
 	; Generic 16 bit op
 	ldy #0
 	ldx #0 ; Fake 24 bit
 	lda MYSCREEN_WIDTH
-play_title_animation_rightvarInteger_var3591 = $56
-	sta play_title_animation_rightvarInteger_var3591
-	sty play_title_animation_rightvarInteger_var3591+1
+play_title_animation_rightvarInteger_var3681 = $56
+	sta play_title_animation_rightvarInteger_var3681
+	sty play_title_animation_rightvarInteger_var3681+1
 	; Generic 16 bit op
 	ldy screen_loc+1 ;keep
 	lda screen_loc
-play_title_animation_rightvarInteger_var3594 = $58
-	sta play_title_animation_rightvarInteger_var3594
-	sty play_title_animation_rightvarInteger_var3594+1
+play_title_animation_rightvarInteger_var3684 = $58
+	sta play_title_animation_rightvarInteger_var3684
+	sty play_title_animation_rightvarInteger_var3684+1
 	; Mul 16x8 setup
 	; Forcetype:  INTEGER
 	ldy #0
@@ -6376,34 +6573,34 @@ play_title_animation_rightvarInteger_var3594 = $58
 	jsr mul16x8_procedure
 	; Low bit binop:
 	clc
-	adc play_title_animation_rightvarInteger_var3594
-play_title_animation_wordAdd3592
-	sta play_title_animation_rightvarInteger_var3594
+	adc play_title_animation_rightvarInteger_var3684
+play_title_animation_wordAdd3682
+	sta play_title_animation_rightvarInteger_var3684
 	; High-bit binop
 	tya
-	adc play_title_animation_rightvarInteger_var3594+1
+	adc play_title_animation_rightvarInteger_var3684+1
 	tay
-	lda play_title_animation_rightvarInteger_var3594
+	lda play_title_animation_rightvarInteger_var3684
 	; Low bit binop:
 	clc
-	adc play_title_animation_rightvarInteger_var3591
-play_title_animation_wordAdd3589
-	sta play_title_animation_rightvarInteger_var3591
+	adc play_title_animation_rightvarInteger_var3681
+play_title_animation_wordAdd3679
+	sta play_title_animation_rightvarInteger_var3681
 	; High-bit binop
 	tya
-	adc play_title_animation_rightvarInteger_var3591+1
+	adc play_title_animation_rightvarInteger_var3681+1
 	tay
-	lda play_title_animation_rightvarInteger_var3591
+	lda play_title_animation_rightvarInteger_var3681
 	; Low bit binop:
 	sec
-	sbc play_title_animation_rightvarInteger_var3588
-play_title_animation_wordAdd3586
-	sta play_title_animation_rightvarInteger_var3588
+	sbc play_title_animation_rightvarInteger_var3678
+play_title_animation_wordAdd3676
+	sta play_title_animation_rightvarInteger_var3678
 	; High-bit binop
 	tya
-	sbc play_title_animation_rightvarInteger_var3588+1
+	sbc play_title_animation_rightvarInteger_var3678+1
 	tay
-	lda play_title_animation_rightvarInteger_var3588
+	lda play_title_animation_rightvarInteger_var3678
 	sta pta_screen_loc
 	sty pta_screen_loc+1
 	; Binary clause Simplified: EQUALS
@@ -6413,8 +6610,8 @@ play_title_animation_wordAdd3586
 	lda (pta_screen_loc),y
 	; Compare with pure num / var optimization
 	cmp #$a0;keep
-	bne play_title_animation_elseblock3597
-play_title_animation_ConditionalTrueBlock3596: ;Main true block ;keep 
+	bne play_title_animation_elseblock3687
+play_title_animation_ConditionalTrueBlock3686: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$66
 	; Calling storevariable on generic assign expression
@@ -6422,8 +6619,8 @@ play_title_animation_ConditionalTrueBlock3596: ;Main true block ;keep
 	; Forcetype: NADA
 	ldy #$0
 	sta (pta_screen_loc),y
-	jmp play_title_animation_elsedoneblock3598
-play_title_animation_elseblock3597
+	jmp play_title_animation_elsedoneblock3688
+play_title_animation_elseblock3687
 	; Forcetype: NADA
 	lda #$a0
 	; Calling storevariable on generic assign expression
@@ -6431,24 +6628,24 @@ play_title_animation_elseblock3597
 	; Forcetype: NADA
 	ldy #$0
 	sta (pta_screen_loc),y
-play_title_animation_elsedoneblock3598
-play_title_animation_loopstart3543
+play_title_animation_elsedoneblock3688
+play_title_animation_loopstart3633
 	; Test Inc dec D
 	inc pta_i
 	; Forcetype: NADA
 	lda #$18
 	cmp pta_i ;keep
-	beq play_title_animation_loopdone3603
-play_title_animation_loopnotdone3604
-	jmp play_title_animation_forloop3542
-play_title_animation_loopdone3603
-play_title_animation_loopend3544
+	beq play_title_animation_loopdone3693
+play_title_animation_loopnotdone3694
+	jmp play_title_animation_forloop3632
+play_title_animation_loopdone3693
+play_title_animation_loopend3634
 	
 ; // Reset animation counter 
 	lda DEF_ANIM_SPEED
 	; Calling storevariable on generic assign expression
 	sta anim_speed
-play_title_animation_elsedoneblock3373
+play_title_animation_elsedoneblock3463
 	; Test Inc dec D
 	dec anim_speed
 	rts
@@ -6490,12 +6687,12 @@ do_irq_animation
 	sty ipd_div_hi
 	; Forcetype: NADA
 	ldy #$2 ; optimized, look out for bugs
-do_irq_animation_printdecimal3607
+do_irq_animation_printdecimal3697
 	jsr init_printdecimal_div10 
 	ora #$30
 	sta (screenmemory),y
 	dey
-	bpl do_irq_animation_printdecimal3607
+	bpl do_irq_animation_printdecimal3697
 	; ****** Inline assembler section
 	pla 
 	tay
@@ -6563,7 +6760,7 @@ player_crash
 	lda #$a0
 	; Calling storevariable on generic assign expression
 	sta i
-player_crash_forloop3613
+player_crash_forloop3703
 	
 ; // Increment animation		
 	lda tmp
@@ -6571,32 +6768,32 @@ player_crash_forloop3613
 	adc #$01
 	sta tmp+0
 	; Optimization : A := A op 8 bit - var and bvar are the same - perform inc
-	bcc player_crash_WordAdd3641
+	bcc player_crash_WordAdd3731
 	inc tmp+1
-player_crash_WordAdd3641
+player_crash_WordAdd3731
 	; Binary clause INTEGER: GREATER
 	lda tmp+1   ; compare high bytes
 	cmp #$00 ;keep
-	bcc player_crash_elsedoneblock3645
-	bne player_crash_ConditionalTrueBlock3643
+	bcc player_crash_elsedoneblock3735
+	bne player_crash_ConditionalTrueBlock3733
 	lda tmp
 	cmp #$02 ;keep
-	bcc player_crash_elsedoneblock3645
-	beq player_crash_elsedoneblock3645
-player_crash_ConditionalTrueBlock3643: ;Main true block ;keep 
+	bcc player_crash_elsedoneblock3735
+	beq player_crash_elsedoneblock3735
+player_crash_ConditionalTrueBlock3733: ;Main true block ;keep 
 	; Forcetype: INTEGER
 	ldy #0   ; Force integer assignment, set y = 0 for values lower than 255
 	lda #$0
 	; Calling storevariable on generic assign expression
 	sta tmp
 	sty tmp+1
-player_crash_elsedoneblock3645
+player_crash_elsedoneblock3735
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_1_crash
 	; cmp #$00 ignored
-	beq player_crash_elsedoneblock3651
-player_crash_ConditionalTrueBlock3649: ;Main true block ;keep 
+	beq player_crash_elsedoneblock3741
+player_crash_ConditionalTrueBlock3739: ;Main true block ;keep 
 	; INTEGER optimization: a=b+c 
 	lda screen_loc
 	clc
@@ -6614,13 +6811,13 @@ player_crash_ConditionalTrueBlock3649: ;Main true block ;keep
 	; Forcetype: NADA
 	ldy #$0
 	sta (screen_loc_work),y
-player_crash_elsedoneblock3651
+player_crash_elsedoneblock3741
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_2_crash
 	; cmp #$00 ignored
-	beq player_crash_elsedoneblock3659
-player_crash_ConditionalTrueBlock3657: ;Main true block ;keep 
+	beq player_crash_elsedoneblock3749
+player_crash_ConditionalTrueBlock3747: ;Main true block ;keep 
 	; INTEGER optimization: a=b+c 
 	lda screen_loc
 	clc
@@ -6638,7 +6835,7 @@ player_crash_ConditionalTrueBlock3657: ;Main true block ;keep
 	; Forcetype: NADA
 	ldy #$0
 	sta (screen_loc_work),y
-player_crash_elsedoneblock3659
+player_crash_elsedoneblock3749
 	
 ; // Make sound
 	lda i
@@ -6649,7 +6846,7 @@ player_crash_elsedoneblock3659
 	; Calling storevariable on generic assign expression
 	sta delay_val
 	jsr do_delay
-player_crash_loopstart3614
+player_crash_loopstart3704
 	; Optimizer: a = a +/- b
 	; Forcetype:  BYTE
 	lda i
@@ -6660,11 +6857,11 @@ player_crash_loopstart3614
 	; Forcetype: NADA
 	lda #$7f
 	cmp i ;keep
-	beq player_crash_loopdone3664
-player_crash_loopnotdone3665
-	jmp player_crash_forloop3613
-player_crash_loopdone3664
-player_crash_loopend3615
+	beq player_crash_loopdone3754
+player_crash_loopnotdone3755
+	jmp player_crash_forloop3703
+player_crash_loopdone3754
+player_crash_loopend3705
 	rts
 end_procedure_player_crash
 	
@@ -6707,16 +6904,16 @@ alternate_engine_sound
 	clc
 	lda player_1_fire
 	; cmp #$00 ignored
-	beq alternate_engine_sound_localfailed3674
-	jmp alternate_engine_sound_ConditionalTrueBlock3669
-alternate_engine_sound_localfailed3674: ;keep
+	beq alternate_engine_sound_localfailed3764
+	jmp alternate_engine_sound_ConditionalTrueBlock3759
+alternate_engine_sound_localfailed3764: ;keep
 	; ; logical OR, second chance
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	lda player_2_fire
 	; cmp #$00 ignored
-	beq alternate_engine_sound_elseblock3670
-alternate_engine_sound_ConditionalTrueBlock3669: ;Main true block ;keep 
+	beq alternate_engine_sound_elseblock3760
+alternate_engine_sound_ConditionalTrueBlock3759: ;Main true block ;keep 
 	
 ; // Higher octave when turbo is engaged
 	; Load Byte array
@@ -6724,53 +6921,53 @@ alternate_engine_sound_ConditionalTrueBlock3669: ;Main true block ;keep
 	lda sound_oct_arr +$1 ; array with const index optimization 
 	; Calling storevariable on generic assign expression
 	sta $e84a
-	jmp alternate_engine_sound_elsedoneblock3671
-alternate_engine_sound_elseblock3670
+	jmp alternate_engine_sound_elsedoneblock3761
+alternate_engine_sound_elseblock3760
 	; Load Byte array
 	; CAST type NADA
 	lda sound_oct_arr +$0 ; array with const index optimization 
 	; Calling storevariable on generic assign expression
 	sta $e84a
-alternate_engine_sound_elsedoneblock3671
+alternate_engine_sound_elsedoneblock3761
 	; Binary clause Simplified: EQUALS
 	lda sound_pitch
 	; Compare with pure num / var optimization
 	cmp #$c8;keep
-	bne alternate_engine_sound_elseblock3679
-alternate_engine_sound_ConditionalTrueBlock3678: ;Main true block ;keep 
+	bne alternate_engine_sound_elseblock3769
+alternate_engine_sound_ConditionalTrueBlock3768: ;Main true block ;keep 
 	
 ; // Iterate through several pitch values
 	; Forcetype: NADA
 	lda #$cd
 	; Calling storevariable on generic assign expression
 	sta sound_pitch
-	jmp alternate_engine_sound_elsedoneblock3680
-alternate_engine_sound_elseblock3679
+	jmp alternate_engine_sound_elsedoneblock3770
+alternate_engine_sound_elseblock3769
 	; Binary clause Simplified: EQUALS
 	lda sound_pitch
 	; Compare with pure num / var optimization
 	cmp #$cd;keep
-	bne alternate_engine_sound_elseblock3707
-alternate_engine_sound_ConditionalTrueBlock3706: ;Main true block ;keep 
+	bne alternate_engine_sound_elseblock3797
+alternate_engine_sound_ConditionalTrueBlock3796: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$c3
 	; Calling storevariable on generic assign expression
 	sta sound_pitch
-	jmp alternate_engine_sound_elsedoneblock3708
-alternate_engine_sound_elseblock3707
+	jmp alternate_engine_sound_elsedoneblock3798
+alternate_engine_sound_elseblock3797
 	; Binary clause Simplified: EQUALS
 	lda sound_pitch
 	; Compare with pure num / var optimization
 	cmp #$c3;keep
-	bne alternate_engine_sound_elsedoneblock3722
-alternate_engine_sound_ConditionalTrueBlock3720: ;Main true block ;keep 
+	bne alternate_engine_sound_elsedoneblock3812
+alternate_engine_sound_ConditionalTrueBlock3810: ;Main true block ;keep 
 	; Forcetype: NADA
 	lda #$c8
 	; Calling storevariable on generic assign expression
 	sta sound_pitch
-alternate_engine_sound_elsedoneblock3722
-alternate_engine_sound_elsedoneblock3708
-alternate_engine_sound_elsedoneblock3680
+alternate_engine_sound_elsedoneblock3812
+alternate_engine_sound_elsedoneblock3798
+alternate_engine_sound_elsedoneblock3770
 	
 ; // Set the pitch
 	; Assigning memory location
@@ -6799,14 +6996,14 @@ end_procedure_stop_sound
 	; ***********  Defining procedure : game_loop
 	;    Procedure type : User-defined procedure
 game_loop
-game_loop_while3727
-game_loop_loopstart3731
+game_loop_while3817
+game_loop_loopstart3821
 	; Binary clause Simplified: EQUALS
 	clc
 	lda game_over_flag
 	; cmp #$00 ignored
-	bne game_loop_elsedoneblock3730
-game_loop_ConditionalTrueBlock3728: ;Main true block ;keep 
+	bne game_loop_elsedoneblock3820
+game_loop_ConditionalTrueBlock3818: ;Main true block ;keep 
 	
 ; // check input devices
 	jsr check_input
@@ -6829,19 +7026,19 @@ game_loop_ConditionalTrueBlock3728: ;Main true block ;keep
 	lda game_over_flag
 	; Compare with pure num / var optimization
 	cmp #$1;keep
-	bne game_loop_elsedoneblock3744
-game_loop_ConditionalTrueBlock3742: ;Main true block ;keep 
+	bne game_loop_elsedoneblock3834
+game_loop_ConditionalTrueBlock3832: ;Main true block ;keep 
 	rts
-game_loop_elsedoneblock3744
+game_loop_elsedoneblock3834
 	
 ; // Slow it down
 	lda game_speed
 	; Calling storevariable on generic assign expression
 	sta delay_val
 	jsr do_delay
-	jmp game_loop_while3727
-game_loop_elsedoneblock3730
-game_loop_loopend3732
+	jmp game_loop_while3817
+game_loop_elsedoneblock3820
+game_loop_loopend3822
 	rts
 end_procedure_game_loop
 block1
@@ -6864,15 +7061,15 @@ main_block_begin_
 	sta screen_loc
 	stx screen_loc+1
 	jsr set_uppercase
-MainProgram_while3748
-MainProgram_loopstart3752
+MainProgram_while3838
+MainProgram_loopstart3842
 	; Binary clause Simplified: NOTEQUALS
 	clc
 	; Forcetype: NADA
 	lda #$1
 	; cmp #$00 ignored
-	beq MainProgram_elsedoneblock3751
-MainProgram_ConditionalTrueBlock3749: ;Main true block ;keep 
+	beq MainProgram_elsedoneblock3841
+MainProgram_ConditionalTrueBlock3839: ;Main true block ;keep 
 	
 ; // Primary loop
 	; Forcetype: NADA
@@ -6882,13 +7079,19 @@ MainProgram_ConditionalTrueBlock3749: ;Main true block ;keep
 	jsr title_screen
 	jsr game_screen
 	jsr game_loop
-	jmp MainProgram_while3748
-MainProgram_elsedoneblock3751
-MainProgram_loopend3753
+	jmp MainProgram_while3838
+MainProgram_elsedoneblock3841
+MainProgram_loopend3843
 main_block_end_
 	; End of program
 	; Ending memory block at $410
-cycle_text_input_handler_stringassignstr1024		dc.b	"                              "
+cycle_text_input_handler_printstring_text1109	dc.b	"BUSINESS"
+	dc.b	0
+cycle_text_input_handler_printstring_text1112	dc.b	"GRAPHICS"
+	dc.b	0
+cycle_text_input_handler_printstring_text1114	dc.b	"         "
+	dc.b	0
+cycle_text_input_handler_stringassignstr1072		dc.b	"                              "
 	dc.b	0
 EndBlock410:
 

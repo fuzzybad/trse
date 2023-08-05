@@ -45,7 +45,10 @@ begin
 	if (not check_input_val & 128) then player_2_input := 2;	// Right
 	if (not check_input_val & 16) then player_2_input := 3;	// Up
 	if (not check_input_val & 32) then player_2_input := 4;	// Down
-
+	
+	// uncomment function in support_functions to debug keyboard codes
+	//check_keyboard_codes();
+	
 	// Read PET Keyboard
 	Key::Read();
 
@@ -65,6 +68,9 @@ begin
 		if Key::Held($4006) then keybd_input := 1;	// 1 Key
 		if Key::Held($4007) then keybd_input := 2;	// 2 Key
 		if Key::Held($8006) then keybd_input := 3;	// 3 Key
+		if Key::Held($2002) then keybd_input := 4;	// K Key (business)
+		if Key::Held($0805) then keybd_input := 4;	// K Key (graphics)
+		//if Key::Held($2000) then keybd_input := 5;	// Left Arrow Key - Abort game
 	end else
 	begin
 		// Values for "business" keyboard
@@ -78,9 +84,12 @@ begin
 		if Key::Held($0200) then player_2_input := 4;	// 5 - P2 Down
 		if Key::Held($0408) then player_1_fire := 1;	// Space - P1 Fire
 		if Key::Held($4006) then player_2_fire := 1;	// RShift - P2 Fire
-		if Key::Held($0101) then keybd_input := 1;	// 1 Key
+		if Key::Held($0101) then keybd_input := 1;	// 1 Key -
 		if Key::Held($0100) then keybd_input := 2;	// 2 Key
 		if Key::Held($0209) then keybd_input := 3;	// 3 Key
+		if Key::Held($2002) then keybd_input := 4;	// K Key (business)
+		if Key::Held($0805) then keybd_input := 4;	// K Key (graphics)
+		//if Key::Held($0401) then keybd_input := 5;	// Left Arrow Key - Abort game
 	end;
 
 	// Get Sark's move when in single-player mode
@@ -150,6 +159,31 @@ begin
 			tmp := (MYSCREEN_WIDTH - 30) / 2;
 			basic_printat("                              ", tmp, 20);
 		end;
+	end;
+
+	// Check keyboard toggle
+	if (keybd_input = 4) then 
+	begin
+		moveto(1,1,hi(screen_char_loc));
+
+		if (keybd_type_flag = 0) then 
+		begin
+			keybd_type_flag := 1;
+			// show message
+			printstring("BUSINESS",0,8);
+		end else
+		begin
+			keybd_type_flag := 0;
+			// show message
+			printstring("GRAPHICS",0,8);			
+		end;
+		
+		do_delay(255);
+		do_delay(255);
+		
+		// erase message
+		moveto(1,1,hi(screen_char_loc));
+		printstring("         ",0,8);
 	end;
 
 	// Animate the scroll around title screen
@@ -398,6 +432,16 @@ end;
 // Game state
 procedure check_game_state();
 begin
+	// Check quit game hotkey 
+	//if (keybd_input = 5) then 
+	//begin
+	//	game_over_flag := 1;
+	//	stop_sound();
+	//	do_delay(255);
+	//	do_delay(255);
+	//	return;
+	//end;	
+	
 	// Check for player crashed
 	if (player_1_crash = 1 or player_2_crash = 1) then begin
 		player_crash();
