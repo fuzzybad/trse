@@ -5,11 +5,7 @@
  */
  
 // TODO: 
-//	Fix lack of collision when both players cross at same position
-//	Add support for 80-col 
-//	Add support for business keyboard
 //	Add third game mode: TWO VS SARK - deferred
-//	IRQ scroller on title screen - fuck it
 
 program LightCycles;
 
