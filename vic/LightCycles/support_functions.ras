@@ -1,0 +1,413 @@
+/* 
+Tron Light Cycles - Support Functions 
+*/
+
+// Predefine these to prevent error
+procedure play_music();
+procedure check_input();
+procedure cycle_text_left();
+procedure cycle_text_right();
+procedure cycle_text_input_handler();
+
+
+// Clear Screen
+procedure cls();
+begin
+	ClearScreen($20, screen_char_loc);
+	moveto(0,0,hi(screen_char_loc));
+end;
+
+// Set lower/uppercase mode
+/*
+procedure set_lowercase();
+begin
+	poke(#$E84C,0,14);
+end;
+*/
+
+// Set uppercase/graphics mode
+procedure set_uppercase();
+begin
+	poke(#$E84C,0,12);
+end;
+
+// Set graphic mode
+procedure cursor_graphic();
+begin
+	_A := GRAPHIC_MODE;
+    call(#$FFD2);
+end;
+
+// Set text mode
+/*
+procedure cursor_text();
+begin
+	_A := TEXT_MODE;
+	call(#$FFD2);
+end;
+*/
+// Home cursor
+procedure cursor_home();
+begin
+	_A := HOME;
+    call(#$FFD2);
+end;
+
+// Clear screen & home cursor
+procedure cursor_clear();
+begin
+	_A := CLR_HOME;
+    call(#$FFD2);
+end;
+
+// Return/Line Feed
+procedure cursor_return();
+begin
+	_A := RETURN_KEY;
+    call(#$FFD2);
+end;
+
+// Move cursor down
+procedure cursor_down();
+begin
+	_A := CRSR_DN;
+    call(#$FFD2);
+end;
+
+// Move cursor right
+procedure cursor_right();
+begin
+	_A := CRSR_RT;
+    call(#$FFD2);
+end;
+
+// Print using KERNAL routine
+procedure basic_print( _ptr:pointer, _center_txt:boolean, _mylen:byte );
+var
+	next_ch: byte;
+	bp_i: byte;
+begin
+	// Center text
+	if _center_txt = true then
+	begin
+		if _mylen < MYSCREEN_WIDTH then begin
+			for bp_i := 0 to ((MYSCREEN_WIDTH - _mylen) / 2) do	cursor_right();
+		end;
+	end;
+
+	// Print text
+	next_ch := 0;
+	while(_ptr[next_ch] <> 0) do
+	begin 
+		_A := _ptr[next_ch];
+    		call(#$FFD2);
+    		inc(next_ch);
+	end;
+	
+	cursor_return();
+end;
+
+// Print using KERNAL routine at X,Y location
+procedure basic_printat( _pa_ptr:pointer, _pa_myx:byte, _pa_myy:byte);
+var
+	pa_next_ch: byte;
+	pa_i: byte;
+begin
+	// Home cursor
+	cursor_home();
+	
+	// Cursor right
+	if _pa_myx > 0 then	begin
+		for pa_i := 0 to _pa_myx do	cursor_right();
+	end;
+
+	// Cursor down
+	if _pa_myy > 0 then	begin
+		for pa_i := 0 to _pa_myy do cursor_down();
+	end;
+
+	// Print text
+	pa_next_ch := 0;
+	while(_pa_ptr[pa_next_ch] <> 0) do
+	begin 
+		_A := _pa_ptr[pa_next_ch];
+    		call(#$FFD2);
+    		inc(pa_next_ch);
+	end;
+end;
+
+// Delay function
+procedure do_delay( delay_val: byte );
+var
+	dd_i : byte;
+begin
+	if( delay_val > 0 ) then	begin
+		for dd_i := 0 to delay_val do wait(255);
+	end;
+end;
+
+// Play music - called from external loop
+procedure play_music();
+begin
+	// Loop over note array
+	// 	Structure - note value, octave, sustain value 
+	/*
+	// Change note when index is zero
+	if (music_sust_idx = 0) then
+	begin
+		// End tune when pitch & sustain both = 0
+		if (song_ptr[music_idx] = 0 and song_ptr[music_idx+2] = 0) then begin
+			music_idx := 0;
+		end;
+	
+		// Set octave
+		LOC_SOUND_OCT	:= sound_oct_arr[song_ptr[music_idx+1]];
+		// Set the pitch
+		LOC_SOUND_FREQ	:= song_ptr[music_idx];
+		// Set sustain - this value is tuned based on routine calling this function
+		music_sust_idx	:= song_ptr[music_idx+2] * 8;
+		
+		// Next note
+		music_idx := music_idx + 3;
+	end;
+	
+	music_sust_idx := music_sust_idx -1;
+	*/
+end;
+
+// Control function for text cycling
+// 	xpos
+//	ypos
+//	num_char
+//	num_cycles - set to zero for infinite cycles
+//	scroll direction - 0:left, 1:right
+//	break on input
+//	play music
+procedure cycle_text( cts_xpos:byte, cts_ypos:byte, cts_num_char:byte
+				  	, cts_num_cycles:byte, cts_dir:boolean, cts_input_brk:boolean	
+					, cts_play_music:boolean );
+begin
+	//moveto(1,2,hi(screen_char_loc));
+	//printdecimal(cts_input_brk,2);
+
+	// Controls when trailing chars at end are drawn
+    	temp_byte := 0;
+    	// Number of trailing chars
+    	scroll_num_char := cts_num_char;
+    	scroll_num_trail := scroll_num_char / 2;
+	// Screen position to start effect
+    	scroll_x := cts_xpos;
+    	scroll_y := cts_ypos;
+    	// Break scroll on input
+    	scroll_inp_brk := 0;
+    	
+	// Value of zero means we cycle forever
+	if (cts_num_cycles = 0) then 
+	begin
+		cts_num_cycles := 1;
+		scroll_step := 0;
+	end else begin
+		scroll_step := 1;
+	end;
+
+	// Initialize music	
+	if (cts_play_music) then
+	begin
+		music_idx		:= 0;
+		music_sust_idx	:= 0;
+//		LOC_SOUND_REG	:= 16;
+	end;
+
+	// Scroll for the given # cycles
+	for k := 0 to cts_num_cycles step scroll_step do 
+	begin
+		if cts_dir then begin
+			cycle_text_left();
+		end else begin
+			cycle_text_right();
+		end;
+
+		// Break on input
+		if scroll_inp_brk then return;
+	end;
+end;
+
+// Cycle text right 
+procedure cycle_text_right();
+begin
+
+	for i := 0 to scroll_num_char step 1 do	 
+	begin
+		screen_loc_work := screen_loc + scroll_x + MYSCREEN_WIDTH * scroll_y;
+		
+		// Leading char
+		screen_loc_work[i] := screen_loc_work[i] +128;
+			
+		// Trailing char
+		if i < scroll_num_trail then begin
+			j := scroll_num_char - scroll_num_trail + i;
+		end	else begin
+		    j := i - scroll_num_trail;
+			// Activate trailing char after index reaches a given point
+		    temp_byte := 1;
+		end;	
+	
+		if temp_byte = 1 then
+		begin
+			screen_loc_work[j] := screen_loc_work[j] +128;
+		end;	
+
+		// If scrolling can be interrupted
+		if cts_input_brk then 
+		begin
+			// Break on 'fire'
+			if (check_input() = 1) then begin
+				scroll_inp_brk := 1;
+				return;
+			end;
+			// If additional input handling required
+			if (scroll_input) then begin
+				cycle_text_input_handler();
+			end;
+		end;
+		
+		// Play theme song
+		if (cts_play_music) then begin
+			play_music();
+		end;
+
+		do_delay(scroll_speed);
+	end;
+end;
+
+// Cycle text left
+procedure cycle_text_left();
+begin
+	// Cycle characters within string
+	for i := scroll_num_char-1 to -1 step -1 do	 
+	begin
+		screen_loc_work := screen_loc + scroll_x + MYSCREEN_WIDTH * scroll_y;
+		
+		// Leading char
+		screen_loc_work[i] := screen_loc_work[i] +128;
+			
+		// Trailing char
+		if i > scroll_num_char - scroll_num_trail then begin
+			j := i - scroll_num_trail -1;
+		end	else begin
+		    j := scroll_num_char - scroll_num_trail +i -1;
+			// Activate trailing char after index reaches a given point
+		    temp_byte := 1;
+		end;	
+
+		if temp_byte = 1 then begin
+			screen_loc_work[j] := screen_loc_work[j] +128;
+		end;	
+
+		// Play theme song
+		if (cts_play_music) then
+		begin
+			play_music();
+		end;
+
+		// If scrolling can be interrupted
+		if cts_input_brk then 
+		begin
+			// Break on 'fire'
+			if (check_input() = 1) then begin
+				scroll_inp_brk := 1;
+				return;
+			end;
+			// If additional input handling required
+			if (scroll_input) then begin
+				cycle_text_input_handler();
+			end;
+		end;
+	
+		do_delay(scroll_speed);	
+	end;
+end;
+
+
+// Routine to debug PET keyboard codes
+procedure check_keyboard_codes();
+begin
+	while (true) do begin
+		Key::Read();
+		
+		temp_byte := 0;	// row to scan
+		moveto(3,1,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,1,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+		temp_byte := 1;	// row to scan
+		moveto(3,2,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,2,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+		temp_byte := 2;	// row to scan
+		moveto(3,3,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,3,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+		temp_byte := 3;	// row to scan
+		moveto(3,4,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,4,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+		temp_byte := 4;	// row to scan
+		moveto(3,5,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,5,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+		temp_byte := 5;	// row to scan
+		moveto(3,6,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,6,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+		temp_byte := 6;	// row to scan
+		moveto(3,7,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,7,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+		temp_byte := 7;	// row to scan
+		moveto(3,8,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,8,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+		temp_byte := 8;	// row to scan
+		moveto(3,9,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,9,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+		temp_byte := 9;	// row to scan
+		moveto(3,10,hi(screen_char_loc));
+		printnumber( temp_byte );
+		temp_byte := Key::keysPressed[temp_byte];
+		moveto(1,10,hi(screen_char_loc));
+		printnumber( temp_byte );
+
+        do_delay(255);
+	end;
+end;
+
+
+// eof

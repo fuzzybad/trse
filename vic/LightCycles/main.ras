@@ -1,0 +1,113 @@
+/**
+ *	VIC Light Cycles
+ *	Supports SPT Dual Joystick Interface
+ *	JLP 2023 (fuzzybad@gmail.com)
+ */
+ 
+// TODO: 
+//	Add third game mode: TWO VS SARK - deferred
+
+program LightCycles;
+
+@use "gfx/gfx"
+@use "input/key"	
+//@use "output/pbm"	// Throws error: Missing: '@define PBMADDRESS $8000' Set the address of the screen in your program 
+@use "screen"
+@use "text/txt"
+
+//@define PBMADDRESS $8000
+
+// === includes =====================================
+@include "variables.ras"
+@include "support_functions.ras"
+@include "functions.ras"
+
+// === main logic ===================================
+procedure game_loop();
+begin
+	while (game_over_flag=0) do
+	begin
+	  	// check input devices
+	  	check_input();
+		// update positions
+		update_positions();
+		// go vroom
+	  	alternate_engine_sound();
+	  	// check collisions
+	  	check_collisions();
+	  	// game state
+	  	check_game_state();
+	  	// update screen
+	  	update_screen();
+	
+	  	if( game_over_flag = 1 ) then return;
+	  	
+	  	// Slow it down
+	  	do_delay(game_speed);
+	end;
+end;
+
+// Init
+begin
+	DefineScreen();
+	screen_loc := #SCREEN_CHAR_LOC;
+	set_uppercase();
+
+	// Primary loop
+	while(1) do
+	begin
+		game_over_flag := 0;
+		title_screen();
+		game_screen();
+		game_loop();
+	end;
+end.
+
+
+/*
+begin
+	
+	DefineScreen();
+
+	// clear the screen and colour RAM
+	//ClearScreen( 32, #SCREEN_CHAR_LOC); 	// ^$1e00 - unexpanded screen location
+	//ClearScreen( GREEN, #SCREEN_COL_LOC); 	// ^$9600 - unexpanded colour location
+	ClearScreen( 32, #SCREEN_CHAR_LOC); 		// ^$1000 - 8k+ screen location
+	ClearScreen( GREEN, #SCREEN_COL_LOC); 	// ^$9400 - 8k+ colour location
+
+	// Call CLR/HOME
+	//cursor_clear();
+
+	moveto(5,10,hi(screen_char_loc));
+	printstring("VIC RULES!",0,10);
+
+	// Set up optional redefined character set. This setting allows 64 unique characters 
+	// and access to all default ROM letters with BIT7 set (ie: values of 128 and greater)
+//	Screen::SetScreenCharAddress( 
+//		Screen::SCREEN_1c00 + Screen::CHAR_1c00, 
+//		Screen::SCREEN_ADD_0200 );
+
+	AUX_COLOR_AND_VOLUME := %00000010;
+	SCREEN_BG_COLOR := BLUE + SCREEN_BG_BLACK; // border + background colours
+
+	// main game loop
+	while (true) offpage do 
+	begin
+		
+		@ifdef DEBUG	// for testing speed of your drawing loop
+		SCREEN_BG_COLOR := BLACK + SCREEN_BG_BLACK;
+		@endif
+		
+		// wait for raster position outside of visible screen area (vertical blank)
+		WaitForRaster(120); // PAL
+
+		@ifdef DEBUG	// for testing speed of your drawing loop
+		SCREEN_BG_COLOR := CYAN + SCREEN_BG_BLACK;
+		@endif
+				
+	end;
+end.
+*/
+
+
+// eof
