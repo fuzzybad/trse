@@ -23,30 +23,18 @@ begin
 	player_2_fire	:= 0;
 	keybd_input		:= 0;
 
-	/*
-	// Read controller values 
+	// Check Joystick L/U/D/F
+	check_input_val := LOC_PORT_A;
+	if (not check_input_val & 16) then player_1_input := 1;	// Left
+	if (not check_input_val & 4) then player_1_input := 3;	// Up
+	if (not check_input_val & 8) then player_1_input := 4;	// Down
+	if (not check_input_val & 32) then player_1_fire := 1;	// Fire
+
+	// Check Joystick R
+	LOC_DDR_B[0] := 127;	// Set value to read joystick
 	check_input_val := LOC_PORT_B;
-	
-	// Check SPT Single Joystick
-	//if (not check_input_val & 1) then player_1_input := 1;	// Left
-	//if (not check_input_val & 2) then player_1_input := 2;	// Right
-	//if (not check_input_val & 4) then player_1_input := 3;	// Up
-	//if (not check_input_val & 8) then player_1_input := 4;	// Down
-	//if (not check_input_val & 32) then player_1_fire := 1;	// Fire
-
-	// Check SPT Double Joysticks
-	if (check_input_val & 3 = 0) then player_1_fire := 1;		// Fire
-	if (not check_input_val & 4) then player_1_input := 1;		// Left
-	if (not check_input_val & 8) then player_1_input := 2;		// Right
-	if (not check_input_val & 1) then player_1_input := 3;		// Up
-	if (not check_input_val & 2) then player_1_input := 4;		// Down
-
-	if (check_input_val & 48 = 0) then player_2_fire := 1;	 	// Fire
-	if (not check_input_val & 64) then player_2_input := 1;	// Left
-	if (not check_input_val & 128) then player_2_input := 2;	// Right
-	if (not check_input_val & 16) then player_2_input := 3;	// Up
-	if (not check_input_val & 32) then player_2_input := 4;	// Down
-	*/
+	LOC_DDR_B[0] := 255;	// Reset value
+	if (not check_input_val & 128) then player_1_input := 2;	// Right
 	
 	// uncomment function in support_functions to debug keyboard codes
 	//check_keyboard_codes();
@@ -54,21 +42,22 @@ begin
 	// Read Keyboard
 	Key::Read();
 
-	// Values for "graphics" keyboard
+	// Values for keyboard
 	if Key::Held($0202) then player_1_input := 1;	// A - P1 Left
-	//if Key::Held($) then player_2_input := 1;	// 4 - P2 Left
+	if Key::Held($1002) then player_2_input := 1;	// J - P2 Left
 	if Key::Held($0402) then player_1_input := 2;	// D - P1 Right
-	//if Key::Held($) then player_2_input := 2;	// 6 - P2 Right
+	if Key::Held($2002) then player_2_input := 2;	// L - P2 Right
 	if Key::Held($0201) then player_1_input := 3;	// W - P1 Up
-	//if Key::Held($) then player_2_input := 3;	// 8 - P2 Up
+	if Key::Held($1001) then player_2_input := 3;	// I - P2 Up
 	if Key::Held($0205) then player_1_input := 4;	// S - P1 Down
-	//if Key::Held($) then player_2_input := 4;	// 5 - P2 Down
+	if Key::Held($1005) then player_2_input := 4;	// K - P2 Down
 	if Key::Held($0104) then player_1_fire := 1;	// Space - P1 Fire
-	//if Key::Held($) then player_2_fire := 1;	// RShift - P2 Fire
+	if Key::Held($4004) then player_2_fire := 1;	// RShift - P2 Fire
 	if Key::Held($0100) then keybd_input := 1;	// 1 Key
 	if Key::Held($0107) then keybd_input := 2;	// 2 Key
 	if Key::Held($0200) then keybd_input := 3;	// 3 Key
-	//if Key::Held($0101) then keybd_input := 5;	// Left Arrow Key - Abort game
+	if Key::Held($8004) then keybd_input := 4;	// F1 Key - Instructions
+	if Key::Held($0800) then keybd_input := 5;	// Left Arrow Key - Abort game
 
 	// Get Sark's move when in single-player mode
 	if (game_mode = 0 and game_run_flag) then begin
@@ -134,8 +123,8 @@ begin
 		if (game_mode = 0) then begin
 			display_game_difficulty();
 		end else begin
-			tmp := (MYSCREEN_WIDTH - 20) / 2;
-			basic_printat("                    ", tmp, 18);
+			tmp := (MYSCREEN_WIDTH - length(msg_blank)) / 2;
+			basic_printat(#msg_blank, tmp, 18);
 		end;
 	end;
 
@@ -147,12 +136,19 @@ end;
 // Update score disp
 procedure update_score(us_do_beep:boolean);
 begin
-	// position of rightmost score
-	temp_byte := MYSCREEN_WIDTH-12;
-	
-	// Convert value from decimal number to screen code
-	screen_loc[11] := score_p1 + 48 + 128;
-	screen_loc[temp_byte] := score_p2 + 48 + 128;
+	if (game_mode) then begin
+		// two player mode
+		temp_byte1 := 4;
+		temp_byte2 := MYSCREEN_WIDTH-5;
+	end else begin
+		// one player mode
+		temp_byte1 := 8;
+		temp_byte2 := MYSCREEN_WIDTH-9;
+	end;
+
+	// Update scores
+	screen_loc[temp_byte1] := score_p1 + 48 + 128;
+	screen_loc[temp_byte2] := score_p2 + 48 + 128;
 
 	// Beep and flash score change
 	if (us_do_beep) then
@@ -161,10 +157,10 @@ begin
 		begin
 			// Flash changed score
 			if (player_1_crash) then begin
-				screen_loc[temp_byte] := screen_loc[temp_byte] + 128;
+				screen_loc[temp_byte2] := screen_loc[temp_byte2] + 128;
 			end;
 			if (player_2_crash) then begin
-				screen_loc[11] := screen_loc[11] + 128;				
+				screen_loc[temp_byte1] := screen_loc[temp_byte1] + 128;
 			end;
 
 			// Enable sound
@@ -218,32 +214,32 @@ begin
 	// Call CLR/HOME
 	cursor_clear();
 	ClearScreen( BLUE, #SCREEN_COL_LOC); // init color RAM
-	
-	// Print title strings
-	basic_print(#title_msg_1, 1, 20);
-	basic_print(#title_msg_2, 1, 20);
-	basic_print(#title_msg_3, 1, 20);
-	basic_print(#title_msg_4, 1, 13);
-	basic_print(#title_msg_5, 1, 17);
-	//basic_print(#title_msg_6, 1, 27);	
-	//basic_print(#title_msg_7, 1, 23);
-	//basic_print(#title_msg_8, 1, 17);
-	//basic_print(#title_msg_9, 1, 25);
-	//basic_print(#title_msg_10, 1, 17);
-	//basic_print(#title_msg_11, 1, 23);
 
 	// Draw box around screen
-	draw_title_screen_box();
+	draw_title_screen_box();	
 	
 	// Start animation interrupt
 	//init_irq_animation();
-	
+
 	// Show game mode
-	display_game_mode();
-	
-	// Display get ready message
-	message_len := length(msg_get_ready);
-	tmp := (MYSCREEN_WIDTH - message_len) / 2;
+	display_game_mode();	
+
+	// Display title messages
+	tmp := (MYSCREEN_WIDTH - 18) / 2;
+	basic_printat(#title_msg_1, tmp, 2);	// ptr, x, y
+	tmp := (MYSCREEN_WIDTH - 18) / 2;
+	basic_printat(#title_msg_2, tmp, 3);
+	tmp := (MYSCREEN_WIDTH - 18) / 2;
+	basic_printat(#title_msg_3, tmp, 4);
+	tmp := (MYSCREEN_WIDTH - length(title_msg_4)) / 2;
+	basic_printat(#title_msg_4, tmp, 6);
+	tmp := (MYSCREEN_WIDTH - length(title_msg_5)) / 2;
+	basic_printat(#title_msg_5, tmp, 8);
+	tmp := (MYSCREEN_WIDTH - length(title_msg_6)) / 2;
+	basic_printat(#title_msg_6, tmp, 11);
+	tmp := (MYSCREEN_WIDTH - length(title_msg_7)) / 2;
+	basic_printat(#title_msg_7, tmp, 13);
+	tmp := (MYSCREEN_WIDTH - length(msg_get_ready)) / 2;
 	basic_printat(#msg_get_ready, tmp, 20);
 	
 	// Run input function within cycle routine
@@ -318,12 +314,12 @@ begin
 	draw_game_screen_box();
 	// Draw score display (text, not score values)
 	if (game_mode = 0) then begin
-		tmp := MYSCREEN_WIDTH - 10;
+		tmp := MYSCREEN_WIDTH - length(#score_msg_3)-1;
 		basic_printat(#score_msg_2, 1, 0);	// string, x, y
 		basic_printat(#score_msg_3, tmp, 0);	// string, x, y
 	end;
 	if (game_mode = 1) then begin
-		tmp := MYSCREEN_WIDTH - 10;
+		tmp := MYSCREEN_WIDTH - length(#score_msg_1);
 		basic_printat(#score_msg_0, 1, 0);	// string, x, y
 		basic_printat(#score_msg_1, tmp, 0);	// string, x, y
 	end;
@@ -345,14 +341,17 @@ begin
 
 	// Beep and flash score change
 	update_score(1);
+	do_delay(64);
+
+	// Clear message	
+	tmp := (MYSCREEN_WIDTH - length(msg_blank)) / 2;
+	basic_printat(#msg_blank, tmp, 13);
 	
 	// Print new round message & wait for input
-	do_delay(64);
-	message_len := length(msg_get_ready);
-	tmp := (MYSCREEN_WIDTH - message_len) / 2;
+	tmp := (MYSCREEN_WIDTH - length(msg_get_ready)) / 2;
 	basic_printat(#msg_get_ready, tmp, 13);
 	// xpos, ypos, # chars, # cycles, direction, input break, play music
-	cycle_text(tmp, 13, message_len, 0, 0, 1, 0);
+	cycle_text(tmp, 13, length(#msg_get_ready), 0, 0, 1, 0);
 
 	// Adjust game speed
 	if( score_p1 = 1 or score_p2 = 1 ) then game_speed := DEF_GAME_SPEED - 10;
@@ -668,12 +667,12 @@ begin
 				begin
 					// Player is above Sark, and move available
 					player_2_input := 3; // move up
-					player_2_fire := 0;  // can't boost & turn
+					//player_2_fire := 0;  // can't boost & turn
 				end else if (sark_near_player_y_neg = 0 and sm_cr_dist_d > 1) then 
 				begin
 					// Player is below Sark, and move available
 					player_2_input := 4; // move down
-					player_2_fire := 0;  // can't boost & turn
+					//player_2_fire := 0;  // can't boost & turn
 				end;	
 			end;
 	
@@ -684,12 +683,12 @@ begin
 				begin
 					// Player is left of Sark, and move available
 					player_2_input := 1; // move left
-					player_2_fire := 0;  // can't boost & turn
+					//player_2_fire := 0;  // can't boost & turn
 				end else if (sark_near_player_x_neg = 0 and sm_cr_dist_r > 1) then 
 				begin
 					// Player is below Sark, and move available
 					player_2_input := 2; // move right
-					player_2_fire := 0;  // can't boost & turn
+					//player_2_fire := 0;  // can't boost & turn
 				end;			
 			end;
 		end;
@@ -716,15 +715,15 @@ begin
 	if (turn_counter = 1 or player_1_fire = 1) then
 	begin
 		// Direction change only allowed when turbo not engaged
-		if (player_1_fire = 0) then
-		begin
+//		if (player_1_fire = 0) then
+//		begin
 			// Verify input was received and not opposite of current dir
 			if (player_1_input and (player_1_input <> dir_opp_arr[player_1_head])) then
 			begin
 				// Set new heading
 				player_1_head	:= player_1_input;
 			end;
-		end;
+//		end;
 		
 		// Draw Trail
 		player_1_trail[1]	:= player_1_trail[0];
@@ -738,15 +737,15 @@ begin
 	if (turn_counter = 1 or player_2_fire = 1) then
 	begin
 		// Direction change only allowed when turbo not engaged
-		if (player_2_fire = 0) then
-		begin
+//		if (player_2_fire = 0) then
+//		begin
 			// Verify input was received and not opposite of current dir
 			if (player_2_input and (player_2_input <> dir_opp_arr[player_2_head])) then
 			begin
 				// Set new heading
 				player_2_head	:= player_2_input;
 			end;
-		end;
+//		end;
 
 		// Draw Trail
 		player_2_trail[1]	:= player_2_trail[0];
@@ -778,8 +777,8 @@ end;
 // Init Variables
 procedure init_gamestate();
 begin
-	player_1_xy			:= 5 + (12 * MYSCREEN_WIDTH);
-	player_2_xy			:= MYSCREEN_WIDTH -6 + (12 * MYSCREEN_WIDTH);
+	player_1_xy			:= 3 + (11 * MYSCREEN_WIDTH);
+	player_2_xy			:= MYSCREEN_WIDTH -4 + (11 * MYSCREEN_WIDTH);
 	player_1_head		:= 2; // heading right
 	player_2_head		:= 1; // heading left
 	player_1_trail[0]	:= 0;

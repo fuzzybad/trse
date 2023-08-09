@@ -81,32 +81,6 @@ begin
     call(#$FFD2);
 end;
 
-// Print using KERNAL routine
-procedure basic_print( _ptr:pointer, _center_txt:boolean, _mylen:byte );
-var
-	next_ch: byte;
-	bp_i: byte;
-begin
-	// Center text
-	if _center_txt = true then
-	begin
-		if _mylen < MYSCREEN_WIDTH then begin
-			for bp_i := 0 to ((MYSCREEN_WIDTH - _mylen) / 2) do	cursor_right();
-		end;
-	end;
-
-	// Print text
-	next_ch := 0;
-	while(_ptr[next_ch] <> 0) do
-	begin 
-		_A := _ptr[next_ch];
-    		call(#$FFD2);
-    		inc(next_ch);
-	end;
-	
-	cursor_return();
-end;
-
 // Print using KERNAL routine at X,Y location
 procedure basic_printat( _pa_ptr:pointer, _pa_myx:byte, _pa_myy:byte);
 var
@@ -191,7 +165,7 @@ begin
 	//printdecimal(cts_input_brk,2);
 
 	// Controls when trailing chars at end are drawn
-    	temp_byte := 0;
+    	temp_byte1 := 0;
     	// Number of trailing chars
     	scroll_num_char := cts_num_char;
     	scroll_num_trail := scroll_num_char / 2;
@@ -249,10 +223,10 @@ begin
 		end	else begin
 		    j := i - scroll_num_trail;
 			// Activate trailing char after index reaches a given point
-		    temp_byte := 1;
+		    temp_byte1 := 1;
 		end;	
 	
-		if temp_byte = 1 then
+		if temp_byte1 = 1 then
 		begin
 			screen_loc_work[j] := screen_loc_work[j] +128;
 		end;	
@@ -297,10 +271,10 @@ begin
 		end	else begin
 		    j := scroll_num_char - scroll_num_trail +i -1;
 			// Activate trailing char after index reaches a given point
-		    temp_byte := 1;
+		    temp_byte1 := 1;
 		end;	
 
-		if temp_byte = 1 then begin
+		if temp_byte1 = 1 then begin
 			screen_loc_work[j] := screen_loc_work[j] +128;
 		end;	
 
@@ -328,86 +302,114 @@ begin
 	end;
 end;
 
-
+/*
 // Routine to debug PET keyboard codes
 procedure check_keyboard_codes();
 begin
 	while (true) do begin
 		Key::Read();
 		
-		temp_byte := 0;	// row to scan
+		temp_byte1 := 0;	// row to scan
 		moveto(3,1,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,1,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
-		temp_byte := 1;	// row to scan
+		temp_byte1 := 1;	// row to scan
 		moveto(3,2,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,2,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
-		temp_byte := 2;	// row to scan
+		temp_byte1 := 2;	// row to scan
 		moveto(3,3,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,3,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
-		temp_byte := 3;	// row to scan
+		temp_byte1 := 3;	// row to scan
 		moveto(3,4,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,4,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
-		temp_byte := 4;	// row to scan
+		temp_byte1 := 4;	// row to scan
 		moveto(3,5,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,5,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
-		temp_byte := 5;	// row to scan
+		temp_byte1 := 5;	// row to scan
 		moveto(3,6,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,6,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
-		temp_byte := 6;	// row to scan
+		temp_byte1 := 6;	// row to scan
 		moveto(3,7,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,7,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
-		temp_byte := 7;	// row to scan
+		temp_byte1 := 7;	// row to scan
 		moveto(3,8,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,8,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
-		temp_byte := 8;	// row to scan
+		temp_byte1 := 8;	// row to scan
 		moveto(3,9,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,9,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
-		temp_byte := 9;	// row to scan
+		temp_byte1 := 9;	// row to scan
 		moveto(3,10,hi(screen_char_loc));
-		printnumber( temp_byte );
-		temp_byte := Key::keysPressed[temp_byte];
+		printnumber( temp_byte1 );
+		temp_byte1 := Key::keysPressed[temp_byte1];
 		moveto(1,10,hi(screen_char_loc));
-		printnumber( temp_byte );
+		printnumber( temp_byte1 );
 
         do_delay(255);
 	end;
 end;
+*/
 
+/*
+// Print using KERNAL routine
+procedure basic_print( _ptr:pointer, _center_txt:boolean, _mylen:byte );
+var
+	next_ch: byte;
+	bp_i: byte;
+begin
+	// Center text
+	if _center_txt = true then
+	begin
+		if _mylen < MYSCREEN_WIDTH then begin
+			for bp_i := 0 to ((MYSCREEN_WIDTH - _mylen) / 2) do	cursor_right();
+		end;
+	end;
+
+	// Print text
+	next_ch := 0;
+	while(_ptr[next_ch] <> 0) do
+	begin 
+		_A := _ptr[next_ch];
+    		call(#$FFD2);
+    		inc(next_ch);
+	end;
+	
+	cursor_return();
+end;
+*/
 
 // eof

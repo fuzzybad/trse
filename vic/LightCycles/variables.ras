@@ -80,7 +80,8 @@ var
 	tmp:				integer = 0;
 	tmp_irq:			byte = 0;
 	message_len:		byte = 0;
-	temp_byte:		byte = 0;
+	temp_byte1:		byte = 0;
+	temp_byte2:		byte = 0;
 	
 	// Game vars
 	game_mode:		byte = 0;	// 0=One Player, 1=Two Player, 2=Two V.Sark
@@ -131,36 +132,37 @@ var
 	// Message Strings
 	//title_msg_0:		string = (CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
 	//						,"PROGRAMS!!");
-	title_msg_1:		string = (CRSR_DN,CRSR_DN,CHR_CURVED_TOP_LT_CORNER,CHR_MID2_HORIZ_LN
+	title_msg_1:		string = (CHR_CURVED_TOP_LT_CORNER,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
-							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_CURVED_TOP_RT_CORNER);
-	title_msg_2:		string = (CHR_MID2_VERT_LN," LIGHT CYCLE DUEL ",CHR_MID3_VERT_LN);
-	title_msg_3:		string = (CHR_CURVED_BOT_LT_CORNER,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
+							,CHR_CURVED_TOP_RT_CORNER);
+	title_msg_2:		string = (CHR_MID2_VERT_LN,"LIGHT CYCLE DUEL",CHR_MID3_VERT_LN);
+	title_msg_3:		string = (CHR_CURVED_BOT_LT_CORNER,CHR_MID3_HORIZ_LN
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
-							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
-							,CHR_MID3_HORIZ_LN,CHR_CURVED_BOT_RT_CORNER);
-	title_msg_4:		string = (CRSR_DN,"2023 FUZZYBAD");
-	title_msg_5:		string = (CRSR_DN,"SCORE FIVE TO WIN");
-	//title_msg_6:		string = ("TURNS DISABLED DURING BOOST");
-	//title_msg_7:		string = (CRSR_DN,"PLAYER 1       PLAYER 2");
-	//title_msg_8:		string = (CHR_DIAMOND,CHR_DIAMOND,"             ",CHR_CIRCLE,CHR_CIRCLE);
-	//title_msg_9:		string = (CRSR_DN,"USE DUAL JOYSTICK ADAPTER");
-	//title_msg_10:	string = ("OR             OR");
-	//title_msg_11:	string = ("WASD+SPC       8456+RSH");
+							,CHR_CURVED_BOT_RT_CORNER);
+	title_msg_4:		string = ("2023 FUZZYBAD");
+	title_msg_5:		string = ("SCORE FIVE TO WIN");
+	title_msg_6:		string = ("PRESS F1");
+	title_msg_7:		string = ("FOR INSTRUCTIONS");
+	//inst_msg_5:		string = (CRSR_DN,"PLAYER 1       PLAYER 2");
+	//inst_msg_6:		string = (CHR_DIAMOND,CHR_DIAMOND,"             ",CHR_CIRCLE,CHR_CIRCLE);
+	//inst_msg_7:		string = (CRSR_DN,"USE DUAL JOYSTICK ADAPTER");
+	//inst_msg_8:		string = ("OR             OR");
+	//inst_msg_9:		string = ("WASD+SPC       IJKL+RSH");
 
-	score_msg_0:		string = ("PLAYER 1:");
-	score_msg_1:		string = (":PLAYER 2");
-	score_msg_2:		string = ("  PLAYER:");
-	score_msg_3:		string = (":SARK");
+	score_msg_0:		string = ("P1:");
+	score_msg_1:		string = (":P2 ");
+	score_msg_2:		string = ("PLAYER:");
+	score_msg_3:		string = (":SARK  ");
 	
-	msg_both_crash:	string = ("BOTH CRASHED, REDO");
+	msg_both_crash:	string = ("BOTH CRASHED");
 	msg_p1_crash:	string = ("PLAYER 1 CRASHED");
 	msg_p2_crash:	string = ("PLAYER 2 CRASHED");
 	msg_plr_crash:	string = ("PLAYER CRASHED");
@@ -170,6 +172,7 @@ var
 	msg_plr_wins:	string = ("PLAYER WINS");
 	msg_sark_wins:	string = ("SARK WINS");
 	msg_get_ready:	string = ("PRESS FIRE");
+	msg_blank:		string = ("                    ");
 	
 	msg_one_player:	string = (">>> ",RVS_ON,"ONE PLAYER",RVS_OFF," >>>");
 	msg_two_player:	string = ("<<< ",RVS_ON,"TWO PLAYER",RVS_OFF," <<<");
