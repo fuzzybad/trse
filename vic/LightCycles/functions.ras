@@ -135,7 +135,7 @@ end;
 
 // Update score disp
 procedure update_score(us_do_beep:boolean);
-begin
+begin	
 	if (game_mode) then begin
 		// two player mode
 		temp_byte1 := 4;
@@ -164,15 +164,13 @@ begin
 			end;
 
 			// Enable sound
-//			LOC_SOUND_REG	:= 16;
-			// Set octave
-//			LOC_SOUND_OCT	:= sound_oct_arr[1];
+			LOC_SOUND_VOL	:= 15;
 			// Set the pitch
-//			LOC_SOUND_FREQ	:= CONST_NOTE_E;
+			LOC_SOUND_SOPR	:= CONST_NOTE_2_E;
 			// Sustain note
 			do_delay(128);
 			// Turn off sound
-//			LOC_SOUND_REG := 0;
+			LOC_SOUND_VOL := 0;
 			// Sustain pause		
 			do_delay(128);
 		end;
@@ -245,7 +243,8 @@ begin
 	// Run input function within cycle routine
 	scroll_input := 1;
 	// Song to play	
-	song_ptr := #theme_music_arr;
+	song_ptr := #theme_music_arr;	
+	
 	// Adjust scroll speed to compensate additional
 	// CPU load for music & animation
 //	scroll_speed := scroll_speed - 8;
@@ -374,6 +373,7 @@ begin
 
 	// Cycle text, wait for input, & play music
 	song_ptr := #game_end_music_arr;
+
 	// xpos, ypos, # chars, # cycles, direction, input break, play music
 	cycle_text(tmp, 13, message_len, 25, 0, 0, 1);
 	
@@ -907,8 +907,11 @@ begin
 	
 	// Animate crash & make sound
 	tmp := 0;
+	LOC_SOUND_ALTO := 0;
+	LOC_SOUND_TENO := 0;
+	LOC_SOUND_SOPR := 0;
 	
-	for i := 160 to 127 step -1 do
+	fori i := 0 to 50 step 1 do
 	begin
 		// Increment animation		
 		tmp := tmp + 1;
@@ -922,9 +925,18 @@ begin
 			screen_loc_work := screen_loc + player_2_xy;
 			screen_loc_work[0] := crash_anim_arr[tmp];
 		end;
-
-		// Make sound
-//		LOC_SOUND_FREQ := i;
+		
+		// Sound Effect
+		if (tmp = 0) then begin
+			LOC_SOUND_ALTO := 130;
+			LOC_SOUND_NOIS := 130;
+		end else if (tmp = 1) then begin
+			LOC_SOUND_ALTO := 135;
+			LOC_SOUND_NOIS := 135;
+		end else begin 
+			LOC_SOUND_ALTO := 255;
+			LOC_SOUND_NOIS := 255;		
+		end;
 		
 		do_delay(16);
 	end;
@@ -933,29 +945,20 @@ end;
 // init engine sound
 procedure init_engine_sound();
 begin
-	/*
+	// stop any current voices
+	stop_sound();
+
 	// enable sound
-	LOC_SOUND_REG	:= 16;
-	// set octave
-	LOC_SOUND_OCT	:= sound_oct_arr[0];
+	LOC_SOUND_VOL	:= 15;
 	// set pitch 
 	sound_pitch		:= 200;
 	
 	alternate_engine_sound();
-	*/
 end;
 	
 // alt engine sound
 procedure alternate_engine_sound();
 begin
-	/*
-	// Higher octave when turbo is engaged
-	if (player_1_fire or player_2_fire) then begin
-		LOC_SOUND_OCT	:= sound_oct_arr[1];
-	end 	else begin
-		LOC_SOUND_OCT	:= sound_oct_arr[0];
-	end;
-	
 	// Iterate through several pitch values
 	if (sound_pitch = 200) then begin
 		sound_pitch := 205;
@@ -967,15 +970,25 @@ begin
 		sound_pitch := 200;
 	end;
 	
-	// Set the pitch
-	LOC_SOUND_FREQ	:= sound_pitch;
-	*/
+	// Use higher voices when turbo is engaged
+	if (player_1_fire or player_2_fire) then begin
+		LOC_SOUND_TENO	:= sound_pitch; // makes high engine sound
+//		LOC_SOUND_SOPR	:= sound_pitch; // makes cool sound effect like centipede
+	end 	else begin
+		LOC_SOUND_ALTO	:= sound_pitch;	// makes low engine sound
+		LOC_SOUND_TENO	:= 0;
+		LOC_SOUND_SOPR	:= 0;		
+	end;
 end;
 
 // sound stop
 procedure stop_sound();
 begin
-//	LOC_SOUND_REG := 0;
+	LOC_SOUND_VOL	:= 0;
+	LOC_SOUND_ALTO	:= 0;
+	LOC_SOUND_TENO	:= 0;
+	LOC_SOUND_SOPR	:= 0;	
+	LOC_SOUND_NOIS	:= 0;
 end;
 
 // eof

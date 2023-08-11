@@ -124,29 +124,33 @@ end;
 procedure play_music();
 begin
 	// Loop over note array
-	// 	Structure - note value, octave, sustain value 
-	/*
+	//  Structure - tenor pitch, alto pitch, soprano pitch, sustain 
+	//
 	// Change note when index is zero
 	if (music_sust_idx = 0) then
 	begin
-		// End tune when pitch & sustain both = 0
-		if (song_ptr[music_idx] = 0 and song_ptr[music_idx+2] = 0) then begin
+		// End tune when all params=0
+		if (	(song_ptr[music_idx] = 0 and song_ptr[music_idx+1] = 0) 
+			and (song_ptr[music_idx+2] = 0 and song_ptr[music_idx+3] = 0)) then 
+		begin
 			music_idx := 0;
 		end;
 	
-		// Set octave
-		LOC_SOUND_OCT	:= sound_oct_arr[song_ptr[music_idx+1]];
-		// Set the pitch
-		LOC_SOUND_FREQ	:= song_ptr[music_idx];
-		// Set sustain - this value is tuned based on routine calling this function
-		music_sust_idx	:= song_ptr[music_idx+2] * 8;
+		// Play note(s)
+		LOC_SOUND_TENO := song_ptr[music_idx];
+		LOC_SOUND_ALTO := song_ptr[music_idx+1];
+		//LOC_SOUND_SOPR := song_ptr[music_idx+2];
+		// Play same notes as tenor for now
+		LOC_SOUND_SOPR := song_ptr[music_idx];
+
+		// Set sustain - this value is tuned in array
+		music_sust_idx	:= song_ptr[music_idx+3] * 8;
 		
 		// Next note
-		music_idx := music_idx + 3;
+		music_idx := music_idx + 4;
 	end;
 	
 	music_sust_idx := music_sust_idx -1;
-	*/
 end;
 
 // Control function for text cycling
@@ -189,7 +193,7 @@ begin
 	begin
 		music_idx		:= 0;
 		music_sust_idx	:= 0;
-//		LOC_SOUND_REG	:= 16;
+		LOC_SOUND_VOL	:= 15;
 	end;
 
 	// Scroll for the given # cycles

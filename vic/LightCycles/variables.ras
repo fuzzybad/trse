@@ -6,14 +6,9 @@ var
 	const	MYSCREEN_WIDTH: byte = 22;
 	const	MYSCREEN_HEIGHT: byte = 22; // actually 23
 	const	SCORE_TO_WIN: byte = 5;
-	const	DEF_GAME_SPEED: byte = 50;	// Speed of game - lower is faster
+	const	DEF_GAME_SPEED: byte = 80;	// Speed of game - lower is faster
 	const	DEF_ANIM_SPEED: byte = 6;	// Speed of animation - lower is faster
 	const	DEF_SCROLL_SPEED: byte = 16; 	// Speed of scrolling - lower is faster
-
-	// Sound Locations
-	//const	LOC_SOUND_REG: address = 59467;
-	//const	LOC_SOUND_OCT: address = 59466;
-	//const	LOC_SOUND_FREQ: address = 59464;
 	
 	// Interface Locations
 	const	LOC_PORT_A:	address = 37151;	// Port A - Joystick L,D,U,F
@@ -97,8 +92,6 @@ var
 	music_idx:		byte = 0;
 	music_sust_idx:	byte = 0;
 	sound_pitch:		byte = 255;
-	sound_oct_idx:	byte = 0;
-	sound_oct_arr:	array[3] of byte = (15, 51, 85);
 	crash_anim_arr:	array[3] of byte = (42, 87, 81);
 	// dir_map_arr:	1=L, 2=R, 3=U, 4=D
 	dir_map_arr:		array[5] of integer = (0, -1, 1, -MYSCREEN_WIDTH, MYSCREEN_WIDTH);
@@ -182,40 +175,94 @@ var
 	msg_diff_two:	string = ("1 ",RVS_ON,"2",RVS_OFF," 3 MED "); // 13 chars
 	msg_diff_three:	string = ("1 2 ",RVS_ON,"3",RVS_OFF," HARD");
 
+
+	////////////////////////////////////////////////////////////////////////
+	/// SOUND SECTION
+	////////////////////////////////////////////////////////////////////////
+
+	// Sound Locations
+	const	LOC_SOUND_VOL:	address = 36878;		// 0-15
+	const	LOC_SOUND_ALTO:	address = 36874;		// 128-255
+	const	LOC_SOUND_TENO:	address = 36875;		// 128-255
+	const	LOC_SOUND_SOPR:	address = 36876;		// 128-255
+	const	LOC_SOUND_NOIS:	address = 36877;		// 128-255
+
 	// Music notes
-	const CONST_NOTE_B:	byte = 251;	
-	const CONST_NOTE_BS:	byte = 245;	// Improvised
-	const CONST_NOTE_C:	byte = 238;
-	const CONST_NOTE_CS:	byte = 224;
-	const CONST_NOTE_D:	byte = 210;
-	const CONST_NOTE_DS:	byte = 199;
-	const CONST_NOTE_E:	byte = 188;
-	const CONST_NOTE_ES:	byte = 183;	// Improvised
-	const CONST_NOTE_F:	byte = 177;
-	const CONST_NOTE_FS:	byte = 168;
-	const CONST_NOTE_G:	byte = 158;
-	const CONST_NOTE_GS:	byte = 149;
-	const CONST_NOTE_A:	byte = 140;	// start of next octave
-	const CONST_NOTE_AS:	byte = 133;	// start of next octave
+	const CONST_NOTE_1_C:	byte = 255;
+	const CONST_NOTE_1_CS:	byte = 134;
+	const CONST_NOTE_1_D:	byte = 141;
+	const CONST_NOTE_1_DS:	byte = 147;
+	const CONST_NOTE_1_E:	byte = 153;
+	const CONST_NOTE_1_F:	byte = 159;
+	const CONST_NOTE_1_FS:	byte = 164;
+	const CONST_NOTE_1_G:	byte = 170;
+	const CONST_NOTE_1_GS:	byte = 174;
+	const CONST_NOTE_1_A:	byte = 179;
+	const CONST_NOTE_1_AS:	byte = 183;
+	const CONST_NOTE_1_B:	byte = 187;
+
+	const CONST_NOTE_2_C:	byte = 191;
+	const CONST_NOTE_2_CS:	byte = 195;
+	const CONST_NOTE_2_D:	byte = 198;
+	const CONST_NOTE_2_DS:	byte = 201;
+	const CONST_NOTE_2_E:	byte = 204;
+	const CONST_NOTE_2_F:	byte = 207;
+	const CONST_NOTE_2_FS:	byte = 210;
+	const CONST_NOTE_2_G:	byte = 212;
+	const CONST_NOTE_2_GS:	byte = 215;
+	const CONST_NOTE_2_A:	byte = 217;
+	const CONST_NOTE_2_AS:	byte = 219;
+	const CONST_NOTE_2_B:	byte = 221;
+	
+	const CONST_NOTE_3_C:	byte = 223;
+	const CONST_NOTE_3_CS:	byte = 225;
+	const CONST_NOTE_3_D:	byte = 226;
+	const CONST_NOTE_3_DS:	byte = 228;
+	const CONST_NOTE_3_E:	byte = 230;
+	const CONST_NOTE_3_F:	byte = 231;
+	const CONST_NOTE_3_FS:	byte = 232;
+	const CONST_NOTE_3_G:	byte = 234;
+	const CONST_NOTE_3_GS:	byte = 235;
+	const CONST_NOTE_3_A:	byte = 236;
+	const CONST_NOTE_3_AS:	byte = 237;
+	const CONST_NOTE_3_B:	byte = 238;
 	
 	// Intro to "Anthem for Keyboard Solo" Tron theme - 7/4 time
 	// Transcribed from sheet music: https://www.sheetmusicplus.com/title/tron-theme-digital-sheet-music/22158340
 	// How to read sheet music: https://theonlinemetronome.com/blogs/8/treble-clef
-	// Array structure - pitch, octave, sustain value 
+	//  Structure - tenor pitch, alto pitch, soprano pitch, sustain 
 	theme_music_arr: array[] of byte = (
-		0,0,7, 	// half measure rst
-		0,0,2,  CONST_NOTE_C,1,1,  CONST_NOTE_D,1,1,  CONST_NOTE_E,1,3,  0,0,1,  CONST_NOTE_C,1,1,  CONST_NOTE_D,1,1,  CONST_NOTE_E,1,2,  CONST_NOTE_C,1,2,
-		CONST_NOTE_G,1,4,  CONST_NOTE_D,1,4,  CONST_NOTE_B,1,4,  CONST_NOTE_G,0,3,
-		0,0,2,  CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_C,1,3,  0,0,1,  CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_C,1,2,  CONST_NOTE_A,0,2,
-		CONST_NOTE_E,1,4,  CONST_NOTE_B,1,4,  CONST_NOTE_GS,0,4,  CONST_NOTE_E,0,3,
-		0,0,2,  CONST_NOTE_A,0,1,  CONST_NOTE_G,0,1,  CONST_NOTE_F,0,2,  CONST_NOTE_A,0,2,  CONST_NOTE_B,1,6,
-		0,0,2,  CONST_NOTE_C,1,1,  CONST_NOTE_B,1,1,  CONST_NOTE_A,0,2,  CONST_NOTE_C,1,2,  CONST_NOTE_D,1,6,
-		0,0,2,  CONST_NOTE_DS,1,1,  CONST_NOTE_CS,1,1,  CONST_NOTE_B,1,2,  CONST_NOTE_DS,1,2,  CONST_NOTE_FS,1,4,  CONST_NOTE_CS,1,3,
-		0,0,2,  CONST_NOTE_FS,1,1,  CONST_NOTE_E,1,1,  CONST_NOTE_D,1,2,  CONST_NOTE_FS,1,2,  CONST_NOTE_A,1,6,
-		0,0,7,	// half measure rst
-		0,0,0	// End
-		);
-		
+		// CONST_NOTE_C,1,1,  CONST_NOTE_D,1,1,  CONST_NOTE_E,1,3, CONST_NOTE_C,1,1,  CONST_NOTE_D,1,1,  CONST_NOTE_E,1,2,  CONST_NOTE_C,1,2,
+		// CONST_NOTE_G,1,4,  CONST_NOTE_D,1,4,  CONST_NOTE_B,1,4,  CONST_NOTE_G,0,3,
+		// CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_C,1,3,  CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_C,1,2,  CONST_NOTE_A,0,2,
+		// CONST_NOTE_E,1,4,  CONST_NOTE_B,1,4,  CONST_NOTE_GS,0,4,  CONST_NOTE_E,0,3,
+		// CONST_NOTE_A,0,1,  CONST_NOTE_G,0,1,  CONST_NOTE_F,0,2,  CONST_NOTE_A,0,2,  CONST_NOTE_B,1,6,
+		// CONST_NOTE_C,1,1,  CONST_NOTE_B,1,1,  CONST_NOTE_A,0,2,  CONST_NOTE_C,1,2,  CONST_NOTE_D,1,6,
+		// CONST_NOTE_DS,1,1,  CONST_NOTE_CS,1,1,  CONST_NOTE_B,1,2,  CONST_NOTE_DS,1,2,  CONST_NOTE_FS,1,4,  CONST_NOTE_CS,1,3,
+		// CONST_NOTE_FS,1,1,  CONST_NOTE_E,1,1,  CONST_NOTE_D,1,2,  CONST_NOTE_FS,1,2,  CONST_NOTE_A,1,6,
+
+		0,0,0,7, 	// half measure rst
+		// note 1
+		0,0,0,2,  CONST_NOTE_3_C,0,0,1,  CONST_NOTE_3_D,0,0,1,  CONST_NOTE_3_E,0,0,3,  0,0,0,1,  CONST_NOTE_3_C,0,0,1,  CONST_NOTE_3_D,0,0,1,  CONST_NOTE_3_E,0,0,2,  CONST_NOTE_3_C,0,0,2,
+		// note 8
+		CONST_NOTE_3_G,0,0,4,  CONST_NOTE_3_D,0,0,4,  CONST_NOTE_2_B,0,0,4,  CONST_NOTE_2_G,0,0,3,
+		// note 12
+		0,0,0,2,  CONST_NOTE_2_A,0,0,1,  CONST_NOTE_2_B,0,0,1,  CONST_NOTE_3_C,0,0,3,  0,0,0,1,  CONST_NOTE_2_A,0,0,1,  CONST_NOTE_2_B,0,0,1,  CONST_NOTE_3_C,0,0,2,  CONST_NOTE_2_A,0,0,2,
+		// note 19
+		CONST_NOTE_3_E,0,0,4,  CONST_NOTE_2_B,0,0,4,  CONST_NOTE_2_GS,0,0,4,  CONST_NOTE_2_E,0,0,3,
+		// note 23
+		0,0,0,2,  CONST_NOTE_2_A,0,0,1,  CONST_NOTE_2_G,0,0,1,  CONST_NOTE_2_F,0,0,2,  CONST_NOTE_2_A,0,0,2,  CONST_NOTE_2_B,0,0,6,
+		// note 28
+		0,0,0,2,  CONST_NOTE_3_C,0,0,1,  CONST_NOTE_2_B,0,0,1,  CONST_NOTE_2_A,0,0,2,  CONST_NOTE_3_C,0,0,2,  CONST_NOTE_3_D,0,0,6,
+		// note 32
+		0,0,0,2,  CONST_NOTE_3_DS,0,0,1,  CONST_NOTE_3_CS,0,0,1,  CONST_NOTE_2_B,0,0,2,  CONST_NOTE_3_DS,0,0,2,  CONST_NOTE_3_FS,0,0,4,  CONST_NOTE_3_CS,0,0,3,
+		// note 38
+		0,0,0,2,  CONST_NOTE_3_FS,0,0,1,  CONST_NOTE_3_E,0,0,1,  CONST_NOTE_3_D,0,0,2,  CONST_NOTE_3_FS,0,0,2,  CONST_NOTE_3_A,0,0,6,
+		// note 43
+		0,0,0,7,	// half measure rst
+		0,0,0,0	// End
+	);
+
 	// Tron Scherzo hook - DAA, dah, da-DA, daa. DA-da-DA-DAAA!
 	//
 	// Need sheet music - notes suggested here:
@@ -231,13 +278,17 @@ var
 	//
 	// Array structure - pitch, octave, sustain value 
 	game_end_music_arr: array[] of byte = (
-		0,0,7,	// half measure rst
-		CONST_NOTE_D,0,2,  CONST_NOTE_G,0,2,
-		CONST_NOTE_C,0,1,  CONST_NOTE_CS,0,2,  CONST_NOTE_GS,0,2,  0,0,1,
-		CONST_NOTE_B,1,1,  CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_E,1,4,
-		0,0,14,	// full measure rst
-		0,0,0	// End
-		);
+		// CONST_NOTE_D,0,2,  CONST_NOTE_G,0,2,
+		// CONST_NOTE_C,0,1,  CONST_NOTE_CS,0,2,  CONST_NOTE_GS,0,2,  0,0,1,
+		// CONST_NOTE_B,1,1,  CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_E,1,4,
+
+		0,0,0,7,	// half measure rst
+		CONST_NOTE_3_D,0,0,2,  CONST_NOTE_3_G,0,0,2,
+		CONST_NOTE_3_C,0,0,1,  CONST_NOTE_3_CS,0,0,2,  CONST_NOTE_3_GS,0,0,2,  0,0,0,1,
+		CONST_NOTE_2_B,1,0,1,  CONST_NOTE_2_A,0,0,1,  CONST_NOTE_2_B,1,0,1,  CONST_NOTE_3_E,1,0,4,
+		0,0,0,14,	// full measure rst
+		0,0,0,0	// End
+	);
 
 /*
 	// Scale for testing
