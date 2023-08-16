@@ -136,9 +136,9 @@ var
 	sark_near_player_y_neg:	boolean = 0;
 
 	// Message Strings
-	//title_msg_0:		string = (CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
+	//title_msg_0:		string = (RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
 	//						,"PROGRAMS!!");
-	title_msg_1:		string = (CRSR_DN,CRSR_DN,CHR_CURVED_TOP_LT_CORNER,CHR_MID2_HORIZ_LN
+	title_msg_1:		string = (CHR_CURVED_TOP_LT_CORNER,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
 							,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN,CHR_MID2_HORIZ_LN
@@ -153,15 +153,15 @@ var
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
 							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
 							,CHR_MID3_HORIZ_LN,CHR_CURVED_BOT_RT_CORNER);
-	title_msg_4:		string = (CRSR_DN,"2023 FUZZYBAD");
-	title_msg_5:		string = (CRSR_DN,"FIRST PLAYER TO SCORE FIVE WINS");
+	title_msg_4:		string = ("2023 FUZZYBAD");
+	title_msg_5:		string = ("FIRST PLAYER TO SCORE FIVE WINS");
 	title_msg_6:		string = ("TURNS DISABLED DURING BOOST");
-	title_msg_7:		string = (CRSR_DN,"PLAYER 1       PLAYER 2");
+	title_msg_7:		string = ("PLAYER 1       PLAYER 2");
 	title_msg_8:		string = (CHR_DIAMOND,CHR_DIAMOND,"             ",CHR_CIRCLE,CHR_CIRCLE);
-	title_msg_9:		string = (CRSR_DN,"USE DUAL JOYSTICK ADAPTER");
+	title_msg_9:		string = ("USE DUAL JOYSTICK ADAPTER");
 	title_msg_10:	string = ("OR             OR");
 	title_msg_11:	string = ("WASD+SPC       8456+RSH");
-	title_msg_12:	string = (CRSR_DN,CRSR_DN,CRSR_DN,CRSR_DN,CRSR_DN,RVS_ON,"PRESS FIRE TO BEGIN");
+	title_msg_12:	string = ("PRESS FIRE TO BEGIN");
 
 	score_msg_0:		string = ("PLAYER 1:");
 	score_msg_1:		string = (":PLAYER 2");

@@ -26,9 +26,9 @@ begin
 	if (Model::Is_40Col() = 0) then
 	begin
 		MYSCREEN_WIDTH := 80;
-//		DEF_GAME_SPEED := 25;
-//		DEF_ANIM_SPEED := 6;
-//		DEF_SCROLL_SPEED := 8;
+		//DEF_GAME_SPEED := 25;
+		//DEF_ANIM_SPEED := 6;
+		//DEF_SCROLL_SPEED := 8;
 		game_speed := DEF_GAME_SPEED;
 		anim_speed := DEF_ANIM_SPEED;
 		scroll_speed := DEF_SCROLL_SPEED;
@@ -44,10 +44,12 @@ begin
 end;
 
 // Set lower/uppercase mode
+/*
 procedure set_lowercase();
 begin
 	poke(#$E84C,0,14);
 end;
+*/
 
 // Set uppercase/graphics mode
 procedure set_uppercase();
@@ -63,12 +65,13 @@ begin
 end;
 
 // Set text mode
+/*
 procedure cursor_text();
 begin
 	_A := TEXT_MODE;
 	call(#$FFD2);
 end;
-
+*/
 // Home cursor
 procedure cursor_home();
 begin
@@ -104,6 +107,7 @@ begin
     call(#$FFD2);
 end;
 
+/*
 // Print using KERNAL routine
 procedure basic_print( _ptr:pointer, _center_txt:boolean, _mylen:byte );
 var
@@ -129,6 +133,7 @@ begin
 	
 	cursor_return();
 end;
+*/
 
 // Print using KERNAL routine at X,Y location
 procedure basic_printat( _pa_ptr:pointer, _pa_myx:byte, _pa_myy:byte);

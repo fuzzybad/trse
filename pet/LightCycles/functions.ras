@@ -264,24 +264,30 @@ procedure title_screen();
 begin
 	// Call CLR/HOME
 	cursor_clear();
-
-	// Print title strings
-	//basic_print(#title_msg_0, 1, 19);
-	basic_print(#title_msg_1, 1, 20);
-	basic_print(#title_msg_2, 1, 20);
-	basic_print(#title_msg_3, 1, 20);
-	basic_print(#title_msg_4, 1, 13);
-	basic_print(#title_msg_5, 1, 31);
-	basic_print(#title_msg_6, 1, 27);	
-	basic_print(#title_msg_7, 1, 23);
-	basic_print(#title_msg_8, 1, 17);
-	basic_print(#title_msg_9, 1, 25);
-	basic_print(#title_msg_10, 1, 17);
-	basic_print(#title_msg_11, 1, 23);
-	basic_print(#title_msg_12, 1, 19);
-
+	
 	// Draw box around screen
 	draw_title_screen_box();
+	
+	// Print title strings
+	//basic_printat(#title_msg_0, 1, 19);
+	tmp := (MYSCREEN_WIDTH - 20) / 2;
+	basic_printat(#title_msg_1, tmp, 2);
+	basic_printat(#title_msg_2, tmp, 3);
+	basic_printat(#title_msg_3, tmp, 4);
+	tmp := (MYSCREEN_WIDTH - 13) / 2;
+	basic_printat(#title_msg_4, tmp, 6);
+	tmp := (MYSCREEN_WIDTH - 31) / 2;
+	basic_printat(#title_msg_5, tmp, 8);
+	tmp := (MYSCREEN_WIDTH - 27) / 2;
+	basic_printat(#title_msg_6, tmp, 9);	
+	tmp := (MYSCREEN_WIDTH - 23) / 2;
+	basic_printat(#title_msg_7, tmp, 11);
+	basic_printat(#title_msg_11, tmp, 16);
+	tmp := (MYSCREEN_WIDTH - 17) / 2;
+	basic_printat(#title_msg_8, tmp, 12);
+	basic_printat(#title_msg_10, tmp, 15);
+	tmp := (MYSCREEN_WIDTH - 25) / 2;
+	basic_printat(#title_msg_9, tmp, 14);
 	
 	// Start animation interrupt
 	//init_irq_animation();
@@ -296,9 +302,11 @@ begin
 	// Adjust scroll speed to compensate additional
 	// CPU load for music & animation
 	scroll_speed := scroll_speed - 8;
+
 	// Center scroll message
 	tmp := (MYSCREEN_WIDTH - 19) / 2;
-	
+	basic_printat(#title_msg_12, tmp, 22);
+
 	// Cycle text, wait for input, play music
 	// xpos, ypos, # chars, # cycles, direction, input break, play music
 	//song_ptr := #game_end_music_arr;
@@ -917,6 +925,7 @@ end;
 	
 // Runs on IRQ
 // I must be doing something wrong here, stack seems to get corrupted
+/*
 procedure do_irq_animation();
 begin
  	Interrupts::StartIRQ();
@@ -948,6 +957,7 @@ begin
 	Interrupts::RasterIRQ(#do_irq_animation);
 	Interrupts::Enable();
 end;
+*/
 
 // crash visual & sound effect
 procedure player_crash();
