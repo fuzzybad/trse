@@ -9,13 +9,24 @@
 
 program LightCycles;
 
+//@define DEBUG 1
+@define PBMADDRESS $8000
+
 @use "gfx/gfx"
 @use "input/key"	
 //@use "output/pbm"	// Throws error: Missing: '@define PBMADDRESS $8000' Set the address of the screen in your program 
 @use "screen"
 @use "text/txt"
 
-//@define PBMADDRESS $8000
+// comment out if using multiplcation or division, otherwise save space
+@ignoremethod "init16x8mul"
+@ignoremethod "init16x8div"
+@ignoremethod "init8x8div"
+@ignoremethod "initeightbitmul"
+
+// deprecated commands - ensure not included
+@ignoremethod "initjoystick"
+@ignoremethod "initmoveto"
 
 // === includes =====================================
 @include "variables.ras"
@@ -44,6 +55,11 @@ begin
 	  	
 	  	// Slow it down
 	  	do_delay(game_speed);
+
+		// for testing speed of loop
+		@ifdef DEBUG	
+		debug_speed();
+		@endif
 	end;
 end;
 
@@ -51,7 +67,11 @@ end;
 begin
 	DefineScreen();
 	screen_loc := #SCREEN_CHAR_LOC;
+	color_loc := #SCREEN_COL_LOC;
 	set_uppercase();
+	
+	// Black screen, black border, inverse bit set
+	LOC_SCREEN_BORD := %00001000;
 
 	// Primary loop
 	while(1) do

@@ -8,6 +8,7 @@ procedure check_input();
 procedure cycle_text_left();
 procedure cycle_text_right();
 procedure cycle_text_input_handler();
+procedure debug_speed();
 
 
 // Clear Screen
@@ -137,10 +138,11 @@ begin
 		end;
 	
 		// Play note(s)
-		LOC_SOUND_TENO := song_ptr[music_idx];
-		LOC_SOUND_ALTO := song_ptr[music_idx+1];
+		//LOC_SOUND_TENO := song_ptr[music_idx];
+		//LOC_SOUND_ALTO := song_ptr[music_idx+1];
 		//LOC_SOUND_SOPR := song_ptr[music_idx+2];
-		// Play same notes as tenor for now
+		
+		// Just play soprano part for now
 		LOC_SOUND_SOPR := song_ptr[music_idx];
 
 		// Set sustain - this value is tuned in array
@@ -255,6 +257,11 @@ begin
 		end;
 
 		do_delay(scroll_speed);
+
+		// for testing speed of loop
+		@ifdef DEBUG	
+		debug_speed();
+		@endif
 	end;
 end;
 
@@ -302,9 +309,25 @@ begin
 			end;
 		end;
 	
-		do_delay(scroll_speed);	
+		do_delay(scroll_speed);
+		
+		// for testing speed of loop
+		@ifdef DEBUG	
+		debug_speed();
+		@endif
 	end;
 end;
+
+// Show relative speed of loop by changing background on raster refresh
+procedure debug_speed();
+begin
+	// for testing speed of loop
+	// wait for raster position outside of visible screen area (vertical blank)
+	SCREEN_BG_COLOR := BLACK + SCREEN_BG_BLACK;		
+	WaitForRaster(0); // Raster line 0-155
+	SCREEN_BG_COLOR := CYAN + SCREEN_BG_BLACK;
+end;
+
 
 /*
 // Routine to debug PET keyboard codes

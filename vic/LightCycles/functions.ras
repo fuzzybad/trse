@@ -9,6 +9,7 @@ procedure alternate_engine_sound();
 procedure player_crash();
 procedure stop_sound();
 procedure sark_move();
+procedure draw_title_screen_box();
 procedure play_title_animation();
 
 // Read input devices - keyboard & SPT dual joys
@@ -177,35 +178,6 @@ begin
 	end;
 end;
 
-// Draw box around title screen
-procedure draw_title_screen_box();
-var
-	dtsb_tmp : byte;
-	dtsb_i : byte;
-begin	
-	// Draw top and bottom	
-	screen_loc_work := screen_loc + MYSCREEN_WIDTH * MYSCREEN_HEIGHT;
-	
-	for dtsb_i := 0 to MYSCREEN_WIDTH step 2 do
-	begin
-		screen_loc[dtsb_i]		:= SCR_SOLID_BLOCK;
-		screen_loc_work[dtsb_i]	:= SCR_SOLID_BLOCK;
-		screen_loc[dtsb_i+1]		:= SCR_SHADED_BLOCK;
-		screen_loc_work[dtsb_i+1]:= SCR_SHADED_BLOCK;
-    	end;
-	
-	// Draw sides
-	for dtsb_i := 0 to MYSCREEN_HEIGHT step 2 do
-	begin
-		dtsb_tmp := MYSCREEN_WIDTH-1;
-		screen_loc_work	:= screen_loc + (dtsb_tmp * dtsb_i);
-		screen_loc_work[dtsb_i]							:= SCR_SOLID_BLOCK;
-		screen_loc_work[dtsb_i+dtsb_tmp]					:= SCR_SHADED_BLOCK;
-		screen_loc_work[dtsb_i+MYSCREEN_WIDTH]			:= SCR_SHADED_BLOCK;
-		screen_loc_work[dtsb_i+MYSCREEN_WIDTH+dtsb_tmp]	:= SCR_SOLID_BLOCK;
-	end;
-end;
-
 // Show title
 procedure title_screen();
 begin
@@ -218,17 +190,20 @@ begin
 	
 	// Start animation interrupt
 	//init_irq_animation();
-
-	// Show game mode
-	display_game_mode();	
+	
+	// Set color to white
+	_A := CHR_COL_YEL;
+    call(#$FFD2);
+	tmp := (MYSCREEN_WIDTH - 18) / 2;
 
 	// Display title messages
-	tmp := (MYSCREEN_WIDTH - 18) / 2;
 	basic_printat(#title_msg_1, tmp, 2);	// ptr, x, y
-	tmp := (MYSCREEN_WIDTH - 18) / 2;
 	basic_printat(#title_msg_2, tmp, 3);
-	tmp := (MYSCREEN_WIDTH - 18) / 2;
 	basic_printat(#title_msg_3, tmp, 4);
+	
+	// Set color to green
+	_A := CHR_COL_GRN;
+    call(#$FFD2);
 	tmp := (MYSCREEN_WIDTH - length(title_msg_4)) / 2;
 	basic_printat(#title_msg_4, tmp, 6);
 	tmp := (MYSCREEN_WIDTH - length(title_msg_5)) / 2;
@@ -237,6 +212,14 @@ begin
 	basic_printat(#title_msg_6, tmp, 11);
 	tmp := (MYSCREEN_WIDTH - length(title_msg_7)) / 2;
 	basic_printat(#title_msg_7, tmp, 13);
+
+	// Set color to cyan
+	_A := CHR_COL_CYN;
+    call(#$FFD2);
+
+	// Show game mode
+	display_game_mode();	
+
 	tmp := (MYSCREEN_WIDTH - length(msg_get_ready)) / 2;
 	basic_printat(#msg_get_ready, tmp, 20);
 	
@@ -244,10 +227,11 @@ begin
 	scroll_input := 1;
 	// Song to play	
 	song_ptr := #theme_music_arr;	
+	//song_ptr := #game_end_music_arr;
 	
 	// Adjust scroll speed to compensate additional
 	// CPU load for music & animation
-//	scroll_speed := scroll_speed - 8;
+	scroll_speed := scroll_speed - 5;
 	
 	// Cycle text, wait for input, play music
 	// xpos, ypos, # chars, # cycles, direction, input break, play music
@@ -323,6 +307,11 @@ begin
 		basic_printat(#score_msg_1, tmp, 0);	// string, x, y
 	end;
 	
+	// Set color for top row
+	for i := 0 to SCREEN_WIDTH do begin
+		color_loc[i] := 5;
+	end;
+	
 	update_score(0);
 	init_engine_sound();
 	init_gamestate();
@@ -331,12 +320,16 @@ end;
 // Start new round
 procedure new_round();
 begin
+	// Set color yellow
+	_A := CHR_COL_YEL;
+    call(#$FFD2);
+
 	// Print crash message
 	do_delay(64);
 	tmp := (MYSCREEN_WIDTH - message_len) / 2;
-	basic_printat(message_ptr, tmp, 13);	// string, x, y
+	basic_printat(message_ptr, tmp, 12);	// string, x, y
 	// xpos, ypos, # chars, # cycles, direction, input break, play music
-	cycle_text(tmp, 13, message_len, 3, 1, 0, 0);
+	cycle_text(tmp, 12, message_len, 3, 1, 0, 0);
 
 	// Beep and flash score change
 	update_score(1);
@@ -344,13 +337,17 @@ begin
 
 	// Clear message	
 	tmp := (MYSCREEN_WIDTH - length(msg_blank)) / 2;
-	basic_printat(#msg_blank, tmp, 13);
+	basic_printat(#msg_blank, tmp, 12);
 	
+	// Set color
+	_A := CHR_COL_CYN;
+    call(#$FFD2);
+
 	// Print new round message & wait for input
 	tmp := (MYSCREEN_WIDTH - length(msg_get_ready)) / 2;
-	basic_printat(#msg_get_ready, tmp, 13);
+	basic_printat(#msg_get_ready, tmp, 12);
 	// xpos, ypos, # chars, # cycles, direction, input break, play music
-	cycle_text(tmp, 13, length(#msg_get_ready), 0, 0, 1, 0);
+	cycle_text(tmp, 12, length(#msg_get_ready), 0, 0, 1, 0);
 
 	// Adjust game speed
 	if( score_p1 = 1 or score_p2 = 1 ) then game_speed := DEF_GAME_SPEED - 10;
@@ -369,13 +366,13 @@ begin
 	
 	// Print Game Over message
 	tmp := (MYSCREEN_WIDTH - message_len) / 2;
-	basic_printat(message_ptr, tmp, 13);	// string, x, y
+	basic_printat(message_ptr, tmp, 12);	// string, x, y
 
 	// Cycle text, wait for input, & play music
 	song_ptr := #game_end_music_arr;
 
 	// xpos, ypos, # chars, # cycles, direction, input break, play music
-	cycle_text(tmp, 13, message_len, 25, 0, 0, 1);
+	cycle_text(tmp, 12, message_len, 25, 0, 0, 1);
 	
 	// Reset scores, game speed & return to main loop
 	score_p1	:= 0;
@@ -766,12 +763,20 @@ begin
 	screen_loc_work[0]	:= SCR_DIAMOND;
 	screen_loc_work		:= player_1_trail[1];
 	screen_loc_work[0]	:= SCR_SOLID_BLOCK;
+	color_loc_work		:= color_loc + player_1_xy;
+	color_loc_work[0]	:= 3;	// +8 enables multicolor
+	color_loc_work		:= player_1_trail[1] + color_loc - screen_loc;
+	color_loc_work[0]	:= 6;
 
 	// P2 bike & trail
 	screen_loc_work		:= screen_loc + player_2_xy;
 	screen_loc_work[0]	:= SCR_CIRCLE;
 	screen_loc_work		:= player_2_trail[1];
 	screen_loc_work[0]	:= SCR_SHADED_BLOCK;
+	color_loc_work		:= color_loc + player_2_xy;
+	color_loc_work[0]	:= 4; 	// +8 enables multicolor
+	color_loc_work		:= player_2_trail[1] + color_loc - screen_loc;
+	color_loc_work[0]	:= 2;
 end;
 
 // Init Variables
@@ -796,34 +801,73 @@ begin
 	game_mode_changed	:= 1;
 end;
 
-// Play title screen animation 
+// Draw box around title screen
+procedure draw_title_screen_box();
+var
+	dtsb_tmp : byte;
+	dtsb_i : byte;
+begin	
+	// Draw top and bottom	
+	screen_loc_work	:= screen_loc + MYSCREEN_WIDTH * MYSCREEN_HEIGHT;
+
+	for dtsb_i := 0 to MYSCREEN_WIDTH step 2 do
+	begin
+		screen_loc[dtsb_i]		:= SCR_SOLID_BLOCK;
+		screen_loc_work[dtsb_i]	:= SCR_SOLID_BLOCK;
+		screen_loc[dtsb_i+1]		:= SCR_SHADED_BLOCK;
+		screen_loc_work[dtsb_i+1]:= SCR_SHADED_BLOCK;
+   	end;
+	
+	// Draw sides
+	for dtsb_i := 0 to MYSCREEN_HEIGHT step 2 do
+	begin
+		dtsb_tmp := MYSCREEN_WIDTH-1;
+		screen_loc_work	:= screen_loc + (dtsb_tmp * dtsb_i);
+		screen_loc_work[dtsb_i]							:= SCR_SOLID_BLOCK;
+		screen_loc_work[dtsb_i+dtsb_tmp]					:= SCR_SHADED_BLOCK;
+		screen_loc_work[dtsb_i+MYSCREEN_WIDTH]			:= SCR_SHADED_BLOCK;
+		screen_loc_work[dtsb_i+MYSCREEN_WIDTH+dtsb_tmp]	:= SCR_SOLID_BLOCK;
+	end;
+end;
+
+// Animate characters around title screen
 procedure play_title_animation();
 var
 	pta_tmp	: byte;
 	pta_i	: byte;
-	pta_screen_loc : pointer;
 begin
+	// defines colors 3=cyan, 5=green, 6=blue, 7=yellow	
+	temp_byte1 := 3;	// shaded blocks
+	temp_byte2 := 6;	// solid blocks
+
 	if anim_speed = 0 then
 	begin
 		// Top/bottom sides
 		for pta_i := 0 to MYSCREEN_WIDTH do
 		begin
 			// Top
-			pta_screen_loc := screen_loc + pta_i;
-			
-			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
-				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			screen_loc_work := screen_loc + pta_i;
+			color_loc_work := color_loc + pta_i;
+
+			// Update chars
+			if (peek(screen_loc_work, 0) = SCR_SOLID_BLOCK) then begin
+				screen_loc_work[0] := SCR_SHADED_BLOCK;
+				color_loc_work[0] := temp_byte1;
 			end else begin
-				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
-			end;		
+				screen_loc_work[0] := SCR_SOLID_BLOCK;			
+				color_loc_work[0] := temp_byte2;			
+			end;	
 
 			// Bottom
-			pta_screen_loc := screen_loc + pta_i + (MYSCREEN_WIDTH * MYSCREEN_HEIGHT);
+			screen_loc_work	:= screen_loc + pta_i + (MYSCREEN_WIDTH * MYSCREEN_HEIGHT);
+			color_loc_work	:= color_loc + pta_i + (MYSCREEN_WIDTH * MYSCREEN_HEIGHT);
 			
-			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
-				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			if (peek(screen_loc_work, 0) = SCR_SOLID_BLOCK) then begin
+				screen_loc_work[0] := SCR_SHADED_BLOCK;
+				color_loc_work[0] := temp_byte1;
 			end else begin
-				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+				screen_loc_work[0] := SCR_SOLID_BLOCK;			
+				color_loc_work[0] := temp_byte2;
 			end;		
 		end;
 
@@ -831,21 +875,27 @@ begin
 		for pta_i := 1 to MYSCREEN_HEIGHT do
 		begin
 			// Left
-			pta_screen_loc := screen_loc + pta_i * MYSCREEN_WIDTH;
+			screen_loc_work	:= screen_loc + pta_i * MYSCREEN_WIDTH;
+			color_loc_work	:= color_loc + pta_i * MYSCREEN_WIDTH;
 			
-			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
-				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			if (peek(screen_loc_work, 0) = SCR_SOLID_BLOCK) then begin
+				screen_loc_work[0] := SCR_SHADED_BLOCK;
+				color_loc_work[0] := temp_byte1;
 			end else begin
-				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+				screen_loc_work[0] := SCR_SOLID_BLOCK;			
+				color_loc_work[0] := temp_byte2;
 			end;		
 
 			// Right
-			pta_screen_loc := screen_loc + (pta_i * MYSCREEN_WIDTH) + MYSCREEN_WIDTH -1;
+			screen_loc_work	:= screen_loc + (pta_i * MYSCREEN_WIDTH) + MYSCREEN_WIDTH -1;
+			color_loc_work	:= color_loc + (pta_i * MYSCREEN_WIDTH) + MYSCREEN_WIDTH -1;
 			
-			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
-				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			if (peek(screen_loc_work, 0) = SCR_SOLID_BLOCK) then begin
+				screen_loc_work[0] := SCR_SHADED_BLOCK;
+				color_loc_work[0] := temp_byte1;
 			end else begin
-				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+				screen_loc_work[0] := SCR_SOLID_BLOCK;			
+				color_loc_work[0] := temp_byte2;
 			end;	
 		end;
 		
@@ -920,10 +970,14 @@ begin
 		if player_1_crash then begin
 			screen_loc_work := screen_loc + player_1_xy;
 			screen_loc_work[0] := crash_anim_arr[tmp];
+			color_loc_work := color_loc + player_1_xy;
+			color_loc_work[0] := 2;
 		end;
 		if player_2_crash then begin
 			screen_loc_work := screen_loc + player_2_xy;
 			screen_loc_work[0] := crash_anim_arr[tmp];
+			color_loc_work := color_loc + player_2_xy;
+			color_loc_work[0] := 2;
 		end;
 		
 		// Sound Effect

@@ -1,6 +1,28 @@
 /* 
-Tron Light Cycles - Functions 
-*/
+ *	Tron Light Cycles - Variables 
+ */
+
+//
+// 1FFA		8186-8191		SCREEN		Screen memory for 8k+ expansion
+//
+// 900F		36879			VICCRF		Screen and border color register
+//   									A bit 7–4 background color
+//							AAAABCCC		B bit 3 inverse switch
+//										C bit 2–0 border color
+//
+// 9400		37888-38399		COLORMA		Color memory for 8k+ expansion
+//										A bit 7-4 not used
+//							AAAABCCC		B bit 3 multicolor enable (1) disable default (0)
+//										C bit 2-0 foreground color (default value 1) 9600
+//									
+// Normal Colors:
+// 	0000 black  		0001 white 		0010 red 		0011 cyan
+// 	0100 purple 		0101 green 		0110 blue 		0111 yellow
+//
+// Extended Colors (only available for background & multicolor):
+// 	1000 org 		1001 lt. org 	1010 pink 		1011 lt. cyn
+// 	1100 lt. pur 	1101 lt. grn 	1110 lt. blu 	1111 lt. yel
+
 var
 	// Game Constants
 	const	MYSCREEN_WIDTH: byte = 22;
@@ -15,7 +37,8 @@ var
 	const	LOC_PORT_B:	address = 37152;	// Port B - Joystick R
 	// Set LOC_DDR_B to 127 to read joystick Right, set to 255 afterwards to enable keyboard scan.
 	const	LOC_DDR_B:	address = 37154; // Data direction register B 
-	
+	const	LOC_SCREEN_BORD: address = 36879; // SCreen/Border color register
+
 	// Character Code Defs
 	const 	CLR_HOME: byte = 147;
 	const	HOME: byte = 19;
@@ -39,6 +62,14 @@ var
 	const	CHR_MID3_VERT_LN: byte = 221;
 	const	CHR_DIAMOND: byte = 218;
 	const	CHR_CIRCLE: byte = 209;
+	const	CHR_COL_BLK: byte = 144;
+	const	CHR_COL_WHT: byte = 5;
+	const	CHR_COL_RED: byte = 28;
+	const	CHR_COL_CYN: byte = 159;
+	const	CHR_COL_PUR: byte = 156;
+	const	CHR_COL_GRN: byte = 30;
+	const	CHR_COL_BLU: byte = 31;
+	const	CHR_COL_YEL: byte = 158;
 	
 	// Screen code defs
 	//const	SCR_THIN_TOP_HORIZ_LN: byte = 99;
@@ -63,13 +94,15 @@ var
 	// Pointers
 	screen_loc:		pointer;
 	screen_loc_work:	pointer;
+	color_loc:		pointer;
+	color_loc_work:	pointer;
 	message_ptr:		pointer;
 	song_ptr:		pointer;
 
 	// Counters
-	i: byte = 0;
-	j: byte = 0;
-	k: byte = 0;
+	i: byte at $00;
+	j: byte at $01;
+	k: byte at $02;
 	
 	// Temp vars
 	tmp:				integer = 0;
@@ -226,6 +259,16 @@ var
 	const CONST_NOTE_3_A:	byte = 236;
 	const CONST_NOTE_3_AS:	byte = 237;
 	const CONST_NOTE_3_B:	byte = 238;
+
+//	musicNote = record
+//    	  teno_p, alto_p, sopr_p, sust : byte;
+//  	end;
+   
+//	mn_A1 : musicNote;
+//	mn_A1:teno_p = CONST_NOTE_1_A;
+//	mn_A1.alto_p := 0;
+//	mn_A1.sopr_p := 0;
+
 	
 	// Intro to "Anthem for Keyboard Solo" Tron theme - 7/4 time
 	// Transcribed from sheet music: https://www.sheetmusicplus.com/title/tron-theme-digital-sheet-music/22158340
@@ -277,6 +320,20 @@ var
 	//	just playing up from A (instead of G) same kind of thing."
 	//
 	// Array structure - pitch, octave, sustain value 
+	/*
+	game_end_music_arr: array[] of byte = (
+		// CONST_NOTE_D,0,2,  CONST_NOTE_G,0,2,
+		// CONST_NOTE_C,0,1,  CONST_NOTE_CS,0,2,  CONST_NOTE_GS,0,2,  0,0,1,
+		// CONST_NOTE_B,1,1,  CONST_NOTE_A,0,1,  CONST_NOTE_B,1,1,  CONST_NOTE_E,1,4,
+
+		0,0,0,7,	// half measure rst
+		CONST_NOTE_3_D,0,0,2,  CONST_NOTE_3_G,0,0,2,
+		CONST_NOTE_3_C,0,0,1,  CONST_NOTE_3_CS,0,0,2,  CONST_NOTE_3_GS,0,0,2,  0,0,0,1,
+		CONST_NOTE_2_B,1,0,1,  CONST_NOTE_2_A,0,0,1,  CONST_NOTE_2_B,1,0,1,  CONST_NOTE_3_E,1,0,4,
+		0,0,0,14,	// full measure rst
+		0,0,0,0	// End
+	);*/
+
 	game_end_music_arr: array[] of byte = (
 		// CONST_NOTE_D,0,2,  CONST_NOTE_G,0,2,
 		// CONST_NOTE_C,0,1,  CONST_NOTE_CS,0,2,  CONST_NOTE_GS,0,2,  0,0,1,
@@ -289,6 +346,7 @@ var
 		0,0,0,14,	// full measure rst
 		0,0,0,0	// End
 	);
+
 
 /*
 	// Scale for testing
