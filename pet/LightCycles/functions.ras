@@ -829,16 +829,24 @@ end;
 procedure update_screen();
 begin
 	// P1 bike & trail
-	screen_loc_work		:= screen_loc + player_1_xy;
-	screen_loc_work[0]	:= SCR_DIAMOND;
-	screen_loc_work		:= player_1_trail[1];
-	screen_loc_work[0]	:= SCR_SOLID_BLOCK;
+	// Only update if player moving
+	if (turn_counter = 1 or player_1_fire = 1) then
+	begin
+		screen_loc_work		:= screen_loc + player_1_xy;
+		screen_loc_work[0]	:= SCR_DIAMOND;
+		screen_loc_work		:= player_1_trail[1];
+		screen_loc_work[0]	:= SCR_SOLID_BLOCK;
+	end;
 
 	// P2 bike & trail
-	screen_loc_work		:= screen_loc + player_2_xy;
-	screen_loc_work[0]	:= SCR_CIRCLE;
-	screen_loc_work		:= player_2_trail[1];
-	screen_loc_work[0]	:= SCR_SHADED_BLOCK;
+	// Only update if player moving
+	if (turn_counter = 1 or player_2_fire = 1) then
+	begin
+		screen_loc_work		:= screen_loc + player_2_xy;
+		screen_loc_work[0]	:= SCR_CIRCLE;
+		screen_loc_work		:= player_2_trail[1];
+		screen_loc_work[0]	:= SCR_SHADED_BLOCK;
+	end;
 end;
 
 // Init Variables
