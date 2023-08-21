@@ -10,13 +10,18 @@
 program LightCycles;
 
 //@define DEBUG 1
-@define PBMADDRESS $8000
+//@define PBMADDRESS $8000
+@VicMemoryConfig "8k"
+//@VicMemoryConfig "16k"
+// Adjust start of code to make room for char data at $1400-$1C00
+@startblock	$2400 "Game"
+@userdata	$1400 $1C00 "Charset"
 
 @use "gfx/gfx"
 @use "input/key"	
-//@use "output/pbm"	// Throws error: Missing: '@define PBMADDRESS $8000' Set the address of the screen in your program 
 @use "screen"
 @use "text/txt"
+//@use "output/pbm"	
 
 // comment out if using multiplcation or division, otherwise save space
 @ignoremethod "init16x8mul"
@@ -66,12 +71,16 @@ end;
 // Init
 begin
 	DefineScreen();
+	set_uppercase();
 	screen_loc := #SCREEN_CHAR_LOC;
 	color_loc := #SCREEN_COL_LOC;
-	set_uppercase();
-	
+		
 	// Black screen, black border, inverse bit set
 	LOC_SCREEN_BORD := %00001000;
+	
+	// Copy CHARROM to RAM & set char loc to value defined by LOC_CUST_CHAR
+	SetCharsetLocation(LOC_CUST_CHAR);
+	//copy_charrom();
 
 	// Primary loop
 	while(1) do
@@ -82,52 +91,6 @@ begin
 		game_loop();
 	end;
 end.
-
-
-/*
-begin
-	
-	DefineScreen();
-
-	// clear the screen and colour RAM
-	//ClearScreen( 32, #SCREEN_CHAR_LOC); 	// ^$1e00 - unexpanded screen location
-	//ClearScreen( GREEN, #SCREEN_COL_LOC); 	// ^$9600 - unexpanded colour location
-	ClearScreen( 32, #SCREEN_CHAR_LOC); 		// ^$1000 - 8k+ screen location
-	ClearScreen( GREEN, #SCREEN_COL_LOC); 	// ^$9400 - 8k+ colour location
-
-	// Call CLR/HOME
-	//cursor_clear();
-
-	moveto(5,10,hi(screen_char_loc));
-	printstring("VIC RULES!",0,10);
-
-	// Set up optional redefined character set. This setting allows 64 unique characters 
-	// and access to all default ROM letters with BIT7 set (ie: values of 128 and greater)
-//	Screen::SetScreenCharAddress( 
-//		Screen::SCREEN_1c00 + Screen::CHAR_1c00, 
-//		Screen::SCREEN_ADD_0200 );
-
-	AUX_COLOR_AND_VOLUME := %00000010;
-	SCREEN_BG_COLOR := BLUE + SCREEN_BG_BLACK; // border + background colours
-
-	// main game loop
-	while (true) offpage do 
-	begin
-		
-		@ifdef DEBUG	// for testing speed of your drawing loop
-		SCREEN_BG_COLOR := BLACK + SCREEN_BG_BLACK;
-		@endif
-		
-		// wait for raster position outside of visible screen area (vertical blank)
-		WaitForRaster(120); // PAL
-
-		@ifdef DEBUG	// for testing speed of your drawing loop
-		SCREEN_BG_COLOR := CYAN + SCREEN_BG_BLACK;
-		@endif
-				
-	end;
-end.
-*/
 
 
 // eof

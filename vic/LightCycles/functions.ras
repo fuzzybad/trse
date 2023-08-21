@@ -722,7 +722,8 @@ begin
 			end;
 //		end;
 		
-		// Draw Trail
+		// Update trail register
+		player_1_trail[2]	:= player_1_trail[1];
 		player_1_trail[1]	:= player_1_trail[0];
 		player_1_trail[0]	:= screen_loc + player_1_xy;
 		
@@ -744,7 +745,8 @@ begin
 			end;
 //		end;
 
-		// Draw Trail
+		// Update trail register
+		player_2_trail[2]	:= player_2_trail[1];
 		player_2_trail[1]	:= player_2_trail[0];
 		player_2_trail[0]	:= screen_loc + player_2_xy;
 
@@ -753,30 +755,101 @@ begin
 	end;
 end;
 
+// Determine trailing character
+function return_trail_char(rtc_new_pos:byte, rtc_old_pos:byte) : byte;
+var
+	rtc_return:	byte;
+begin
+	if (rtc_new_pos = rtc_old_pos) then 
+	begin
+		// Draw trail horiz & ver
+		if (rtc_old_pos = 1 or rtc_old_pos = 2) then begin
+			rtc_return := trail_char_arr[0];
+		end else begin
+			rtc_return := trail_char_arr[1];
+		end;
+	end else
+	begin
+		// Draw trail corners
+		// 1=L, 2=R, 3=U, 4=D
+		// 0=H, 1=V, 2=LT, 3=RT, 4=LB, 5=RB
+		if (rtc_new_pos = 1 and rtc_old_pos = 3 ) then begin
+			rtc_return := trail_char_arr[2];	// left top corner
+		end
+		else if (rtc_new_pos = 1 and rtc_old_pos = 4) then begin
+			rtc_return := trail_char_arr[4];	// left bot corner
+		end 
+		else if (rtc_new_pos = 2 and rtc_old_pos = 3) then begin
+			rtc_return := trail_char_arr[3];	// right top corner
+		end
+		else if (rtc_new_pos = 2 and rtc_old_pos = 4) then begin
+			rtc_return := trail_char_arr[5];	// right bot corner
+		end
+		else if (rtc_new_pos = 3 and rtc_old_pos = 1) then begin
+			rtc_return := trail_char_arr[5];	// right bot corner 
+		end 
+		else if (rtc_new_pos = 3 and rtc_old_pos = 2) then begin
+			rtc_return := trail_char_arr[4];	// left bot corner 
+		end 
+		else if (rtc_new_pos = 4 and rtc_old_pos = 1) then begin
+			rtc_return := trail_char_arr[3];	// top right corner
+		end 
+		else if (rtc_new_pos = 4 and rtc_old_pos = 2) then begin
+			rtc_return := trail_char_arr[2];	// top left corner
+		end;
+	end;
+
+	return_trail_char := rtc_return;
+end;
+
 // Update Screen
 //	player_1_xy, player_2_xy - Player Coordinates 	
 //	player_1_trail, player_2_trail - Trail Coordinates
 procedure update_screen();
 begin
-	// P1 bike & trail
-	screen_loc_work		:= screen_loc + player_1_xy;
-	screen_loc_work[0]	:= SCR_DIAMOND;
-	screen_loc_work		:= player_1_trail[1];
-	screen_loc_work[0]	:= SCR_SOLID_BLOCK;
-	color_loc_work		:= color_loc + player_1_xy;
-	color_loc_work[0]	:= 3;	// +8 enables multicolor
-	color_loc_work		:= player_1_trail[1] + color_loc - screen_loc;
-	color_loc_work[0]	:= 6;
+	// Only update if player moving
+	if (turn_counter = 1 or player_1_fire = 1) then
+	begin
+		// P1 bike & trail
+		screen_loc_work		:= screen_loc + player_1_xy;
+		screen_loc_work[0]	:= SCR_DIAMOND;
+		//screen_loc_work		:= player_1_trail[1];
+		//	screen_loc_work[0]	:= SCR_SOLID_BLOCK;
 
-	// P2 bike & trail
-	screen_loc_work		:= screen_loc + player_2_xy;
-	screen_loc_work[0]	:= SCR_CIRCLE;
-	screen_loc_work		:= player_2_trail[1];
-	screen_loc_work[0]	:= SCR_SHADED_BLOCK;
-	color_loc_work		:= color_loc + player_2_xy;
-	color_loc_work[0]	:= 4; 	// +8 enables multicolor
-	color_loc_work		:= player_2_trail[1] + color_loc - screen_loc;
-	color_loc_work[0]	:= 2;
+		// Trailing char
+		screen_loc_work		:= player_1_trail[0];
+		screen_loc_work[0]	:= return_trail_char(player_1_head, player_1_head_1);
+
+		color_loc_work		:= color_loc + player_1_xy;
+		color_loc_work[0]	:= 3;	// +8 enables multicolor
+		color_loc_work		:= player_1_trail[1] + color_loc - screen_loc;
+		color_loc_work[0]	:= 6;
+		
+		// Save old player headings
+		player_1_head_1	:= player_1_head;
+	end;
+
+	// Only update if player moving
+	if (turn_counter = 1 or player_2_fire = 1) then
+	begin
+		// P2 bike & trail
+		screen_loc_work		:= screen_loc + player_2_xy;
+		screen_loc_work[0]	:= SCR_CIRCLE;
+		//screen_loc_work		:= player_2_trail[1];
+		//	screen_loc_work[0]	:= SCR_SHADED_BLOCK;
+
+		// Trailing char
+		screen_loc_work		:= player_2_trail[0];
+		screen_loc_work[0]	:= return_trail_char(player_2_head, player_2_head_1);
+	
+		color_loc_work		:= color_loc + player_2_xy;
+		color_loc_work[0]	:= 4; 	// +8 enables multicolor
+		color_loc_work		:= player_2_trail[1] + color_loc - screen_loc;
+		color_loc_work[0]	:= 2;
+		
+		// Save old player headings
+		player_2_head_1	:= player_2_head;
+	end;
 end;
 
 // Init Variables
@@ -786,6 +859,8 @@ begin
 	player_2_xy			:= MYSCREEN_WIDTH -4 + (11 * MYSCREEN_WIDTH);
 	player_1_head		:= 2; // heading right
 	player_2_head		:= 1; // heading left
+	player_1_head_1		:= player_1_head;
+	player_2_head_1		:= player_2_head;
 	player_1_trail[0]	:= 0;
 	player_1_trail[1]	:= 0;
 	player_2_trail[0]	:= 0;

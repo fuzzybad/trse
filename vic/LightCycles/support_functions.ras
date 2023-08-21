@@ -328,6 +328,12 @@ begin
 	SCREEN_BG_COLOR := CYAN + SCREEN_BG_BLACK;
 end;
 
+// Copy CHARROM to RAM
+procedure copy_charrom();
+begin
+	// Copies 256*8 bytes of data - 2KB
+	BlockMemCpy($8000, LOC_CUST_CHAR, 8);	
+end;
 
 /*
 // Routine to debug PET keyboard codes
