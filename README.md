@@ -1,9 +1,9 @@
 ## Random stuff built using the Turbo Rascal Syntax Error (TRSE) development environment.
 
 ### PET Demos
-[Sceenshots](https://github.com/fuzzybad/trse/tree/main/pet/screenshots) | 
-[PRG files](https://github.com/fuzzybad/trse/tree/main/pet/binaries) |
-[Sources](https://github.com/fuzzybad/trse/tree/main/pet/source)
+[Sceenshots (examples)](https://github.com/fuzzybad/trse/tree/main/pet/TRSE%20Examples/screenshots) | 
+[PRG files (examples)](https://github.com/fuzzybad/trse/tree/main/pet/TRSE%20Examples/bin) |
+[Sources (all)](https://github.com/fuzzybad/trse/tree/main/pet)
 
 
 ### More information about TRSE
