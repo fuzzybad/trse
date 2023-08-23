@@ -6,14 +6,14 @@
 //	1000-11FF    4096-4607		Screen memory (expanded)
 //
 //	900F		36879			VICCRF		Screen and border color register
-//   										A bit 7–4 background color
+//   									A bit 7–4 background color
 //							AAAABCCC		B bit 3 inverse switch
-//											C bit 2–0 border color
+//										C bit 2–0 border color
 //
 //	9400			37888-38399	Color memory (expanded)
-//											A bit 7-4 not used
+//										A bit 7-4 not used
 //							AAAABCCC		B bit 3 multicolor enable (1) disable default (0)
-//											C bit 2-0 foreground color (default value 1) 9600
+//										C bit 2-0 foreground color (default value 1) 9600
 //									
 // Normal Colors:
 // 	0000 black  		0001 white 		0010 red 		0011 cyan
@@ -34,22 +34,27 @@
 
 var
 	// Game Constants
-	const	MYSCREEN_WIDTH: byte = 22;
-	const	MYSCREEN_HEIGHT: byte = 22; // actually 23
-	const	SCORE_TO_WIN: byte = 5;
-	const	DEF_GAME_SPEED: byte = 80;	// Speed of game - lower is faster
-	const	DEF_ANIM_SPEED: byte = 6;	// Speed of animation - lower is faster
-	const	DEF_SCROLL_SPEED: byte = 16; 	// Speed of scrolling - lower is faster
+	const	MYSCREEN_WIDTH:		byte = 22;
+	const	MYSCREEN_HEIGHT:		byte = 22; // actually 23
+	const	SCORE_TO_WIN:		byte = 5;
+	const	DEF_GAME_SPEED:		byte = 80;	// Speed of game - lower is faster
+	const	DEF_ANIM_SPEED:		byte = 6;	// Speed of animation - lower is faster
+	const	DEF_SCROLL_SPEED:	byte = 16; 	// Speed of scrolling - lower is faster
 	
 	// Interface Locations
-	const	LOC_PORT_A:	address = 37151;	// Port A - Joystick L,D,U,F
-	const	LOC_PORT_B:	address = 37152;	// Port B - Joystick R
+	const	LOC_PORT_A:			address = 37151;	// Port A - Joystick L,D,U,F
+	const	LOC_PORT_B:			address = 37152;	// Port B - Joystick R
 	// Set LOC_DDR_B to 127 to read joystick Right, set to 255 afterwards to enable keyboard scan.
-	const	LOC_DDR_B:	address = 37154; // Data direction register B 
-	const	LOC_SCREEN_BORD: address = 36879; // SCreen/Border color register
-	//const	LOC_CHAR_DEF: address = 36869; // Bits 3-0 (Bits 7-4 set screen address)
-	const	LOC_AUX_COLOR : address = 36878; // Bits 7-4 (Bits 0-3 set sound volume)
-	const	LOC_CUST_CHAR : address = $1400; // Location for copy of CHARROM
+	const	LOC_DDR_B:			address = 37154; // Data direction register B 
+	const	LOC_SCREEN_BORD:		address = 36879; // SCreen/Border color register
+	//const	LOC_CHAR_DEF:		address = 36869; // Bits 3-0 (Bits 7-4 set screen address)
+	const	LOC_CUST_CHAR:		address = $1400; // Location for copy of CHARROM
+	const	LOC_SOUND_VOL_AUX:	address = 36878;		// 0-15 (bits 0-3 set sound volume, bits 7-4 aux color)
+	const	LOC_SOUND_ALTO:		address = 36874;		// 128-255
+	const	LOC_SOUND_TENO:		address = 36875;		// 128-255
+	const	LOC_SOUND_SOPR:		address = 36876;		// 128-255
+	const	LOC_SOUND_NOIS:		address = 36877;		// 128-255
+
 
 	// Character Code Defs
 	const 	CLR_HOME: byte = 147;
@@ -85,38 +90,42 @@ var
 	const	CHR_COL_YEL: byte = 158;
 	
 	// Screen code defs
-	//const	SCR_THIN_TOP_HORIZ_LN: byte = 99;
-	//const	SCR_THIN_BOT_HORIZ_LN: byte = 100;
-	//const	SCR_THIN_LT_VERT_LN: byte = 101;
-	//const	SCR_THIN_RT_VERT_LN: byte = 103;
-	//const	SCR_OUTER_TOP_LT_CORNER: byte = 79;
-	//const	SCR_OUTER_TOP_RT_CORNER: byte = 80;
-	//const	SCR_OUTER_BOT_LT_CORNER: byte = 76;
+	//const	SCR_OUTER_TOP_LT_CORNER: byte = 079;
+	//const	SCR_OUTER_TOP_RT_CORNER: byte = 080;
+	//const	SCR_OUTER_BOT_LT_CORNER: byte = 076;
 	//const	SCR_OUTER_BOT_RT_CORNER: byte = 122;
-	const	SCR_MID_HORIZ_LN: byte = 64;
-	const	SCR_MID_VERT_LN: byte = 93;
-	const	SCR_MID_TOP_LT_CORNER: byte = 112;
-	const	SCR_MID_TOP_RT_CORNER: byte = 110;
-	const	SCR_MID_BOT_LT_CORNER: byte = 109;
-	const	SCR_MID_BOT_RT_CORNER: byte = 125;
-	const	SCR_DIAMOND: byte = 90;
-	const	SCR_CIRCLE: byte = 81;
-	const	SCR_SOLID_BLOCK: byte = 160;
-	const	SCR_SHADED_BLOCK: byte = 102;
-	const	SCR_TRAIL_HORIZ: byte = 103;
-	const	SCR_TRAIL_VERT: byte = 104;
-	const	SCR_TRAIL_LB_CORNER: byte = 105;
-	const	SCR_TRAIL_RB_CORNER: byte = 106;
-	const	SCR_TRAIL_LT_CORNER: byte = 107;
-	const	SCR_TRAIL_RT_CORNER: byte = 108;
-	const	SCR_BIKE_UP_1: byte = 94;
-	const	SCR_BIKE_UP_2: byte = 95;
-	const	SCR_BIKE_DN_1: byte = 96;
-	const	SCR_BIKE_DN_2: byte = 97;
-	const	SCR_BIKE_RT_1: byte = 98;
-	const	SCR_BIKE_RT_2: byte = 99;
-	const	SCR_BIKE_LT_1: byte = 100;
-	const	SCR_BIKE_LT_2: byte = 101;
+	const	SCR_SPLAT:				byte = 042;
+	const	SCR_CIRCLE_OPEN:			byte = 087;
+	const	SCR_MID_HORIZ_LN: 		byte = 064;
+	const	SCR_MID_VERT_LN: 		byte = 093;
+	const	SCR_MID_TOP_LT_CORNER: 	byte = 112;
+	const	SCR_MID_TOP_RT_CORNER: 	byte = 110;
+	const	SCR_MID_BOT_LT_CORNER: 	byte = 109;
+	const	SCR_MID_BOT_RT_CORNER: 	byte = 125;
+	const	SCR_DIAMOND: 		byte = 090;
+	const	SCR_CIRCLE: 			byte = 081;
+	const	SCR_SOLID_BLOCK: 	byte = 160;
+	const	SCR_SHADED_BLOCK: 	byte = 102;
+	const	SCR_TRAIL_HORIZ: 	byte = 103;
+	const	SCR_TRAIL_VERT: 		byte = 104;
+	const	SCR_TRAIL_LB_CORNER:	byte = 105;
+	const	SCR_TRAIL_RB_CORNER:	byte = 106;
+	const	SCR_TRAIL_LT_CORNER:	byte = 107;
+	const	SCR_TRAIL_RT_CORNER:	byte = 108;
+	const	SCR_BIKE_LR_1: 		byte = 094;
+	const	SCR_BIKE_LR_2: 		byte = 095;
+	const	SCR_BIKE_UD_1: 		byte = 096;
+	const	SCR_BIKE_UD_2: 		byte = 097;    
+	const	SCR_BIKE_LR_MID_1: 	byte = 098;
+	const	SCR_BIKE_LR_MID_2: 	byte = 099;
+	const	SCR_BIKE_LR_MID_3: 	byte = 100;
+	const	SCR_BIKE_UD_MID_1: 	byte = 101;
+	const	SCR_BIKE_UD_MID_2: 	byte = 091;
+	const	SCR_BIKE_UD_MID_3: 	byte = 092;
+	const	SCR_EXPLODE:			byte = 082;
+	const	SCR_CIRCLE_SM:		byte = 083;
+	const	SCR_CIRCLE_LG:		byte = 084;
+	
 
 	// Pointers
 	screen_loc:		pointer;
@@ -127,9 +136,12 @@ var
 	song_ptr:		pointer;
 
 	// Counters
-	i: byte at $00;
+	i: byte at $00;	// temp variables
 	j: byte at $01;
 	k: byte at $02;
+	player_char_1: byte at $03;	// temp pointers for player chars
+	player_char_2: byte at $04;
+	player_char_3: byte at $05;
 	
 	// Temp vars
 	tmp:				integer = 0;
@@ -152,7 +164,8 @@ var
 	music_idx:		byte = 0;
 	music_sust_idx:	byte = 0;
 	sound_pitch:		byte = 255;
-	crash_anim_arr:	array[3] of byte = (42, 87, 81);
+	crash_anim_arr:	array[3] of byte = (SCR_CIRCLE_SM, SCR_CIRCLE_OPEN, SCR_CIRCLE_LG, SCR_EXPLODE);
+	crash_color_arr:	array[3] of byte = (7, 2, 7, 2);	
 	// dir_map_arr:	1=L, 2=R, 3=U, 4=D
 	dir_map_arr:		array[5] of integer = (0, -1, 1, -MYSCREEN_WIDTH, MYSCREEN_WIDTH);
 	dir_opp_arr:		array[5] of byte = (0, 2, 1, 4, 3);
@@ -170,8 +183,10 @@ var
 	player_2_crash:	boolean = 0;
 	player_1_xy:		integer = 0;
 	player_2_xy:		integer = 0;
-	player_1_trail:	array[3] of integer;
-	player_2_trail:	array[3] of integer;
+	player_1_trail:	array[2] of integer;
+	player_2_trail:	array[2] of integer;
+	player_1_trail_char:	array[2] of byte;
+	player_2_trail_char:	array[2] of byte;
 	trail_char_arr:	array[] of byte = (SCR_TRAIL_HORIZ, SCR_TRAIL_VERT, SCR_TRAIL_LT_CORNER, SCR_TRAIL_RT_CORNER, SCR_TRAIL_LB_CORNER, SCR_TRAIL_RB_CORNER);
 	scroll_num_char:	byte = 0;
 	scroll_x:		byte = 0;
@@ -244,13 +259,6 @@ var
 	////////////////////////////////////////////////////////////////////////
 	/// SOUND SECTION
 	////////////////////////////////////////////////////////////////////////
-
-	// Sound Locations
-	const	LOC_SOUND_VOL:	address = 36878;		// 0-15 (bit 7-4 aux color)
-	const	LOC_SOUND_ALTO:	address = 36874;		// 128-255
-	const	LOC_SOUND_TENO:	address = 36875;		// 128-255
-	const	LOC_SOUND_SOPR:	address = 36876;		// 128-255
-	const	LOC_SOUND_NOIS:	address = 36877;		// 128-255
 
 	// Music notes
 	const CONST_NOTE_1_C:	byte = 255;

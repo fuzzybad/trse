@@ -7,7 +7,7 @@ procedure init_gamestate();
 procedure init_engine_sound();
 procedure alternate_engine_sound();
 procedure player_crash();
-procedure stop_sound();
+procedure sound_stop();
 procedure sark_move();
 procedure draw_title_screen_box();
 procedure play_title_animation();
@@ -164,14 +164,14 @@ begin
 				screen_loc[temp_byte1] := screen_loc[temp_byte1] + 128;
 			end;
 
-			// Enable sound
-			LOC_SOUND_VOL	:= 15;
+			// Max vol, do not disturb aux color
+			LOC_SOUND_VOL_AUX	:= (peek(LOC_SOUND_VOL_AUX,0) & $F0) | $0F;
 			// Set the pitch
-			LOC_SOUND_SOPR	:= CONST_NOTE_2_E;
+			LOC_SOUND_SOPR		:= CONST_NOTE_2_E;
 			// Sustain note
 			do_delay(128);
 			// Turn off sound
-			LOC_SOUND_VOL := 0;
+    			LOC_SOUND_VOL_AUX	:= peek(LOC_SOUND_VOL_AUX,0) & $F0;
 			// Sustain pause		
 			do_delay(128);
 		end;
@@ -212,6 +212,28 @@ begin
 	basic_printat(#title_msg_6, tmp, 11);
 	tmp := (MYSCREEN_WIDTH - length(title_msg_7)) / 2;
 	basic_printat(#title_msg_7, tmp, 13);
+	
+/*
+	// debug custom chars
+	screen_loc_work := screen_loc + SCREEN_WIDTH;
+	screen_loc_work[1] := SCR_BIKE_UD_1;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*2;
+	screen_loc_work[1] := SCR_BIKE_UD_2;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*3;
+	screen_loc_work[1] := SCR_TRAIL_VERT;	
+	screen_loc_work := screen_loc + SCREEN_WIDTH*4;
+	screen_loc_work[1] := SCR_BIKE_UD_1;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*5;
+	screen_loc_work[1] := SCR_BIKE_UD_2;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*6;
+	screen_loc_work[1] := SCR_BIKE_LR_1;
+	screen_loc_work[2] := SCR_BIKE_LR_2;
+	screen_loc_work[3] := SCR_TRAIL_HORIZ;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*7;
+	screen_loc_work[1] := SCR_TRAIL_HORIZ;
+	screen_loc_work[2] := SCR_BIKE_LR_1;
+	screen_loc_work[3] := SCR_BIKE_LR_2;
+*/
 
 	// Set color to cyan
 	_A := CHR_COL_CYN;
@@ -295,6 +317,7 @@ begin
 
 	// Draw box around screen
 	draw_game_screen_box();
+	
 	// Draw score display (text, not score values)
 	if (game_mode = 0) then begin
 		tmp := MYSCREEN_WIDTH - length(#score_msg_3)-1;
@@ -388,19 +411,19 @@ begin
 	//if (keybd_input = 5) then 
 	//begin
 	//	game_over_flag := 1;
-	//	stop_sound();
+	//	sound_stop();
 	//	do_delay(255);
 	//	do_delay(255);
 	//	return;
 	//end;	
-	
+
 	// Check for player crashed
 	if (player_1_crash = 1 or player_2_crash = 1) then begin
 		player_crash();
-		stop_sound();
+		sound_stop();
 		game_run_flag := 0;
 	end;
-	
+
 	if (player_1_crash = 1 and player_2_crash = 1) then begin
 		message_ptr := #msg_both_crash;
 		message_len := length(msg_both_crash);
@@ -723,7 +746,6 @@ begin
 //		end;
 		
 		// Update trail register
-		player_1_trail[2]	:= player_1_trail[1];
 		player_1_trail[1]	:= player_1_trail[0];
 		player_1_trail[0]	:= screen_loc + player_1_xy;
 		
@@ -746,7 +768,6 @@ begin
 //		end;
 
 		// Update trail register
-		player_2_trail[2]	:= player_2_trail[1];
 		player_2_trail[1]	:= player_2_trail[0];
 		player_2_trail[0]	:= screen_loc + player_2_xy;
 
@@ -802,6 +823,29 @@ begin
 	return_trail_char := rtc_return;
 end;
 
+// Determine bike characters to use
+procedure return_bike_char(rbc_heading:byte);
+begin
+	if (rbc_heading = 1 ) then begin
+		player_char_1	:= SCR_BIKE_LR_1;
+		player_char_2	:= SCR_BIKE_LR_2;
+		//player_char_3	:= SCR_BIKE_LR_1;
+	end else if (rbc_heading = 2 ) then begin
+		player_char_1	:= SCR_BIKE_LR_2;
+		player_char_2	:= SCR_BIKE_LR_1;
+		//player_char_1	:= SCR_BIKE_LR_2;
+	end else if (rbc_heading = 3 ) then begin
+		player_char_1	:= SCR_BIKE_UD_1;
+		player_char_2	:= SCR_BIKE_UD_2;
+		//player_char_1	:= SCR_BIKE_UD_1;
+	end else if (rbc_heading = 4 ) then begin
+		player_char_1	:= SCR_BIKE_UD_2;
+		player_char_2	:= SCR_BIKE_UD_1;
+		//player_char_1	:= SCR_BIKE_UD_2;
+	end;
+	
+end;
+
 // Update Screen
 //	player_1_xy, player_2_xy - Player Coordinates 	
 //	player_1_trail, player_2_trail - Trail Coordinates
@@ -810,20 +854,28 @@ begin
 	// Only update if player moving
 	if (turn_counter = 1 or player_1_fire = 1) then
 	begin
-		// P1 bike & trail
-		screen_loc_work		:= screen_loc + player_1_xy;
-		screen_loc_work[0]	:= SCR_DIAMOND;
-		//screen_loc_work		:= player_1_trail[1];
-		//	screen_loc_work[0]	:= SCR_SOLID_BLOCK;
+		// Draw P1 bike
+		screen_loc_work	:= screen_loc + player_1_xy;
+		return_bike_char(player_1_head);
+		screen_loc_work[0] := player_char_1;
+		
+		screen_loc_work	:= player_1_trail[0];
+		screen_loc_work[0] := player_char_2;
+		//screen_loc_work[?] := player_char_3;
 
-		// Trailing char
-		screen_loc_work		:= player_1_trail[0];
-		screen_loc_work[0]	:= return_trail_char(player_1_head, player_1_head_1);
-
+		// Draw P1 trail
+		screen_loc_work			:= player_1_trail[1];
+		screen_loc_work[0]		:= player_1_trail_char[1];
+		player_1_trail_char[0]	:= return_trail_char(player_1_head, player_1_head_1);
+		player_1_trail_char[1]	:= player_1_trail_char[0];
+		
+		// Color of bike
 		color_loc_work		:= color_loc + player_1_xy;
-		color_loc_work[0]	:= 3;	// +8 enables multicolor
+		color_loc_work[0]	:= 6;	// 8 enables multicolor
+
+		// Color of trail
 		color_loc_work		:= player_1_trail[1] + color_loc - screen_loc;
-		color_loc_work[0]	:= 6;
+		color_loc_work[0]	:= 3;
 		
 		// Save old player headings
 		player_1_head_1	:= player_1_head;
@@ -834,18 +886,25 @@ begin
 	begin
 		// P2 bike & trail
 		screen_loc_work		:= screen_loc + player_2_xy;
-		screen_loc_work[0]	:= SCR_CIRCLE;
-		//screen_loc_work		:= player_2_trail[1];
-		//	screen_loc_work[0]	:= SCR_SHADED_BLOCK;
-
-		// Trailing char
+		return_bike_char(player_2_head);
+		screen_loc_work[0]	:= player_char_1;
 		screen_loc_work		:= player_2_trail[0];
-		screen_loc_work[0]	:= return_trail_char(player_2_head, player_2_head_1);
+		screen_loc_work[0]	:= player_char_2;
+		//screen_loc_work[?] := player_char_3;
+
+		// Draw P2 trail
+		screen_loc_work			:= player_2_trail[1];
+		screen_loc_work[0]		:= player_2_trail_char[1];
+		player_2_trail_char[0]	:= return_trail_char(player_2_head, player_2_head_1);
+		player_2_trail_char[1]	:= player_2_trail_char[0];
 	
+		// Color of bike
 		color_loc_work		:= color_loc + player_2_xy;
-		color_loc_work[0]	:= 4; 	// +8 enables multicolor
+		color_loc_work[0]	:= 2; 	// 8 enables multicolor
+
+		// Color of trail
 		color_loc_work		:= player_2_trail[1] + color_loc - screen_loc;
-		color_loc_work[0]	:= 2;
+		color_loc_work[0]	:= 4;
 		
 		// Save old player headings
 		player_2_head_1	:= player_2_head;
@@ -862,9 +921,9 @@ begin
 	player_1_head_1		:= player_1_head;
 	player_2_head_1		:= player_2_head;
 	player_1_trail[0]	:= 0;
-	player_1_trail[1]	:= 0;
 	player_2_trail[0]	:= 0;
-	player_2_trail[1]	:= 0;
+	player_1_trail_char[0] := SCR_TRAIL_HORIZ;
+	player_2_trail_char[0] := SCR_TRAIL_HORIZ;
 	player_1_crash		:= 0;
 	player_2_crash		:= 0;
 	player_1_input		:= 0;
@@ -1036,23 +1095,43 @@ begin
 	LOC_SOUND_TENO := 0;
 	LOC_SOUND_SOPR := 0;
 	
-	fori i := 0 to 50 step 1 do
+	fori i := 0 to 22 step 1 do
 	begin
 		// Increment animation		
 		tmp := tmp + 1;
-		if tmp > 2 then tmp := 0;
+		if tmp > 3 then tmp := 0;
 		
 		if player_1_crash then begin
+			// Explode impact point
 			screen_loc_work := screen_loc + player_1_xy;
 			screen_loc_work[0] := crash_anim_arr[tmp];
 			color_loc_work := color_loc + player_1_xy;
-			color_loc_work[0] := 2;
+			color_loc_work[0] := crash_color_arr[tmp];
+			// Explode bike
+			screen_loc_work := player_1_trail[0];
+			screen_loc_work[0] := crash_anim_arr[tmp];
+			screen_loc_work := player_1_trail[1];
+			screen_loc_work[0] := crash_anim_arr[tmp];
+			color_loc_work := color_loc - screen_loc + player_1_trail[0];
+			color_loc_work[0] := crash_color_arr[tmp];
+			color_loc_work := color_loc - screen_loc + player_1_trail[1];
+			color_loc_work[0] := crash_color_arr[tmp];	
 		end;
 		if player_2_crash then begin
+			// Explode impact point
 			screen_loc_work := screen_loc + player_2_xy;
 			screen_loc_work[0] := crash_anim_arr[tmp];
 			color_loc_work := color_loc + player_2_xy;
-			color_loc_work[0] := 2;
+			color_loc_work[0] := crash_color_arr[tmp];
+			// Explode bike
+			screen_loc_work := player_2_trail[0];
+			screen_loc_work[0] := crash_anim_arr[tmp];
+			screen_loc_work := player_2_trail[1];
+			screen_loc_work[0] := crash_anim_arr[tmp];
+			color_loc_work := color_loc - screen_loc + player_2_trail[0];
+			color_loc_work[0] := crash_color_arr[tmp];
+			color_loc_work := color_loc - screen_loc + player_2_trail[1];
+			color_loc_work[0] := crash_color_arr[tmp];
 		end;
 		
 		// Sound Effect
@@ -1061,13 +1140,16 @@ begin
 			LOC_SOUND_NOIS := 130;
 		end else if (tmp = 1) then begin
 			LOC_SOUND_ALTO := 135;
-			LOC_SOUND_NOIS := 135;
-		end else begin 
+			LOC_SOUND_NOIS := 135;		
+		end else if (tmp = 2) then begin 
+			LOC_SOUND_ALTO := 140;
+			LOC_SOUND_NOIS := 140;
+		end else begin
 			LOC_SOUND_ALTO := 255;
 			LOC_SOUND_NOIS := 255;		
 		end;
-		
-		do_delay(16);
+
+		do_delay(48);
 	end;
 end;
 
@@ -1075,13 +1157,13 @@ end;
 procedure init_engine_sound();
 begin
 	// stop any current voices
-	stop_sound();
+	sound_stop();
 
-	// enable sound
-	LOC_SOUND_VOL	:= 15;
+	// Max vol, do not disturb aux color
+	LOC_SOUND_VOL_AUX	:= (peek(LOC_SOUND_VOL_AUX,0) & $F0) | $0F;
 	// set pitch 
-	sound_pitch		:= 200;
-	
+	sound_pitch			:= 200;
+
 	alternate_engine_sound();
 end;
 	
@@ -1111,13 +1193,13 @@ begin
 end;
 
 // sound stop
-procedure stop_sound();
+procedure sound_stop();
 begin
-	LOC_SOUND_VOL	:= 0;
-	LOC_SOUND_ALTO	:= 0;
-	LOC_SOUND_TENO	:= 0;
-	LOC_SOUND_SOPR	:= 0;	
-	LOC_SOUND_NOIS	:= 0;
+	LOC_SOUND_VOL_AUX	:= peek(LOC_SOUND_VOL_AUX,0) & $F0;
+	LOC_SOUND_ALTO		:= 0;
+	LOC_SOUND_TENO		:= 0;
+	LOC_SOUND_SOPR		:= 0;	
+	LOC_SOUND_NOIS		:= 0;
 end;
 
 // eof

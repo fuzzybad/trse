@@ -193,9 +193,10 @@ begin
 	// Initialize music	
 	if (cts_play_music) then
 	begin
-		music_idx		:= 0;
-		music_sust_idx	:= 0;
-		LOC_SOUND_VOL	:= 15;
+		music_idx			:= 0;
+		music_sust_idx		:= 0;
+		// Max vol, do not disturb aux color
+		LOC_SOUND_VOL_AUX	:= (peek(LOC_SOUND_VOL_AUX,0) & $F0) | $0F;
 	end;
 
 	// Scroll for the given # cycles

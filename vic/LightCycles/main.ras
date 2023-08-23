@@ -11,8 +11,8 @@ program LightCycles;
 
 //@define DEBUG 1
 //@define PBMADDRESS $8000
-@VicMemoryConfig "8k"
-//@VicMemoryConfig "16k"
+//@VicMemoryConfig "8k"
+@VicMemoryConfig "16k"
 // Adjust start of code to make room for char data at $1400-$1C00
 @startblock	$2400 "Game"
 @userdata	$1400 $1C00 "Charset"
@@ -76,11 +76,13 @@ begin
 	color_loc := #SCREEN_COL_LOC;
 		
 	// Black screen, black border, inverse bit set
-	LOC_SCREEN_BORD := %00001000;
+	LOC_SCREEN_BORD := $08;
 	
+	// Set aux color
+	LOC_SOUND_VOL_AUX := (peek(LOC_SOUND_VOL_AUX,0) & $0F) | $F0;	
+
 	// Copy CHARROM to RAM & set char loc to value defined by LOC_CUST_CHAR
 	SetCharsetLocation(LOC_CUST_CHAR);
-	//copy_charrom();
 
 	// Primary loop
 	while(1) do
