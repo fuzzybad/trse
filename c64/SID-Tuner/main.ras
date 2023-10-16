@@ -3,6 +3,8 @@ var
 	i : byte = 0;
 	temp_byte1 : byte = 0;
 	const	LOC_CHAR_SCREEN:		address = $0400;		// Location for text screen (1k)
+	const	LOC_SCREEN_BORD:		address = 53280; 	// Border color 
+	const	LOC_SCREEN_BACK:		address = 53281; 	// Background color 0
 
 	// SID Registers
 	const	LOC_FRELO1:			address = $D400;		// Voice 1 Frequency Control (low byte)
@@ -100,11 +102,17 @@ begin
 end;
 
 
+// Set up screen display	
 procedure init_tuner_screen();
 begin
-	ClearScreen($20, LOC_CHAR_SCREEN);
+	ClearScreen( $20, LOC_CHAR_SCREEN);
+	ClearScreen( CYAN, SCREEN_COL_LOC); // init color ram
 	
-	// Set up screen display	
+	moveto(2,0,hi(LOC_CHAR_SCREEN));
+	printstring("*** SID TUNER ***",0,17);
+	moveto(26,0,hi(LOC_CHAR_SCREEN));
+	printstring("2023 FUZZYBAD",0,17);
+
 	moveto(2,2,hi(LOC_CHAR_SCREEN));
 	printstring("VOICE 1:",0,8);
 	moveto(14,2,hi(LOC_CHAR_SCREEN));
@@ -1083,6 +1091,10 @@ end;
 
 // Main loop
 begin
+	// Black screen, black border
+	LOC_SCREEN_BORD := dark_grey;
+	LOC_SCREEN_BACK := black;
+
 //	Loop(); 
 	sound_debug();
 end.
