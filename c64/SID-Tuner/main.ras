@@ -1,0 +1,1090 @@
+program C64Project;
+var
+	i : byte = 0;
+	temp_byte1 : byte = 0;
+	const	LOC_CHAR_SCREEN:		address = $0400;		// Location for text screen (1k)
+
+	// SID Registers
+	const	LOC_FRELO1:			address = $D400;		// Voice 1 Frequency Control (low byte)
+	const	LOC_FREHI1:			address = $D401;		// Voice 1 Frequency Control (high byte)
+	const	LOC_PWLO1:			address = $D402;		// Voice 1 Pulse Waveform Width (low byte)
+	const	LOC_PWHI1:			address = $D403;		// Voice 1 Pulse Waveform Width (high nybble)
+	const	LOC_VCREG1:			address = $D404;		// Voice 1 Control Register
+	const	LOC_ATDCY1:			address = $D405;		// Voice 1 Attack/Decay Register
+	const	LOC_SUREL1:			address = $D406;		// Voice 1 Sustain/Release Control Register
+
+	const	LOC_FRELO2:			address = $D407;		// Voice 2 Frequency Control (low byte)
+	const	LOC_FREHI2:			address = $D408;		// Voice 2 Frequency Control (high byte)
+	const	LOC_PWLO2:			address = $D409;		// Voice 2 Pulse Waveform Width (low byte)
+	const	LOC_PWHI2:			address = $D40A;		// Voice 2 Pulse Waveform Width (high nybble)
+	const	LOC_VCREG2:			address = $D40B;		// Voice 2 Control Register
+	const	LOC_ATDCY2:			address = $D40C;		// Voice 2 Attack/Decay Register
+	const	LOC_SUREL2:			address = $D40D;		// Voice 2 Sustain/Release Control Register
+
+	const	LOC_FRELO3:			address = $D40E;		// Voice 3 Frequency Control (low byte)
+	const	LOC_FREHI3:			address = $D40F;		// Voice 3 Frequency Control (high byte)
+	const	LOC_PWLO3:			address = $D410;		// Voice 3 Pulse Waveform Width (low byte)
+	const	LOC_PWHI3:			address = $D411;		// Voice 3 Pulse Waveform Width (high nybble)
+	const	LOC_VCREG3:			address = $D412;		// Voice 3 Control Register
+	const	LOC_ATDCY3:			address = $D413;		// Voice 3 Attack/Decay Register
+	const	LOC_SUREL3:			address = $D414;		// Voice 3 Sustain/Release Control Register
+
+	const	LOC_CUTLO:			address = $D415;		// Low part of filter cutoff
+	const	LOC_CUTHI:			address = $D416;		// High part of filter cutoff
+	const	LOC_RESON:			address = $D417;		// Filter resonance control
+	const	LOC_SIGVOL:			address = $D418;		// Volume and Filter Select Register (0:no sound, 15:max vol)
+
+	const	LOC_POTX:			address = $D419;		// Pot X
+	const	LOC_POTY:			address = $D41A;		// Pot Y
+	const	LOC_RANDOM:			address = $D41B;		// Random #
+	const	LOC_ENV3:			address = $D41C;		// Envelope Generator 3 Output
+	
+	// init vars
+	sd_freq1	:	byte = 48;
+	sd_freq2	:	byte = 48;
+	sd_freq3	:	byte = 48;
+	sd_pulse1:	byte = 15;
+	sd_pulse2:	byte = 15;
+	sd_pulse3:	byte = 15;
+	sd_contr1:	byte = %01000000;
+	sd_contr2:	byte = %00100000;
+	sd_contr3:	byte = %00010000;
+	sd_atdcy1:	byte = $88;
+	sd_atdcy2:	byte = $88;
+	sd_atdcy3:	byte = $88;
+	sd_susrel1:	byte = $88;
+	sd_susrel2:	byte = $88;
+	sd_susrel3:	byte = $88;
+	sd_filtlo:	byte = 0;
+	sd_filthi:	byte = 0;
+	sd_reson	:	byte = 0;
+	sd_volume:	byte = $0f;	// max volume
+	sd_osc3_tgt:	byte = 0;
+	sd_env3_tgt:	byte = 0;
+	sd_potx:		byte = 0;
+	sd_poty:		byte = 0;
+	sd_random:	byte = 0;
+	sd_env3:		byte = 0;
+	sd_tempo:	byte = 96;
+	
+@use "input/key"	
+
+// Delay function
+procedure do_delay( delay_val: byte );
+var
+	dd_i : byte;
+begin
+	if( delay_val > 0 ) then	begin
+		for dd_i := 0 to delay_val do wait(255);
+	end;
+end;
+
+// Turn off sound
+procedure sound_stop();
+begin
+	// Mute sound 
+	LOC_SIGVOL	:= 0;
+
+	// Set frequency registers to zero
+	LOC_FRELO1	:= 0;
+	LOC_FREHI1	:= 0;
+	LOC_FRELO2	:= 0;
+	LOC_FREHI2	:= 0;
+	LOC_FRELO3	:= 0;
+	LOC_FREHI3	:= 0;
+	
+	// Reset voice control registers
+	LOC_VCREG1	:= LOC_VCREG1 & %11111110;
+	LOC_VCREG2	:= LOC_VCREG2 & %11111110;
+	LOC_VCREG3	:= LOC_VCREG3 & %11111110;
+end;
+
+
+procedure init_tuner_screen();
+begin
+	ClearScreen($20, LOC_CHAR_SCREEN);
+	
+	// Set up screen display	
+	moveto(2,2,hi(LOC_CHAR_SCREEN));
+	printstring("VOICE 1:",0,8);
+	moveto(14,2,hi(LOC_CHAR_SCREEN));
+	printstring("VOICE 2:",0,8);
+	moveto(26,2,hi(LOC_CHAR_SCREEN));
+	printstring("VOICE 3:",0,8);
+
+	moveto(2,3,hi(LOC_CHAR_SCREEN));
+	printstring("TYPE:",0,5);
+	moveto(14,3,hi(LOC_CHAR_SCREEN));
+	printstring("TYPE:",0,5);
+	moveto(26,3,hi(LOC_CHAR_SCREEN));
+	printstring("TYPE:",0,5);
+	
+	moveto(2,4,hi(LOC_CHAR_SCREEN));
+	printstring("FREQ:",0,5);
+	moveto(14,4,hi(LOC_CHAR_SCREEN));
+	printstring("FREQ:",0,5);
+	moveto(26,4,hi(LOC_CHAR_SCREEN));
+	printstring("FREQ:",0,5);
+	
+	moveto(2,5,hi(LOC_CHAR_SCREEN));
+	printstring("PULSE:",0,6);
+	moveto(14,5,hi(LOC_CHAR_SCREEN));
+	printstring("PULSE:",0,6);
+	moveto(26,5,hi(LOC_CHAR_SCREEN));
+	printstring("PULSE:",0,6);
+
+	moveto(2,6,hi(LOC_CHAR_SCREEN));
+	printstring("SYNC:",0,5);
+	moveto(14,6,hi(LOC_CHAR_SCREEN));
+	printstring("SYNC:",0,5);
+	moveto(26,6,hi(LOC_CHAR_SCREEN));
+	printstring("SYNC:",0,5);
+
+	moveto(2,7,hi(LOC_CHAR_SCREEN));
+	printstring("RING:",0,5);
+	moveto(14,7,hi(LOC_CHAR_SCREEN));
+	printstring("RING:",0,5);
+	moveto(26,7,hi(LOC_CHAR_SCREEN));
+	printstring("RING:",0,5);
+	
+	moveto(2,8,hi(LOC_CHAR_SCREEN));
+	printstring("ATTACK:",0,8);
+	moveto(14,8,hi(LOC_CHAR_SCREEN));
+	printstring("ATTACK:",0,8);
+	moveto(26,8,hi(LOC_CHAR_SCREEN));
+	printstring("ATTACK:",0,8);
+	
+	moveto(2,9,hi(LOC_CHAR_SCREEN));
+	printstring("DECAY:",0,8);
+	moveto(14,9,hi(LOC_CHAR_SCREEN));
+	printstring("DECAY:",0,8);
+	moveto(26,9,hi(LOC_CHAR_SCREEN));
+	printstring("DECAY:",0,8);
+
+	moveto(2,10,hi(LOC_CHAR_SCREEN));
+	printstring("SUSTAIN:",0,8);
+	moveto(14,10,hi(LOC_CHAR_SCREEN));
+	printstring("SUSTAIN:",0,8);
+	moveto(26,10,hi(LOC_CHAR_SCREEN));
+	printstring("SUSTAIN:",0,8);
+
+	moveto(2,11,hi(LOC_CHAR_SCREEN));
+	printstring("RELEASE:",0,8);
+	moveto(14,11,hi(LOC_CHAR_SCREEN));
+	printstring("RELEASE:",0,8);
+	moveto(26,11,hi(LOC_CHAR_SCREEN));
+	printstring("RELEASE:",0,8);
+	
+	moveto(2,12,hi(LOC_CHAR_SCREEN));
+	printstring("FILTER:",0,7);
+	moveto(14,12,hi(LOC_CHAR_SCREEN));
+	printstring("FILTER:",0,7);
+	moveto(26,12,hi(LOC_CHAR_SCREEN));
+	printstring("FILTER:",0,7);
+
+	moveto(2,14,hi(LOC_CHAR_SCREEN));
+	printstring("FILTER HI:",0,10);
+	moveto(2,15,hi(LOC_CHAR_SCREEN));
+	printstring("FILTER LO:",0,10);
+	moveto(2,16,hi(LOC_CHAR_SCREEN));
+	printstring("RESONANCE:",0,10);
+	moveto(2,17,hi(LOC_CHAR_SCREEN));
+	printstring("MASTER VOLUME:",0,14);
+
+	moveto(2,19,hi(LOC_CHAR_SCREEN));
+	printstring("BAND-PASS FILTER:",0,20);
+	moveto(2,20,hi(LOC_CHAR_SCREEN));
+	printstring("LOW-PASS FILTER:",0,19);
+	moveto(2,21,hi(LOC_CHAR_SCREEN));
+	printstring("HIGH-PASS FILTER:",0,20);
+	moveto(2,22,hi(LOC_CHAR_SCREEN));
+	printstring("VOICE 3 OFF:",0,20);
+	moveto(2,23,hi(LOC_CHAR_SCREEN));
+	printstring("FILTER EXT:",0,14);
+
+	
+	moveto(26,14,hi(LOC_CHAR_SCREEN));
+	printstring("RAND TGT:",0,9);
+	moveto(26,16,hi(LOC_CHAR_SCREEN));
+	printstring("ENV3 TGT:",0,9);
+	
+	moveto(26,19,hi(LOC_CHAR_SCREEN));
+	printstring("POTX:",0,5);
+	moveto(26,20,hi(LOC_CHAR_SCREEN));
+	printstring("POTY:",0,5);
+	moveto(26,21,hi(LOC_CHAR_SCREEN));
+	printstring("RAND:",0,5);
+	moveto(26,22,hi(LOC_CHAR_SCREEN));
+	printstring("ENV3:",0,5);
+	moveto(26,23,hi(LOC_CHAR_SCREEN));
+	printstring("TEMPO:",0,6);
+	
+end;
+
+
+procedure update_screen_values();
+begin
+	// Voice Toggle
+	moveto(10,2,hi(LOC_CHAR_SCREEN));
+	if(sd_contr1 & 1) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;	
+
+	moveto(22,2,hi(LOC_CHAR_SCREEN));
+	if(sd_contr2 & 1) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;	
+
+	moveto(34,2,hi(LOC_CHAR_SCREEN));
+	if(sd_contr3 & 1) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;	
+
+	// Voice Type
+	moveto(7,3,hi(LOC_CHAR_SCREEN));
+	if( sd_contr1 & %01000000 ) then begin
+		printstring("SAW  ",0,5);
+	end else if ( sd_contr1 & %00100000 ) then begin
+		printstring("TRI  ",0,5);
+	end else if ( sd_contr1 & %00010000 ) then begin
+		printstring("NOISE",0,5);
+	end else if ( sd_contr1 & %10000000 ) then begin
+		printstring("PULSE",0,5);
+	end;
+
+	moveto(19,3,hi(LOC_CHAR_SCREEN));
+	if( sd_contr2 & %01000000 ) then begin
+		printstring("SAW  ",0,5);
+	end else if ( sd_contr2 & %00100000 ) then begin
+		printstring("TRI  ",0,5);
+	end else if ( sd_contr2 & %00010000 ) then begin
+		printstring("NOISE",0,5);
+	end else if ( sd_contr2 & %10000000 ) then begin
+		printstring("PULSE",0,5);
+	end;
+
+	moveto(31,3,hi(LOC_CHAR_SCREEN));
+	if( sd_contr3 & %01000000 ) then begin
+		printstring("SAW  ",0,5);
+	end else if ( sd_contr3 & %00100000 ) then begin
+		printstring("TRI  ",0,5);
+	end else if ( sd_contr3 & %00010000 ) then begin
+		printstring("NOISE",0,5);
+	end else if ( sd_contr3 & %10000000 ) then begin
+		printstring("PULSE",0,5);
+	end;
+	
+	// Frequency
+	moveto(7,4,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_freq1);
+	moveto(19,4,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_freq2);
+	moveto(31,4,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_freq3);
+	
+	// Pulse
+	moveto(8,5,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_pulse1);
+	moveto(20,5,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_pulse2);
+	moveto(32,5,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_pulse3);
+
+	// Sync
+	moveto(7,6,hi(LOC_CHAR_SCREEN));
+	if (sd_contr1 & %00000010 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;	
+
+	moveto(19,6,hi(LOC_CHAR_SCREEN));
+	if (sd_contr2 & %00000010 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;	
+
+	moveto(31,6,hi(LOC_CHAR_SCREEN));
+	if (sd_contr3 & %00000010 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;	
+
+	// Ring
+	moveto(7,7,hi(LOC_CHAR_SCREEN));
+	if (sd_contr1 & %00000100 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;	
+
+	moveto(19,7,hi(LOC_CHAR_SCREEN));
+	if (sd_contr2 & %00000100 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;	
+
+	moveto(31,7,hi(LOC_CHAR_SCREEN));
+	if (sd_contr3 & %00000100 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;	
+	
+	// Attack
+	moveto(9,8,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_atdcy1 & $F0);
+	moveto(21,8,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_atdcy2 & $F0);
+	moveto(33,8,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_atdcy3 & $F0);
+
+	// Decay	
+	moveto(8,9,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_atdcy1 & $0F);
+	moveto(20,9,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_atdcy2 & $0F);
+	moveto(32,9,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_atdcy3 & $0F);
+
+	// Sustain
+	moveto(10,10,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_susrel1 & $F0);
+	moveto(22,10,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_susrel2 & $F0);
+	moveto(34,10,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_susrel3 & $F0);
+
+	// Release
+	moveto(10,11,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_susrel1 & $0F);
+	moveto(22,11,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_susrel2 & $0F);
+	moveto(34,11,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_susrel3 & $0F);
+	
+	// Filter Toggles
+	moveto(9,12,hi(LOC_CHAR_SCREEN));
+	if (sd_reson & %00000001 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;
+
+	moveto(21,12,hi(LOC_CHAR_SCREEN));
+	if (sd_reson & %00000010 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;
+
+	moveto(33,12,hi(LOC_CHAR_SCREEN));
+	if (sd_reson & %00000100 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;
+	
+	moveto(13,23,hi(LOC_CHAR_SCREEN));
+	if (sd_reson & %00001000 ) then begin
+		printstring("ON ",0,3);				
+	end else begin
+		printstring("OFF",0,3);				
+	end;
+
+	// Filter, Resonance, Volume
+	moveto(12,14,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_filthi);
+	moveto(12,15,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_filtlo);
+	moveto(12,16,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_reson & $f0);
+	moveto(16,17,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_volume & $0F);
+
+
+	// Cursor left - low-pass
+	moveto(18,20,hi(LOC_CHAR_SCREEN));
+	if (sd_volume & %00010000 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);
+	end;			
+
+	// Cursor right - high-pass
+	moveto(19,21,hi(LOC_CHAR_SCREEN));
+	if (sd_volume & %01000000 ) then begin
+		printstring("ON ",0,3);
+	end else begin
+		printstring("OFF",0,3);				
+	end;			
+
+	// Cursor up - band-pass
+	moveto(19,19,hi(LOC_CHAR_SCREEN));
+	if (sd_volume & %00100000 ) then begin
+		printstring("ON ",0,3);				
+	end else begin
+		printstring("OFF",0,3);				
+	end;
+
+	// Toggle voice 3 output
+	moveto(14,22,hi(LOC_CHAR_SCREEN));
+	if (sd_volume & %10000000 ) then begin
+		printstring("YES",0,3);				
+	end else begin
+		printstring("NO ",0,3);				
+	end;
+
+	// RAND Value Forwarding
+	moveto(26,15,hi(LOC_CHAR_SCREEN));	
+	if( sd_osc3_tgt = 0 ) then begin
+		// Do nothing
+		printstring("NONE        ",0,12);
+	end else if( sd_osc3_tgt = 1 ) then begin
+		// Pipe OSC3 output to Voice 1 freq
+		printstring("VOICE 1 FREQ",0,12);
+		moveto(7,4,hi(LOC_CHAR_SCREEN));
+		printnumber(sd_freq1);
+	end else if( sd_osc3_tgt = 2 ) then begin
+		// Pipe OSC3 output to Voice 1 PWM
+		printstring("VOICE 1 PULS",0,12);
+		moveto(8,5,hi(LOC_CHAR_SCREEN));
+		printnumber(sd_pulse1);
+	end else if( sd_osc3_tgt = 3 ) then begin
+		// Pipe OSC3 output to Filter freq
+		printstring("FILTER FREQ ",0,12);
+		moveto(12,14,hi(LOC_CHAR_SCREEN));
+		printnumber(sd_filthi);
+	end;
+
+	// OSC3 Value Forwarding
+	moveto(26,17,hi(LOC_CHAR_SCREEN));		
+	if( sd_env3_tgt = 0 ) then begin
+		// Do nothing
+		printstring("NONE        ",0,12);
+	end else if( sd_env3_tgt = 1 ) then begin
+		// Pipe OSC3 output to Voice 1 freq
+		printstring("VOICE 1 FREQ",0,12);
+		moveto(7,4,hi(LOC_CHAR_SCREEN));
+		printnumber(sd_freq1);
+	end else if( sd_env3_tgt = 2 ) then begin
+		// Pipe OSC3 output to Voice 1 PWM
+		printstring("VOICE 1 PULS",0,12);
+		moveto(8,5,hi(LOC_CHAR_SCREEN));
+		printnumber(sd_pulse1);
+	end else if( sd_env3_tgt = 3 ) then begin
+		// Pipe OSC3 output to Filter freq
+		printstring("FILTER FREQ ",0,12);
+		moveto(12,14,hi(LOC_CHAR_SCREEN));
+		printnumber(sd_filthi);
+	end;
+
+	// Display read-only registers
+	moveto(31,19,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_potx);
+	moveto(31,20,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_poty);
+	moveto(31,21,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_random);
+	moveto(31,22,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_env3);
+	// Display tempo
+	moveto(32,23,hi(LOC_CHAR_SCREEN));
+	printnumber(sd_tempo);
+end;
+
+
+procedure update_values();
+begin
+	// Update register values		
+	LOC_FREHI1	:= sd_freq1;
+	LOC_PWHI1	:= sd_pulse1;
+	LOC_VCREG1	:= sd_contr1;
+	LOC_ATDCY1	:= sd_atdcy1;
+	LOC_SUREL1	:= sd_susrel1;
+	LOC_FREHI2	:= sd_freq2;
+	LOC_PWHI2	:= sd_pulse2;
+	LOC_VCREG2	:= sd_contr2;
+	LOC_ATDCY2	:= sd_atdcy2;
+	LOC_SUREL2	:= sd_susrel2;
+	LOC_FREHI3	:= sd_freq3;
+	LOC_PWHI3	:= sd_pulse3;
+	LOC_VCREG3	:= sd_contr3;
+	LOC_ATDCY3	:= sd_atdcy3;
+	LOC_SUREL3	:= sd_susrel3;
+	LOC_CUTLO	:= sd_filtlo;
+	LOC_CUTHI	:= sd_filthi;
+	LOC_RESON	:= sd_reson;
+	LOC_SIGVOL	:= sd_volume;
+end;
+
+
+// Testing SID registers
+//
+// SID Notes:
+//	Voice 1 Ring/Sync work on Osc 1 & 3
+//	Voice 2 Ring/Sync work on Osc 1 & 2
+//	Voice 3 Ring/Sync work on Osc 2 & 3
+// 	Attack/Decay registers use format: AAAADDDD where A=Attack Duration, D=Decay Duration
+//	Sustain/Release register use format: VVVVRRRR where V=Sustain Volume, R=Release Duration
+//	Filter Low - XXXXXFFF - X=Not Used, F=Filter high bits (11-bit number)
+// 	Filter High - FFFFFFFF - F=Filter low bits (11-bit number)
+//	Resonance/Filter - RRRRDCBA - R=Filter Resonance, A=Voice 1, B=Voice 2, C=Voice 3,D=External Audio
+//	Mode/Volume - ABCDVVVV - A=Voice 3 Off, B=Enable High-pass Filter, C=Enable Band-pass filter, 
+//							D=Enable Low-pass filter, V=Volume
+//
+//	Technique I found to get a pretty decent resonant sound:
+//		Set Voice 3 freq between 10-35
+//		Set Voice 1 Type to Triangle
+//		Enable Voice 1 Sync & Ring
+//	
+procedure sound_debug();
+begin
+	// Not using low registers for now
+	LOC_FRELO1	:= 0;
+	LOC_FRELO2	:= 0;
+	LOC_FRELO3	:= 0;
+	LOC_PWLO1	:= 0;
+	LOC_PWLO2	:= 0;
+	LOC_PWLO3	:= 0;
+
+	init_tuner_screen();
+	
+	while (true) do begin
+		
+		update_screen_values();
+
+		// Read Keyboard
+		Key::Read();
+		
+		//////////////////////////////////////////////////////////////////////
+		
+		// Shift-1 - toggle type
+		if( Key::Held(KEY_K1) and (Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT)) ) then begin
+			if( sd_contr1 & %01000000 ) then begin
+				sd_contr1 := sd_contr1 & %00000111 | %00100000;
+			end else if ( sd_contr1 & %00100000 ) then begin
+				sd_contr1 := sd_contr1 & %00000111 | %00010000;
+			end else if ( sd_contr1 & %00010000 ) then begin
+				sd_contr1 := sd_contr1 & %00000111 | %10000000;
+			end else if ( sd_contr1 & %10000000 ) then begin
+				sd_contr1 := sd_contr1 & %00000111 | %01000000;
+			end;
+		end else if Key::Held(KEY_K1) then begin
+			// 1 Key - Toggle voice 1
+			if(sd_contr1 & 1) then begin
+				sd_contr1 := sd_contr1 & %11111110;	// start decay/release
+			end else begin
+				sd_contr1 := sd_contr1 | %00000001;	// start attack/sustain
+			end;	
+		end;
+
+		// Shift-2 - toggle type
+		if( Key::Held(KEY_K2) and (Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT)) ) then begin
+			if( sd_contr2 & %01000000 ) then begin
+				sd_contr2 := sd_contr2 & %00000111 | %00100000;
+			end else if ( sd_contr2 & %00100000 ) then begin
+				sd_contr2 := sd_contr2 & %00000111 | %00010000;
+			end else if ( sd_contr2 & %00010000 ) then begin
+				sd_contr2 := sd_contr2 & %00000111 | %10000000;
+			end else if ( sd_contr2 & %10000000 ) then begin
+				sd_contr2 := sd_contr2 & %00000111 | %01000000;
+			end;
+		end else if Key::Held(KEY_K2) then begin
+			// 2 Key - Toggle voice 2
+			if(sd_contr2 & 1) then begin
+				sd_contr2 := sd_contr2 & %11111110;	// start decay/release
+			end else begin
+				sd_contr2 := sd_contr2 | %00000001;	// start attack/sustain
+			end;	
+		end;
+		
+		// Shift-3 - toggle type
+		if( Key::Held(KEY_K3) and (Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT)) ) then begin
+			//printstring("SHIFT-3",0,7);
+			if( sd_contr3 & %01000000 ) then begin
+				sd_contr3 := sd_contr3 & %00000111 | %00100000;
+			end else if ( sd_contr3 & %00100000 ) then begin
+				sd_contr3 := sd_contr3 & %00000111 | %00010000;
+			end else if ( sd_contr3 & %00010000 ) then begin
+				sd_contr3 := sd_contr3 & %00000111 | %10000000;
+			end else if ( sd_contr3 & %10000000 ) then begin
+				sd_contr3 := sd_contr3 & %00000111 | %01000000;
+			end;
+		end else if Key::Held(KEY_K3) then begin
+			// 3 Key - Toggle voice 3
+			if(sd_contr3 & 1) then begin
+				sd_contr3 := sd_contr3 & %11111110;	// start decay/release
+			end else begin
+				sd_contr3 := sd_contr3 | %00000001;	// start attack/sustain
+			end;	
+		end;
+		
+		//////////////////////////////////////////////////////////////////////
+
+		// Q key - Adjust voice 1 frequency
+		if Key::Held(KEY_KQ) then begin
+			// Check shift
+			if ( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_freq1 := sd_freq1 - 5;	// down
+			end else begin
+				sd_freq1 := sd_freq1 + 5;	// up	
+			end;
+		end;
+		
+		// W key - Adjust voice 2 frequency
+		if Key::Held(KEY_KW) then begin
+			// Check shift
+			if ( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_freq2 := sd_freq2 - 5;	// down
+			end else begin
+				sd_freq2 := sd_freq2 + 5;	// up	
+			end;
+		end;
+		
+		// E key - Adjust voice 3 frequency
+		if Key::Held(KEY_KE) then begin
+			// Check shift
+			if ( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_freq3 := sd_freq3 - 5;	// down
+			end else begin
+				sd_freq3 := sd_freq3 + 5;	// up	
+			end;
+		end;
+
+		//////////////////////////////////////////////////////////////////////
+
+		// A key - Adjust voice 1 pulse width
+		if Key::Held(KEY_KA) then begin
+			// Check shift
+			if ( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				dec(sd_pulse1);
+				if( sd_pulse1 > 15 ) then sd_pulse1 := 15;
+			end else begin
+				inc(sd_pulse1);
+				if( sd_pulse1 > 15 ) then sd_pulse1 := 0;
+			end;
+		end;
+		
+		// S key - Adjust voice 2 pulse width
+		if Key::Held(KEY_KS) then begin
+			// Check shift
+			if ( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				dec(sd_pulse2);
+				if( sd_pulse2 > 15 ) then sd_pulse2 := 15;
+			end else begin
+				inc(sd_pulse2);
+				if( sd_pulse2 > 15 ) then sd_pulse2 := 0;
+			end;
+		end;
+		
+		// D key - Adjust voice 3 pulse width
+		if Key::Held(KEY_KD) then begin
+			// Check shift
+			if ( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				dec(sd_pulse3);
+				if( sd_pulse3 > 15 ) then sd_pulse3 := 15;
+			end else begin
+				inc(sd_pulse3);
+				if( sd_pulse3 > 15 ) then sd_pulse3 := 0;
+			end;
+		end;
+		
+		//////////////////////////////////////////////////////////////////////
+
+		// Z key - Toggle voice 1 sync & ring
+		if( Key::Held(KEY_KZ) and (Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT)) ) then begin
+			// Toggle ring
+			if (sd_contr1 & %00000100 ) then begin
+				sd_contr1 := sd_contr1 & %11111011;	// disable ring
+			end else begin
+				sd_contr1 := sd_contr1 | %00000100;	// enable ring
+			end;	
+		end else if ( Key::Held(KEY_KZ) ) then begin
+			// Toggle sync
+			if (sd_contr1 & %00000010 ) then begin
+				sd_contr1 := sd_contr1 & %11111101;	// disable sync
+			end else begin
+				sd_contr1 := sd_contr1 | %00000010;	// enable sync
+			end;	
+		end;
+
+		// X key - Toggle voice 2 sync & ring
+		if( Key::Held(KEY_KX) and (Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT)) ) then begin
+			// Toggle ring
+			if (sd_contr2 & %00000100 ) then begin
+				sd_contr2 := sd_contr2 & %11111011;	// disable ring
+			end else begin
+				sd_contr2 := sd_contr2 | %00000100;	// enable ring
+			end;	
+		end else if ( Key::Held(KEY_KX) ) then begin
+			// Toggle sync
+			if (sd_contr2 & %00000010 ) then begin
+				sd_contr2 := sd_contr2 & %11111101;	// disable sync
+			end else begin
+				sd_contr2 := sd_contr2 | %00000010;	// enable sync
+			end;	
+		end;
+
+		// C key - Toggle voice 3 sync & ring
+		if( Key::Held(KEY_KC) and (Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT)) ) then begin
+			// Toggle ring
+			if (sd_contr3 & %00000100 ) then begin
+				sd_contr3 := sd_contr3 & %11111011;	// disable ring
+			end else begin
+				sd_contr3 := sd_contr3 | %00000100;	// enable ring
+			end;	
+		end else if ( Key::Held(KEY_KC) ) then begin
+			// Toggle sync
+			if (sd_contr3 & %00000010 ) then begin
+				sd_contr3 := sd_contr3 & %11111101;	// disable sync
+			end else begin
+				sd_contr3 := sd_contr3 | %00000010;	// enable sync
+			end;	
+		end;
+
+		//////////////////////////////////////////////////////////////////////
+
+		// ADSR Settings
+		
+		// 5 key - Adjust Attack V1
+		if( Key::Held(KEY_K5) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_atdcy1 := sd_atdcy1 - 16;
+			end else begin
+				sd_atdcy1 := sd_atdcy1 + 16;				
+			end;
+		end;
+
+		// 6 key - Adjust Attack V2
+		if( Key::Held(KEY_K6) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_atdcy2 := sd_atdcy2 - 16;
+			end else begin
+				sd_atdcy2 := sd_atdcy2 + 16;				
+			end;
+		end;
+
+		// 7 key - Adjust Attack V3
+		if( Key::Held(KEY_K7) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_atdcy3 := sd_atdcy3 - 16;
+			end else begin
+				sd_atdcy3 := sd_atdcy3 + 16;				
+			end;
+		end;
+		
+
+		// T key - Adjust Decay V1
+		if( Key::Held(KEY_KT) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_atdcy1 := sd_atdcy1 - 1;
+			end else begin
+				sd_atdcy1 := sd_atdcy1 + 1;				
+			end;
+		end;
+
+		// Y key - Adjust Decay V2
+		if( Key::Held(KEY_KY) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_atdcy2 := sd_atdcy2 - 1;
+			end else begin
+				sd_atdcy2 := sd_atdcy2 + 1;				
+			end;
+		end;
+
+		// U key - Adjust Decay V3
+		if( Key::Held(KEY_KU) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_atdcy3 := sd_atdcy3 - 1;
+			end else begin
+				sd_atdcy3 := sd_atdcy3 + 1;				
+			end;
+		end;
+		
+		// G key - Adjust Sustain V1
+		if( Key::Held(KEY_KG) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_susrel1 := sd_susrel1 - 16;
+			end else begin
+				sd_susrel1 := sd_susrel1 + 16;				
+			end;
+		end;
+
+		// H key - Adjust Sustain V2
+		if( Key::Held(KEY_KH) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_susrel2 := sd_susrel2 - 16;
+			end else begin
+				sd_susrel2 := sd_susrel2 + 16;				
+			end;
+		end;
+
+		// J key - Adjust Sustain V3
+		if( Key::Held(KEY_KJ) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_susrel3 := sd_susrel3 - 16;
+			end else begin
+				sd_susrel3 := sd_susrel3 + 16;				
+			end;
+		end;
+
+		// B key - Adjust Release V1
+		if( Key::Held(KEY_KB) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_susrel1 := sd_susrel1 - 1;
+			end else begin
+				sd_susrel1 := sd_susrel1 + 1;				
+			end;
+		end;
+
+		// N key - Adjust Release V2
+		if( Key::Held(KEY_KN) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_susrel2 := sd_susrel2 - 1;
+			end else begin
+				sd_susrel2 := sd_susrel2 + 1;				
+			end;
+		end;
+
+		// M key - Adjust Release V3
+		if( Key::Held(KEY_KM) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_susrel3 := sd_susrel3 - 1;
+			end else begin
+				sd_susrel3 := sd_susrel3 + 1;				
+			end;
+		end;
+
+		//////////////////////////////////////////////////////////////////////
+
+		// 4 key - Toggle Voice 1 Filter Enable
+		if( Key::Held(KEY_K4) ) then begin
+			if (sd_reson & %00000001 ) then begin
+				sd_reson := sd_reson & %11111110;	// disable voice 1 filter
+			end else begin
+				sd_reson := sd_reson | %00000001;	// enable voice 1 filter
+			end;
+		end;		
+
+		// R key - Toggle Voice 2 Filter Enable
+		if( Key::Held(KEY_KR) ) then begin
+			if (sd_reson & %00000010 ) then begin
+				sd_reson := sd_reson & %11111101;	// disable voice 2 filter
+			end else begin
+				sd_reson := sd_reson | %00000010;	// enable voice 2 filter
+			end;
+		end;		
+
+		// F key - Toggle Voice 3 Filter Enable
+		if( Key::Held(KEY_KF) ) then begin
+			if (sd_reson & %00000100 ) then begin
+				sd_reson := sd_reson & %11111011;	// disable voice 3 filter
+			end else begin
+				sd_reson := sd_reson | %00000100;	// enable voice 3 filter
+			end;
+		end;		
+
+		// V key - Toggle External Audio Filter Enable
+		if( Key::Held(KEY_KV) ) then begin
+			if (sd_reson & %00001000 ) then begin
+				sd_reson := sd_reson & %11110111;	// disable ext filter
+			end else begin
+				sd_reson := sd_reson | %00001000;	// enable ext filter
+			end;
+		end;		
+
+		//////////////////////////////////////////////////////////////////////
+		
+		// Filter High
+		if( Key::Held(KEY_KF1) ) then begin
+			if( Key::Held(KEY_KF1) and (Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT)) ) then begin
+				dec(sd_filthi);
+				if(sd_filthi > 15) then sd_filthi := 15;
+			end else begin
+				inc(sd_filthi);
+				if(sd_filthi > 15) then sd_filthi := 0;
+			end;
+		end;
+
+		// Filter Low		
+		if( Key::Held(KEY_KF3) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_filtlo := sd_filtlo - 5;
+			end else begin
+				sd_filtlo := sd_filtlo + 5;
+			end;
+		end;
+
+		// Cursor left/right - low-pass / high-pass
+		if( Key::Held(KEY_KCLEFTRIGHT) and (Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT)) ) then begin
+			// Cursor left - low-pass
+			if (sd_volume & %00010000 ) then begin
+				sd_volume := sd_volume & %11101111;	// disable low-pass
+			end else begin
+				sd_volume := sd_volume | %00010000;	// enable low-pass
+			end;			
+		end else if( Key::Held(KEY_KCLEFTRIGHT) ) then begin
+			// Cursor right - high-pass
+			if (sd_volume & %01000000 ) then begin
+				sd_volume := sd_volume & %10111111;	// disable hi-pass
+			end else begin
+				sd_volume := sd_volume | %01000000;	// enable hi-pass
+			end;			
+		end;
+		
+		// Cursor up/down- band-pass / voice 3 output
+		if( Key::Held(KEY_KCUPDOWN) and (Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT)) ) then begin
+			// Cursor up - band-pass
+			if (sd_volume & %00100000 ) then begin
+				sd_volume := sd_volume & %11011111;	// disable band-pass
+			end else begin
+				sd_volume := sd_volume | %00100000;	// enable band-pass
+			end;
+		end else if ( Key::Held(KEY_KCUPDOWN) ) then begin
+			// Toggle voice 3 output
+			if (sd_volume & %10000000 ) then begin
+				sd_volume := sd_volume & %01111111;	// disable voice 3 output
+			end else begin
+				sd_volume := sd_volume | %10000000;	// enable voice 3 output
+			end;
+		end;
+
+		// Resonance
+		if( Key::Held(KEY_KF5) ) then begin
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				sd_reson := sd_reson - 16;
+			end else begin
+				sd_reson := sd_reson + 16;
+			end;
+		end;
+		
+		// Volume
+		if( Key::Held(KEY_KF7) ) then begin
+			temp_byte1 := sd_volume & $0f;
+			
+			if( Key::Held(KEY_KRSHIFT) or Key::Held(KEY_KLSHIFT) ) then begin
+				dec(temp_byte1);
+				if( temp_byte1 > 15 ) then temp_byte1 := 15;
+			end else begin
+				inc(temp_byte1);
+				if( temp_byte1 > 15 ) then temp_byte1 := 0;
+			end;
+
+			sd_volume := sd_volume & $F0 | temp_byte1;
+		end;
+
+		//////////////////////////////////////////////////////////////////////
+
+		// Get values from read-only registers
+		sd_potx		:= 	peek(LOC_POTX,0);	// Pot X
+		sd_poty		:=	peek(LOC_POTY,0);	// Pot Y
+		sd_random	:=	peek(LOC_RANDOM,0);	// Oscillator 3 Output / Random # Generator when Voice 3 set to noise
+		sd_env3		:=	peek(LOC_ENV3,0);	// Envelope Generator 3 Output
+
+		// Toggle forwarding of OSC3/RANDOM value
+		if( Key::Held(KEY_K9) ) then begin
+			inc(sd_osc3_tgt);
+			if( sd_osc3_tgt > 3 ) then sd_osc3_tgt := 0;
+		end;
+
+		if( sd_osc3_tgt = 0 ) then begin
+			// Do nothing
+		end else if( sd_osc3_tgt = 1 ) then begin
+			// Pipe OSC3 output to Voice 1 freq
+			sd_freq1		:= sd_random;
+		end else if( sd_osc3_tgt = 2 ) then begin
+			// Pipe OSC3 output to Voice 1 PWM
+			sd_pulse1	:= sd_random & $0F;
+		end else if( sd_osc3_tgt = 3 ) then begin
+			// Pipe OSC3 output to Filter freq
+			sd_filthi	:= sd_random & $0F;
+		end;
+
+		// Toggle forwarding of ENV3 value
+		if( Key::Held(KEY_K0) ) then begin
+			inc(sd_env3_tgt);
+			if( sd_env3_tgt > 3 ) then sd_env3_tgt := 0;
+		end;
+
+		if( sd_env3_tgt = 0 ) then begin
+			// Do nothing
+		end else if( sd_env3_tgt = 1 ) then begin
+			// Pipe OSC3 output to Voice 1 freq
+			sd_freq1		:= peek(LOC_ENV3,0);
+		end else if( sd_env3_tgt = 2 ) then begin
+			// Pipe OSC3 output to Voice 1 PWM
+			sd_pulse1	:= peek(LOC_ENV3,0) & $0F;
+		end else if( sd_env3_tgt = 3 ) then begin
+			// Pipe OSC3 output to Filter freq
+			sd_filthi	:= peek(LOC_ENV3,0) & $0F;
+		end;
+
+		//////////////////////////////////////////////////////////////////////
+
+		// Exit sound test 
+		if ( Key::Held(KEY_KRUNSTOP) ) then begin
+			sound_stop();
+			ClearScreen( 32, #LOC_CHAR_SCREEN); // init screen ram
+			break;
+		end;
+
+		// Trigger release cycle on space
+		if( Key::Held(KEY_KSPACE) ) then 	begin
+			// trigger release cycle for all 3 voices
+			LOC_VCREG1 := sd_contr1 & %11111110;
+			LOC_VCREG2 := sd_contr2 & %11111110;
+			LOC_VCREG3 := sd_contr3 & %11111110;
+			//	Bit 3: Test Bit: 1=Disable Oscillator
+//			LOC_VCREG1 := sd_contr1 | %00001000;
+//			LOC_VCREG2 := sd_contr2 | %00001000;
+//			LOC_VCREG3 := sd_contr3 | %00001000;
+			moveto(14,24,hi(LOC_CHAR_SCREEN));
+			printstring("**RELEASE**",0,11);
+			do_delay(255);
+			
+			// restore control settings
+			LOC_VCREG1 := sd_contr1;
+			LOC_VCREG2 := sd_contr2;
+			LOC_VCREG3 := sd_contr3;			
+		end;
+
+		moveto(14,24,hi(LOC_CHAR_SCREEN));
+		printstring("           ",0,11);
+		
+		//////////////////////////////////////////////////////////////////////
+
+		// Adjust tempo
+		if( Key::Held(KEY_KPLUS) ) then begin
+			dec(sd_tempo);
+		end;
+
+		// Adjust tempo
+		if( Key::Held(KEY_KMINUS) ) then begin
+			inc(sd_tempo);
+		end;
+
+		//////////////////////////////////////////////////////////////////////
+
+		update_values();
+		
+		do_delay(sd_tempo);
+	end;
+end;
+
+// Main loop
+begin
+//	Loop(); 
+	sound_debug();
+end.
+
+// eof
