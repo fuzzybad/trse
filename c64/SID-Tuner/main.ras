@@ -257,35 +257,35 @@ begin
 	// Voice Type
 	moveto(7,3,hi(LOC_CHAR_SCREEN));
 	if( sd_contr1 & %01000000 ) then begin
-		printstring("SAW  ",0,5);
-	end else if ( sd_contr1 & %00100000 ) then begin
-		printstring("TRI  ",0,5);
-	end else if ( sd_contr1 & %00010000 ) then begin
-		printstring("NOISE",0,5);
-	end else if ( sd_contr1 & %10000000 ) then begin
 		printstring("PULSE",0,5);
+	end else if ( sd_contr1 & %00100000 ) then begin
+		printstring("SAW  ",0,5);
+	end else if ( sd_contr1 & %00010000 ) then begin
+		printstring("TRI  ",0,5);
+	end else if ( sd_contr1 & %10000000 ) then begin
+		printstring("NOISE",0,5);
 	end;
 
 	moveto(19,3,hi(LOC_CHAR_SCREEN));
 	if( sd_contr2 & %01000000 ) then begin
-		printstring("SAW  ",0,5);
-	end else if ( sd_contr2 & %00100000 ) then begin
-		printstring("TRI  ",0,5);
-	end else if ( sd_contr2 & %00010000 ) then begin
-		printstring("NOISE",0,5);
-	end else if ( sd_contr2 & %10000000 ) then begin
 		printstring("PULSE",0,5);
+	end else if ( sd_contr2 & %00100000 ) then begin
+		printstring("SAW  ",0,5);
+	end else if ( sd_contr2 & %00010000 ) then begin
+		printstring("TRI  ",0,5);
+	end else if ( sd_contr2 & %10000000 ) then begin
+		printstring("NOISE",0,5);
 	end;
 
 	moveto(31,3,hi(LOC_CHAR_SCREEN));
 	if( sd_contr3 & %01000000 ) then begin
-		printstring("SAW  ",0,5);
-	end else if ( sd_contr3 & %00100000 ) then begin
-		printstring("TRI  ",0,5);
-	end else if ( sd_contr3 & %00010000 ) then begin
-		printstring("NOISE",0,5);
-	end else if ( sd_contr3 & %10000000 ) then begin
 		printstring("PULSE",0,5);
+	end else if ( sd_contr3 & %00100000 ) then begin
+		printstring("SAW  ",0,5);
+	end else if ( sd_contr3 & %00010000 ) then begin
+		printstring("TRI  ",0,5);
+	end else if ( sd_contr3 & %10000000 ) then begin
+		printstring("NOISE",0,5);
 	end;
 	
 	// Frequency
