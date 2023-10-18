@@ -1,0 +1,128 @@
+/////////////////////////////////////////////
+//	VARIABLES
+/////////////////////////////////////////////
+
+var
+	// Init constants
+	const	LOC_SCREEN_BORD:		address = 53280; 	// Border color 
+	const	LOC_SCREEN_BACK:		address = 53281; 	// Background color 0
+	// Using VIC bank 0 - $0000 - $3FFF
+	//	Screen at $0400-$07FF
+	//	BASIC code at $0800-$0BFF
+	//	Sprite data at $0C00 - $0FFF
+	const	LOC_CHAR_SCREEN:		address = $0400;		// Location for text screen (1k)
+	//const	LOC_CHAR_DEFS:		address = $8800; 	// Location for CHAR data (2k)
+	const	LOC_SPRITE_DEFS:		address = $0C00; 	// Location for sprite data (1k - 16 shapes)
+	const	LOC_SPRITE_PTRS:		address = LOC_CHAR_SCREEN + 1016;		// Location of sprite pointers
+	//const	LOC_KERNAL_SCREEN:	address = $288;		// Location where Kernal writes to screen
+	const	DEF_SPRITE_DEF_LOC:	byte = 48;			// Block where sprite data is located	 48 = $0C00
+
+	const	CHR_COL_BLK: byte = 144;
+	const	CHR_COL_WHT: byte = 5;
+	const	CHR_COL_RED: byte = 28;
+	const	CHR_COL_CYN: byte = 159;
+	const	CHR_COL_PUR: byte = 156;
+	const	CHR_COL_GRN: byte = 30;
+	const	CHR_COL_BLU: byte = 31;
+	const	CHR_COL_YEL: byte = 158;
+	const	CHR_COL_ORG: byte = 129;
+	const	CHR_COL_BRN: byte = 149;
+	const	CHR_COL_LRED: byte = 150;
+	const	CHR_COL_DGRY: byte = 151;
+	const	CHR_COL_MGRY: byte = 152;
+	const	CHR_COL_LGRN: byte = 153;
+	const	CHR_COL_LBLU: byte = 154;
+	const	CHR_COL_LGRY: byte = 155;
+
+	// SID Registers
+	const	LOC_FRELO1:			address = $D400;		// Voice 1 Frequency Control (low byte)
+	const	LOC_FREHI1:			address = $D401;		// Voice 1 Frequency Control (high byte)
+	const	LOC_PWLO1:			address = $D402;		// Voice 1 Pulse Waveform Width (low byte)
+	const	LOC_PWHI1:			address = $D403;		// Voice 1 Pulse Waveform Width (high nybble)
+	const	LOC_VCREG1:			address = $D404;		// Voice 1 Control Register
+	const	LOC_ATDCY1:			address = $D405;		// Voice 1 Attack/Decay Register
+	const	LOC_SUREL1:			address = $D406;		// Voice 1 Sustain/Release Control Register
+
+	const	LOC_FRELO2:			address = $D407;		// Voice 2 Frequency Control (low byte)
+	const	LOC_FREHI2:			address = $D408;		// Voice 2 Frequency Control (high byte)
+	const	LOC_PWLO2:			address = $D409;		// Voice 2 Pulse Waveform Width (low byte)
+	const	LOC_PWHI2:			address = $D40A;		// Voice 2 Pulse Waveform Width (high nybble)
+	const	LOC_VCREG2:			address = $D40B;		// Voice 2 Control Register
+	const	LOC_ATDCY2:			address = $D40C;		// Voice 2 Attack/Decay Register
+	const	LOC_SUREL2:			address = $D40D;		// Voice 2 Sustain/Release Control Register
+
+	const	LOC_FRELO3:			address = $D40E;		// Voice 3 Frequency Control (low byte)
+	const	LOC_FREHI3:			address = $D40F;		// Voice 3 Frequency Control (high byte)
+	const	LOC_PWLO3:			address = $D410;		// Voice 3 Pulse Waveform Width (low byte)
+	const	LOC_PWHI3:			address = $D411;		// Voice 3 Pulse Waveform Width (high nybble)
+	const	LOC_VCREG3:			address = $D412;		// Voice 3 Control Register
+	const	LOC_ATDCY3:			address = $D413;		// Voice 3 Attack/Decay Register
+	const	LOC_SUREL3:			address = $D414;		// Voice 3 Sustain/Release Control Register
+
+	const	LOC_CUTLO:			address = $D415;		// Low part of filter cutoff
+	const	LOC_CUTHI:			address = $D416;		// High part of filter cutoff
+	const	LOC_RESON:			address = $D417;		// Filter resonance control
+	const	LOC_SIGVOL:			address = $D418;		// Volume and Filter Select Register (0:no sound, 15:max vol)
+
+	const	LOC_POTX:			address = $D419;		// Pot X
+	const	LOC_POTY:			address = $D41A;		// Pot Y
+	const	LOC_RANDOM:			address = $D41B;		// Random #
+	const	LOC_ENV3:			address = $D41C;		// Envelope Generator 3 Output
+	
+	// init vars
+	screen_loc		: pointer;
+	screen_loc_work	: pointer;
+	color_loc		: pointer;
+	color_loc_work	: pointer;
+	
+	i : byte = 0;
+	j : byte = 0;
+	k : byte = 0;
+	temp_byte1 : byte = 0;
+	run_tuner : byte = 1;
+	sprite_def_loc:	byte = DEF_SPRITE_DEF_LOC;
+	logo_xpos:	byte = 110;
+	logo_ypos:	byte = 12;
+	scroll_input : byte = 0;
+	scroll_speed : byte = 20;	// lower val = faster
+	scroll_num_char : byte = 0;
+	scroll_num_trail : byte = 0;
+	scroll_x : byte = 0;
+	scroll_y : byte = 0;
+	scroll_inp_brk : byte = 0;
+	scroll_step : byte = 0;
+
+	// Tuner vars
+	sd_freq1	:	byte = 48;
+	sd_freq2	:	byte = 48;
+	sd_freq3	:	byte = 48;
+	sd_pulse1:	byte = 15;
+	sd_pulse2:	byte = 15;
+	sd_pulse3:	byte = 15;
+	sd_contr1:	byte = %01000000;
+	sd_contr2:	byte = %00100000;
+	sd_contr3:	byte = %00010000;
+	sd_atdcy1:	byte = $88;
+	sd_atdcy2:	byte = $88;
+	sd_atdcy3:	byte = $88;
+	sd_susrel1:	byte = $88;
+	sd_susrel2:	byte = $88;
+	sd_susrel3:	byte = $88;
+	sd_filtlo:	byte = 0;
+	sd_filthi:	byte = 0;
+	sd_reson	:	byte = 0;
+	sd_volume:	byte = $0f;	// max volume
+	sd_osc3_tgt:	byte = 0;
+	sd_env3_tgt:	byte = 0;
+	sd_potx:		byte = 0;
+	sd_poty:		byte = 0;
+	sd_random:	byte = 0;
+	sd_env3:		byte = 0;
+	sd_tempo:	byte = 96;
+	
+	// Include charset
+	//charset1: incbin("assets/vic-tuner-chars.bin", LOC_CHAR_DEFS);
+	// Import sprite data
+	sprites: incbin("assets/SID-Tuner - Sprites.bin", LOC_SPRITE_DEFS); 
+
+// eof

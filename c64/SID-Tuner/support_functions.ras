@@ -1,0 +1,138 @@
+/////////////////////////////////////////////
+//	SUPPORT FUNCTIONS
+/////////////////////////////////////////////
+
+procedure cycle_text_right();
+procedure check_input_title();
+
+
+// Delay function
+procedure do_delay( delay_val: byte );
+var
+	dd_i : byte;
+begin
+	if( delay_val > 0 ) then	begin
+		for dd_i := 0 to delay_val do wait(255);
+	end;
+end;
+
+
+// Turn off sound
+procedure sound_mute();
+begin
+	// Mute sound 
+	LOC_SIGVOL	:= 0;
+end;
+
+
+// Set uppercase, duh
+procedure set_uppercase();
+begin
+	poke(#$E84C,0,12);
+end;
+
+
+
+// Control function for text cycling
+// 	xpos
+//	ypos
+//	num_char
+//	num_cycles - set to zero for infinite cycles
+//	scroll direction - 0:left, 1:right
+//	break on input
+//	play music
+//	init music
+procedure cycle_text( cts_xpos:byte, cts_ypos:byte, cts_num_char:byte
+				  	, cts_num_cycles:byte, cts_dir:boolean, cts_input_brk:boolean	
+					, cts_play_music:boolean, cts_init_music:boolean );
+var ct_temp: byte;
+begin
+	//moveto(1,2,hi(LOC_CHAR_SCREEN));
+	//printdecimal(cts_input_brk,2);
+
+	// Controls when trailing chars at end are drawn
+    	ct_temp := 0;
+    	// Number of trailing chars
+    	scroll_num_char := cts_num_char;
+    	scroll_num_trail := scroll_num_char / 2;
+	// Screen position to start effect
+    	scroll_x := cts_xpos;
+    	scroll_y := cts_ypos;
+    	// Break scroll on input
+    	scroll_inp_brk := 0;
+    	
+	// Value of zero means we cycle forever
+	if (cts_num_cycles = 0) then 
+	begin
+		cts_num_cycles := 1;
+		scroll_step := 0;
+	end else begin
+		scroll_step := 1;
+	end;
+
+	// Scroll for the given # cycles
+	for k := 0 to cts_num_cycles step scroll_step do 
+	begin
+		if cts_dir then begin
+//			cycle_text_left();
+		end else begin
+			cycle_text_right();
+		end;
+
+		// Break on input
+		if scroll_inp_brk then return;
+	end;
+end;
+
+
+// Cycle text right 
+procedure cycle_text_right();
+begin
+	for i := 0 to scroll_num_char step 1 do	 
+	begin
+		screen_loc_work := screen_loc + scroll_x + SCREEN_WIDTH * scroll_y;
+		
+		// Leading char
+		screen_loc_work[i] := screen_loc_work[i] +128;
+			
+		// Trailing char
+		if i < scroll_num_trail then begin
+			j := scroll_num_char - scroll_num_trail + i;
+		end	else begin
+		    j := i - scroll_num_trail;
+			// Activate trailing char after index reaches a given point
+		    ct_temp := 1;
+		end;	
+	
+		if ct_temp = 1 then
+		begin
+			screen_loc_work[j] := screen_loc_work[j] +128;
+		end;	
+
+		// If scrolling can be interrupted
+		if cts_input_brk then 
+		begin
+			// Break on 'fire'
+			if (check_input_title() = 1) then begin
+				scroll_inp_brk := 1;
+				return;
+			end;
+			// If additional input handling required
+//			if (scroll_input) then begin
+//				cycle_text_input_handler();
+//			end;
+		end;
+		
+		do_delay(scroll_speed);
+	end;
+end;
+
+
+// Place a sprite on the screen 
+procedure place_sprite( ps_x : byte, ps_y : byte, ps_idx : byte );
+begin
+	SpritePos(24 + ps_x, 45 + ps_y, ps_idx);	// x, y, sprite #
+end;
+
+
+// eof
