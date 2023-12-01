@@ -1,0 +1,80 @@
+ /**
+ *	C64 Sprite Physics demo
+ *	JLP 2023 (fuzzybad@gmail.com)
+ */
+ 
+program SpritePhysics;
+
+var
+	i : byte=0;
+
+	
+procedure checkInput();
+begin
+	//  100 get a$
+	//  110 if a$="{up}" then dy=dy-1
+	//  120 if a$="{down}" then dy=dy+1
+	//  130 if a$="{left}" then dx=dx-1
+	//  140 if a$="{rght}" then dx=dx+1
+	//  150 if a$=" " then dx=0: dy=0: x=165: y=64
+end;
+
+
+procedure updateState();
+begin
+	//  160 dx=dx*.95
+	//  170 dy=dy+.3
+	//  180 x=x+dx: y=y+dy
+	//  190 if x<0 and r=0 then x=89: r=1
+	//  200 if x>255 and r=0 then x=0: r=1
+	//  210 if x<0 and r=1 then x=255: r=0
+	//  220 if x>89 and r=1 then x=0: r=0
+	//  230 if y<1 then y=1: dy=0
+	//  240 if y>208 then y=208: dy=-dy*.6
+	//  245 if (peek(v+31)and1) then poke 53280,(peek(53280)+1) and 15: y=y-dy*2: dy=-dy*.6
+	//  250 if r=0 then poke v+16,0: goto 270
+	//  260 poke v+16,1
+end;
+
+
+procedure updateScreen();
+begin
+	//  270 poke v,x
+	//  280 poke v+1,y
+end;
+
+procedure setup();
+begin
+	//   10 print"{clr}": poke 53281,0: poke 53280,0
+	//   15 for a=0 to 15: poke1024+a+40*15,160: next
+	//   16 for a=25 to 39: poke1024+a+40*15,160: next
+	//   20 x=165: y=64: dx=0: dy=0: r=0
+	//   30 poke 2040,13: for s=0 to 62: read sd: poke 832+s,sd: next
+	//   40 v=53248
+	//   50 pokev+21,1
+	//   60 pokev+39,3
+	//   70 pokev+23,1: pokev+29,1
+	//
+	//  300 data 0,127,0,1,255,192,3,255,224,3,231,224
+	//  310 data 7,217,240,7,223,240,7,217,240,3,231,224
+	//  320 data 3,255,224,3,255,224,2,255,160,1,127,64
+	//  330 data 1,62,64,0,156,128,0,156,128,0,73,0,0,73,0
+	//  340 data 0,62,0,0,62,0,0,62,0,0,28,0
+end;
+
+
+// Execution starts here
+begin
+	setup();
+
+	while(1) do 
+	begin
+		checkInput();
+		updateScreen();		
+		updateScreen();
+		//  290 goto 100	
+	end;
+end.
+
+
+// eof

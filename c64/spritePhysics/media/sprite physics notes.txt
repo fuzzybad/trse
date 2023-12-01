@@ -1,0 +1,10 @@
+
+"Sprite Physics" Coding Notes
+
+Begin: Nov 2023
+
+
+1. Put copy of PETCAT.EXE into folder with .BAS file
+2. Right-click folder, select Open in Terminal
+3. Type:  .\petcat.exe -2 -o "Sprite Physics.bas" -- "Sprite Physics BASIC.prg"
+4. Open .bas file in Notepad, copy & paste text into Turbo Rascal file
