@@ -47,17 +47,6 @@ var
 	);// at 832;
 
 
-// Delay function
-procedure do_delay( delay_val: byte );
-var
-	dd_i : byte;
-begin
-	if( delay_val > 0 ) then	begin
-		for dd_i := 0 to delay_val do wait(255);
-	end;
-end;
-
-
 procedure checkInput();
 begin
 	// Read Keyboard
@@ -101,9 +90,6 @@ end;
 
 
 procedure updateState();
-var
-	dir_x_tmp : signed integer;
-	dir_y_tmp : signed integer;
 begin		
 	// Debug
 	//moveto(5,5,hi(screen_char_loc));
@@ -223,29 +209,16 @@ begin
 	LOC_SCREEN_BORD := 0;
 
 	//   15 for a=0 to 15: poke 1024+a+40*15,160: next
-	loc_work := SCREEN_CHAR_LOC + 40 * 15;
-
-	for i := 0 to 15 do
-	begin
-		loc_work[i] := 160;
-	end;
- 
 	//   16 for a=25 to 39: poke 1024+a+40*15,160: next
-	for i := 25 to 40 do
-	begin
-		loc_work[i] := 160;
-	end;
+	loc_work := SCREEN_CHAR_LOC + 40 * 15;
+	for i := 0 to 15 do loc_work[i] := 160; 
+	for i := 25 to 40 do loc_work[i] := 160;
 
 	// sprite data 
 	//   30 poke 2040,13: for s=0 to 62: read sd: poke 832+s,sd: next
 	poke(LOC_SPRITE_PTRS, 0, 13);
-	
 	loc_work := 832;
-
-	for i := 0 to 63 do
-	begin
-		loc_work[i] := sprite_data_arr[i];
-	end;
+	for i := 0 to 63 do loc_work[i] := sprite_data_arr[i];
 
 	// enable sprite 0
 	//   50 poke v+21,1
@@ -276,7 +249,6 @@ begin
 		updateState();
 		updateScreen();
 		
-		//do_delay(10);
 		//  290 goto 100			
 	end;
 end.
