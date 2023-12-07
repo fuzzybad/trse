@@ -3,6 +3,10 @@ SpritePhysics demo
 
 This is an example of converting a C64 BASIC program to Turbo Rascal (TRSE).
 
+Notes:
+------
+Notes regarding BASIC to TRSE process can be found at media/sprite%20physics%20notes.txt
+
 
 Binaries: 
 ---------
