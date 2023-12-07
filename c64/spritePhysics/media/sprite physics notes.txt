@@ -1,10 +1,48 @@
 
-"Sprite Physics" Coding Notes
+Conversion of BASIC programs to Turbo Rascal (TRSE) - An Overview
 
-Begin: Nov 2023
+Jessica Petersen <fuzzybad@gmail.com>, Nov 2023
+
+Outline below assumes working from a BASIC PRG on a modern platform which has VICE and Turbo Rascal (TRSE) installed.  If working from a D64 disk image, PRG can be extracted using D64 Editor, or other tools.
+
+1. Detokenize BASIC PRG:
+    a) Copy PETCAT.EXE from VICE install into folder with .BAS file
+    b) Right-click folder, select Open in Terminal
+    c) Type:  .\petcat.exe -2 -o "Sprite Physics.bas" -- "Sprite Physics BASIC.prg"
+    
+2. Open TRSE IDE, create new project.
+
+3. Open "Sprite Physics.bas" in text editor, copy & paste content into TRSE project file as commented lines. From this point, we'll be working exclusively in TRSE IDE.
+
+4. Group BASIC lines into functions (setup, check input, update screen, etc)
+
+5. Starting with setup function, refactor BASIC lines into TRSE equivalents.  
+
+6. After each function has been refactored, compile/test & move to next logical function in program flow.
+
+7. After refactoring all functions, you should now have a ML program functionally equivalent to the original BASIC program. However, it will run much faster. Timing can be controlled by using "waitforverticalblank()" and/or "wait()" within main loop, or by using interrupts.  
+
+7. Commented BASIC lines can now be deleted.
+
+8. Continue making improvements, optimizations, & adding features until satisfied.
 
 
-1. Put copy of PETCAT.EXE into folder with .BAS file
-2. Right-click folder, select Open in Terminal
-3. Type:  .\petcat.exe -2 -o "Sprite Physics.bas" -- "Sprite Physics BASIC.prg"
-4. Open .bas file in Notepad, copy & paste text into Turbo Rascal file
+Notes: 
+------
+It's important to use correct data types in TRSE. Many bugs are caused by putting a number > 255 into a variable defined as a byte, or passing an integer variable to a function which expects a byte.
+
+The following variable types are supported: 
+    byte    - 0 to 255
+    integer - unsigned: 0 to 65535 or signed: -32,768 to +32,767
+    string 
+    pointer 
+    array[n] of (type) 
+
+Data type limitations:
+
+* Strings & arrays cannot be extended once defined.
+
+* Signed integers currently have some limitations, for example currently only less than (<) comparisons can be done, and math involving negative values may require workarounds.  For example, "myvar := -myvar;" will throw an error, even when myvar is a signed integer. main.ras from SpritePhysics uses such a workaround.
+
+* No decimal (floating-point) numeric type currently exists in TRSE.  A workaround for this can be done by using integer data type to represent value with additional decimal places (x10 or x100), then removing the additional decimal places for output. main.ras from SpritePhysics uses such a workaround.
+
