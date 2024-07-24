@@ -1,0 +1,37 @@
+Unit Screen;
+var
+
+	/** 
+	<p>Array holding addresses of each line / row of the screen 0 - 24
+	**/
+	screenAddr: array[ 25 ] of integer = buildtable(
+		
+		" 0x08000 + ( i * 40 ) "
+		
+	);
+	const OUTCHAR: address = $ffd2; // kernal print character
+
+/**
+<p>Wait for the Vertical Blank to start. This is when the raster beam
+has reached the bottom of the screen and is returning to the top left.
+**/
+procedure WaitVblStart();
+
+/**
+<p>Wait for the Vertical Blank to end. This is after the raster beam
+has returned to the top of the screen. This procedure will be true and
+no wait while the screen is being redrawn.
+<p>Use WaitVblEnd after a WaitVblStart when needing to ensure that the
+vertical blank has completed before waiting for the next VBL. 
+This is important when your game loop takes less time than the time for
+the raster to return to the top of the screen.
+**/
+procedure WaitVblEnd();
+
+/** <p>Clear the screen **/
+procedure Clear();
+
+
+@include "output/screen/implementation.ras"
+
+end.

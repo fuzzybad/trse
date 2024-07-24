@@ -1,0 +1,564 @@
+/* 
+Tron Light Cycles - Support Functions 
+*/
+
+// Predefine these to prevent error
+procedure play_music();
+procedure check_input();
+procedure cycle_text_left();
+procedure cycle_text_right();
+procedure cycle_text_input_handler();
+procedure debug_speed();
+procedure sound_init();
+procedure sound_stop();
+procedure animate_game_logo();
+procedure animate_bee();
+
+// Clear Screen
+procedure cls();
+begin
+	ClearScreen($20, LOC_CHAR_SCREEN);
+	moveto(0,0,hi(LOC_CHAR_SCREEN));
+end;
+
+// Set lower/uppercase mode
+/*
+procedure set_lowercase();
+begin
+	poke(#$E84C,0,14);
+end;
+*/
+
+// Set uppercase/graphics mode
+procedure set_uppercase();
+begin
+	poke(#$E84C,0,12);
+end;
+
+// Set graphic mode
+procedure cursor_graphic();
+begin
+	_A := GRAPHIC_MODE;
+    call(#$FFD2);
+end;
+
+// Set text mode
+/*
+procedure cursor_text();
+begin
+	_A := TEXT_MODE;
+	call(#$FFD2);
+end;
+*/
+// Home cursor
+procedure cursor_home();
+begin
+	_A := HOME;
+    call(#$FFD2);
+end;
+
+// Clear screen & home cursor
+/* procedure cursor_clear();
+begin
+	_A := CLR_HOME;
+    call(#$FFD2);
+end; */
+
+// Return/Line Feed
+procedure cursor_return();
+begin
+	_A := RETURN_KEY;
+    call(#$FFD2);
+end;
+
+// Move cursor down
+procedure cursor_down();
+begin
+	_A := CRSR_DN;
+    call(#$FFD2);
+end;
+
+// Move cursor right
+procedure cursor_right();
+begin
+	_A := CRSR_RT;
+    call(#$FFD2);
+end;
+
+// Print using KERNAL routine at X,Y location
+procedure basic_printat( _pa_ptr:pointer, _pa_myx:byte, _pa_myy:byte);
+var
+	pa_next_ch: byte;
+	pa_i: byte;
+begin
+	// Home cursor
+	cursor_home();
+	
+	// Cursor right
+	if _pa_myx > 0 then	begin
+		for pa_i := 0 to _pa_myx do	cursor_right();
+	end;
+
+	// Cursor down
+	if _pa_myy > 0 then	begin
+		for pa_i := 0 to _pa_myy do cursor_down();
+	end;
+
+	// Print text
+	pa_next_ch := 0;
+	while(_pa_ptr[pa_next_ch] <> 0) do
+	begin 
+		_A := _pa_ptr[pa_next_ch];
+    		call(#$FFD2);
+    		inc(pa_next_ch);
+	end;
+end;
+
+// Delay function
+procedure do_delay( delay_val: byte );
+var
+	dd_i : byte;
+begin
+	if( delay_val > 0 ) then	begin
+		for dd_i := 0 to delay_val do wait(255);
+	end;
+end;
+
+// Setup sound
+procedure sound_init();
+begin
+	LOC_ATDCY1	:= $1A; // faster attack, longer decay
+	LOC_SUREL1	:= $A8; // higher volume, longer release
+	LOC_PWLO1	:= 0;
+	LOC_PWHI1	:= 8;
+
+//	LOC_ATDCY2	:= $18; // fast attack, medium decay
+//	LOC_SUREL2	:= $88; // higher volume, medium release
+	LOC_ATDCY2	:= $1A; // fast attack, medium decay
+	LOC_SUREL2	:= $B9; // higher volume, medium release
+	LOC_PWLO2	:= 0;
+	LOC_PWHI2	:= 8;
+	
+	LOC_ATDCY3	:= $1A; // faster attack, longer decay
+	LOC_SUREL3	:= $A8; // higher volume, higher release
+	LOC_PWLO3	:= 0;
+	LOC_PWHI3	:= 8;
+
+	// waveform definition
+	//	Bit 0: Gate Bit: 1 = Start attack/decay/sustain, 0 = Start release
+	//	Bit 1: Sync Bit: 1 = Synchronize Oscillator with Oscillator 3 frequency
+	//	Bit 2: Ring Modulation: l=Ring modulate Oscillators 1 and 3
+	//	Bit 3: Test Bit: 1=Disable Oscillator 
+	//	Bit 4: Select triangle waveform
+	//	Bit 5: Select sawtooth waveform
+	//	Bit 6: Select pulse waveform
+	//	Bit 7: Select random noise waveform
+	//LOC_VCREG1	:= %10000000; // noise 
+	LOC_VCREG1	:= %01000000; // pwm
+	LOC_VCREG2	:= %00100000; // sawtooth
+	LOC_VCREG3	:= %00010000; // triangle
+	
+//	LOC_SIGVOL	:= 0; // init at mute
+end;
+
+// sound stop
+procedure sound_stop();
+begin
+	// Mute sound 
+	LOC_SIGVOL	:= 0;
+
+	// Set frequency registers to zero
+	LOC_FRELO1	:= 0;
+	LOC_FREHI1	:= 0;
+	LOC_FRELO2	:= 0;
+	LOC_FREHI2	:= 0;
+	LOC_FRELO3	:= 0;
+	LOC_FREHI3	:= 0;
+	
+	// Reset voice control registers
+	LOC_VCREG1	:= LOC_VCREG1 & %11111110;
+	LOC_VCREG2	:= LOC_VCREG2 & %11111110;
+	LOC_VCREG3	:= LOC_VCREG3 & %11111110;
+end;
+
+// Play music - called from external loop
+procedure play_music();
+begin
+	// Play melody part
+	//  Structure - melody, duration
+	//
+	// Change note when index is zero
+	if (music_sust_idx = 0) then
+	begin
+		// Release note
+		LOC_VCREG1	:= %01000000;
+		LOC_VCREG2	:= %00100000;
+//		LOC_VCREG1	:= LOC_VCREG1 & %11111110;	// End Voice 1 Note
+//		togglebit(LOC_VCREG1,0,0);
+		
+		// End tune when all params=0
+		if (song_ptr[music_idx] = 0 and song_ptr[music_idx+1] = 0) then 
+		begin
+			music_idx := 0;
+		end;
+	
+		// Play note
+		if (song_ptr[music_idx] > 0) then
+		begin
+			LOC_FREHI1	:= song_ptr[music_idx];
+			LOC_FRELO1	:= 0;
+			LOC_VCREG1	:= %01000001;
+			LOC_FREHI2	:= song_ptr[music_idx];
+			LOC_FRELO2	:= 0;
+			LOC_VCREG2	:= %00100001;
+//			LOC_VCREG1	:= LOC_VCREG1 | %00000001;	// Start Voice 1 Note
+//			togglebit(LOC_VCREG1,0,1);
+		end;
+
+		// Set sustain - this value is tuned in array
+		music_sust_idx	:= song_ptr[music_idx+1] * song_tempo;
+		
+		// Next note
+		music_idx := music_idx + 2;
+	end;
+	
+	dec(music_sust_idx);
+
+	// Play bass part
+	if (song_play_bass) then 
+	begin 
+		// Loop over note array
+		//  Structure - note, duration
+		//
+		// Change note when index is zero
+		if (music_bass_sust_idx = 0) then
+		begin
+			// Release note
+			//LOC_VCREG3	:= %00010000;	// triangle
+			LOC_VCREG3	:= %01000000;	// pulse
+			
+			// End tune when all params=0
+			if (song_bass_ptr[music_bass_idx] = 0 and song_bass_ptr[music_bass_idx+1] = 0) then 
+			begin
+				music_bass_idx := 0;
+			end;
+		
+			// Play note
+			if (song_bass_ptr[music_bass_idx] > 0) then
+			begin
+				LOC_FREHI3	:= song_bass_ptr[music_bass_idx];
+				LOC_FRELO3	:= 0;
+				LOC_VCREG3	:= %00010001;	// triangle
+				//LOC_VCREG3	:= %01000001;	// pulse
+			end;
+	
+			// Set sustain - this value is tuned in array
+			music_bass_sust_idx	:= song_bass_ptr[music_bass_idx+1] * song_tempo;
+			
+			// Next note
+			music_bass_idx := music_bass_idx + 2;
+		end;
+		
+		dec(music_bass_sust_idx);
+	end;
+end;
+
+
+// Control function for text cycling
+// 	xpos
+//	ypos
+//	num_char
+//	num_cycles - set to zero for infinite cycles
+//	scroll direction - 0:left, 1:right
+//	break on input
+//	play music
+//	init music
+procedure cycle_text( cts_xpos:byte, cts_ypos:byte, cts_num_char:byte
+				  	, cts_num_cycles:byte, cts_dir:boolean, cts_input_brk:boolean	
+					, cts_play_music:boolean, cts_init_music:boolean );
+var ct_temp: byte;
+begin
+	//moveto(1,2,hi(LOC_CHAR_SCREEN));
+	//printdecimal(cts_input_brk,2);
+
+	// Controls when trailing chars at end are drawn
+    	ct_temp := 0;
+    	// Number of trailing chars
+    	scroll_num_char := cts_num_char;
+    	scroll_num_trail := scroll_num_char / 2;
+	// Screen position to start effect
+    	scroll_x := cts_xpos;
+    	scroll_y := cts_ypos;
+    	// Break scroll on input
+    	scroll_inp_brk := 0;
+    	
+	// Value of zero means we cycle forever
+	if (cts_num_cycles = 0) then 
+	begin
+		cts_num_cycles := 1;
+		scroll_step := 0;
+	end else begin
+		scroll_step := 1;
+	end;
+
+	// Initialize music	
+	if (cts_init_music) then
+	begin
+		// Initialze sound
+		sound_init();
+		LOC_SIGVOL		:= $0F;
+		music_idx		:= 0;
+		music_sust_idx	:= 0;
+		LOC_VCREG1		:= %01000000;	// Start Voice 1 Type
+		//LOC_FREHI3		:= 16;	// Set Default Voice 3 Freq for Sync/Ring Effect
+		//LOC_VCREG3		:= %00010000;	// Enable Voice 3 with Pulse type
+
+		//if (music_bass_sust_idx = 0) then LOC_FREHI2 := 15;
+	end;
+
+	// Scroll for the given # cycles
+	for k := 0 to cts_num_cycles step scroll_step do 
+	begin
+		if cts_dir then begin
+			cycle_text_left();
+		end else begin
+			cycle_text_right();
+		end;
+
+		// Cycle colors of game logo
+//		if (scroll_istitle) then begin
+//			animate_game_logo();
+//		end;
+
+		// Break on input
+		if scroll_inp_brk then return;
+	end;
+end;
+
+// Cycle text right 
+procedure cycle_text_right();
+begin
+	for i := 0 to scroll_num_char step 1 do	 
+	begin
+		screen_loc_work := screen_loc + scroll_x + MYSCREEN_WIDTH * scroll_y;
+		
+		// Leading char
+		screen_loc_work[i] := screen_loc_work[i] +128;
+			
+		// Trailing char
+		if i < scroll_num_trail then begin
+			j := scroll_num_char - scroll_num_trail + i;
+		end	else begin
+		    j := i - scroll_num_trail;
+			// Activate trailing char after index reaches a given point
+		    ct_temp := 1;
+		end;	
+	
+		if ct_temp = 1 then
+		begin
+			screen_loc_work[j] := screen_loc_work[j] +128;
+		end;	
+
+		// If scrolling can be interrupted
+		if cts_input_brk then 
+		begin
+			// Break on 'fire'
+			if (check_input() = 1) then begin
+				scroll_inp_brk := 1;
+				return;
+			end;
+			// If additional input handling required
+			if (scroll_input) then begin
+				cycle_text_input_handler();
+			end;
+		end;
+		
+		// Play theme song
+		if (cts_play_music) then begin
+			play_music();
+		end;
+
+		do_delay(scroll_speed);
+
+		// Cycle colors of game logo
+		if (scroll_istitle) then begin
+			if (title_anim_idx = 0) then 	animate_game_logo();
+			inc(title_anim_idx);
+			if (title_anim_idx > 5) then title_anim_idx := 0;
+		end;
+		
+		// Animate bee sprite
+		if (scroll_istitle or scroll_iseegg) then begin
+			animate_bee();			
+		end;
+
+		// for testing speed of loop
+		@ifdef DEBUG	
+		debug_speed();
+		@endif
+	end;
+end;
+
+// Cycle text left
+procedure cycle_text_left();
+begin
+	// Cycle characters within string
+	for i := scroll_num_char-1 to -1 step -1 do	 
+	begin
+		screen_loc_work := screen_loc + scroll_x + MYSCREEN_WIDTH * scroll_y;
+		
+		// Leading char
+		screen_loc_work[i] := screen_loc_work[i] +128;
+			
+		// Trailing char
+		if i > scroll_num_char - scroll_num_trail then begin
+			j := i - scroll_num_trail -1;
+		end	else begin
+		    j := scroll_num_char - scroll_num_trail +i -1;
+			// Activate trailing char after index reaches a given point
+		    ct_temp := 1;
+		end;	
+
+		if ct_temp = 1 then begin
+			screen_loc_work[j] := screen_loc_work[j] +128;
+		end;	
+
+		// Play theme song
+		if (cts_play_music) then
+		begin
+			play_music();
+		end;
+
+		// If scrolling can be interrupted
+		if cts_input_brk then 
+		begin
+			// Break on 'fire'
+			if (check_input() = 1) then begin
+				scroll_inp_brk := 1;
+				return;
+			end;
+			// If additional input handling required
+			if (scroll_input) then begin
+				cycle_text_input_handler();
+			end;
+		end;
+		
+		do_delay(scroll_speed);
+		
+		// for testing speed of loop
+		@ifdef DEBUG	
+		debug_speed();
+		@endif
+	end;
+end;
+
+// Show relative speed of loop by changing background on raster refresh
+/*
+procedure debug_speed();
+begin
+	// for testing speed of loop
+	// wait for raster position outside of visible screen area (vertical blank)
+	SCREEN_BG_COLOR := BLACK + SCREEN_BG_BLACK;		
+	WaitForRaster(0); // Raster line 0-155
+	SCREEN_BG_COLOR := CYAN + SCREEN_BG_BLACK;
+end;
+*/
+
+// Copy CHARROM to RAM
+/*
+procedure copy_charrom();
+begin
+	// Copies 256*8 bytes of data - 2KB
+	BlockMemCpy($8000, LOC_CHAR_DEFS, 8);	
+end;
+*/
+
+/*
+// debug custom chars
+procedure debug_custom_chars();
+begin
+	// up/down cycles
+	screen_loc_work := screen_loc + SCREEN_WIDTH;
+	screen_loc_work[1] := SCR_BIKE_UD_1;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*2;
+	screen_loc_work[1] := SCR_BIKE_UD_2;
+	color_loc_work := color_loc + SCREEN_WIDTH;
+	color_loc_work[1] := 14;
+	color_loc_work := color_loc + SCREEN_WIDTH*2;
+	color_loc_work[1] := 14;
+
+	screen_loc_work := screen_loc + SCREEN_WIDTH*3;
+	screen_loc_work[1] := SCR_TRAIL_VERT;	
+	
+	screen_loc_work := screen_loc + SCREEN_WIDTH*4;
+	screen_loc_work[1] := SCR_BIKE_UP_MID_1;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*5;
+	screen_loc_work[1] := SCR_BIKE_UD_MID_2;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*6;
+	screen_loc_work[1] := SCR_BIKE_UP_MID_3;
+	color_loc_work := color_loc + SCREEN_WIDTH*4;
+	color_loc_work[1] := 14;
+	color_loc_work := color_loc + SCREEN_WIDTH*5;
+	color_loc_work[1] := 14;
+	color_loc_work := color_loc + SCREEN_WIDTH*6;
+	color_loc_work[1] := 14;
+
+	screen_loc_work := screen_loc + SCREEN_WIDTH*7;
+	screen_loc_work[1] := SCR_TRAIL_VERT;	
+	
+	screen_loc_work := screen_loc + SCREEN_WIDTH*8;
+	screen_loc_work[1] := SCR_BIKE_DN_MID_3;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*9;
+	screen_loc_work[1] := SCR_BIKE_UD_MID_2;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*10;
+	screen_loc_work[1] := SCR_BIKE_DN_MID_1;
+	color_loc_work := color_loc + SCREEN_WIDTH*8;
+	color_loc_work[1] := 14;
+	color_loc_work := color_loc + SCREEN_WIDTH*9;
+	color_loc_work[1] := 14;
+	color_loc_work := color_loc + SCREEN_WIDTH*10;
+	color_loc_work[1] := 14;
+
+	screen_loc_work := screen_loc + SCREEN_WIDTH*11;
+	screen_loc_work[1] := SCR_TRAIL_VERT;	
+	
+	screen_loc_work := screen_loc + SCREEN_WIDTH*12;
+	screen_loc_work[1] := SCR_BIKE_UD_1;
+	screen_loc_work := screen_loc + SCREEN_WIDTH*13;
+	screen_loc_work[1] := SCR_BIKE_UD_2;
+	color_loc_work := color_loc + SCREEN_WIDTH*12;
+	color_loc_work[1] := 14;
+	color_loc_work := color_loc + SCREEN_WIDTH*13;
+	color_loc_work[1] := 14;
+
+	// right/left cycles
+	screen_loc_work := screen_loc + SCREEN_WIDTH;
+	screen_loc_work[2] := SCR_BIKE_LR_1;
+	screen_loc_work[3] := SCR_BIKE_LR_2;
+	color_loc_work := color_loc + SCREEN_WIDTH;
+	color_loc_work[2] := 14;
+	color_loc_work[3] := 14;
+
+	screen_loc_work[4] := SCR_TRAIL_HORIZ;	
+
+	screen_loc_work[5] := SCR_BIKE_RT_MID_1;
+	screen_loc_work[6] := SCR_BIKE_LR_MID_2;
+	screen_loc_work[7] := SCR_BIKE_RT_MID_3;
+	color_loc_work[5] := 14;
+	color_loc_work[6] := 14;
+	color_loc_work[7] := 14;
+
+	screen_loc_work[8] := SCR_BIKE_LT_MID_1;
+	screen_loc_work[9] := SCR_BIKE_LR_MID_2;
+	screen_loc_work[10] := SCR_BIKE_LT_MID_3;
+	color_loc_work[8] := 14;
+	color_loc_work[9] := 14;
+	color_loc_work[10] := 14;
+
+	screen_loc_work[11] := SCR_TRAIL_HORIZ;
+end;
+*/
+
+
+
+// eof

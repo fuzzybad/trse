@@ -1,0 +1,448 @@
+/* 
+ *	Tron Light Cycles - Variables 
+ */
+
+//
+//	1000-11FF    4096-4607		Screen memory (expanded)
+//
+//	900F		36879			VICCRF		Screen and border color register
+//   									A bit 7–4 background color
+//							AAAABCCC		B bit 3 inverse switch
+//										C bit 2–0 border color
+//
+//	9400			37888-38399	Color memory (expanded)
+//										A bit 7-4 not used
+//							AAAABCCC		B bit 3 multicolor enable (1) disable default (0)
+//										C bit 2-0 foreground color (default value 1) 9600
+//									
+// Normal Colors:
+// 	0000 black  		0001 white 		0010 red 		0011 cyan
+// 	0100 purple 		0101 green 		0110 blue 		0111 yellow
+//
+// Extended Colors (only available for background & aux color):
+// 	1000 org 		1001 lt. org 	1010 lt. red		1011 lt. cyn
+// 	1100 lt. pur 	1101 lt. grn 	1110 lt. blu 	1111 lt. yel
+//
+//	SCREEN LOC HIGH BIT			C------- $9002 (36866)
+//	SCREEN BASE LOCATION 		AAAA---- $9005 (36869)
+//	CHARACTER BASE LOCATION 		----BBBB $9005 (36869)
+//	AUXILIARY COLOR 				AAAA---- $900E (36878)
+//	SOUND VOLUME 				----BBBB $900E (36878)
+
+var
+	// Game Constants
+	const	MYSCREEN_WIDTH:		byte = 22;
+	const	MYSCREEN_HEIGHT:		byte = 22; // actually 23, but this is easier than doing -1 everywhere
+	const	SCORE_TO_WIN:		byte = 5;
+	const	DEF_GAME_SPEED:		byte = 45;	// Speed of game - lower is faster
+	const	DEF_ANIM_SPEED:		byte = 6;	// Speed of animation - lower is faster
+	const	DEF_SCROLL_SPEED:	byte = 16; 	// Speed of scrolling - lower is faster
+	
+	// Interface Locations
+	const	LOC_PORT_A:			address = 37151;	// Port A - Joystick L,D,U,F
+	const	LOC_PORT_B:			address = 37152;	// Port B - Joystick R
+	// Set LOC_DDR_B to 127 to read joystick Right, set to 255 afterwards to enable keyboard scan.
+	const	LOC_DDR_B:			address = 37154; 	// Data direction register B 
+	const	LOC_SCREEN_BORD:		address = 36879; 	// Screen/Border color register
+	//const	LOC_CHAR_DEF:		address = 36869; 	// Bits 3-0 (Bits 7-4 set screen address)
+//	const	LOC_CUST_CHAR:		address = $1400; 	// Location for copy of CHARROM
+	// SetCharsetLocation parameter must be one of the following values: 
+	//	$8000, $8400, $8800, $8C00, $1000, $1400, $1800, $1C00
+	const	LOC_CUST_CHAR:		address = $1400; 	// Location for copy of CHARROM
+	const	LOC_SOUND_VOL_AUX:	address = 36878;		// 0-15 (bits 0-3 set sound volume, bits 7-4 aux color)
+	const	LOC_SOUND_ALTO:		address = 36874;		// 128-255
+	const	LOC_SOUND_TENO:		address = 36875;		// 128-255
+	const	LOC_SOUND_SOPR:		address = 36876;		// 128-255
+	const	LOC_SOUND_NOIS:		address = 36877;		// 128-255
+	// 36866 default val %001011 (22) 
+	const	LOC_NUM_COLS:		address = 36866;		// HDDDDDDD D=number of video columns
+	// 36867 default val	%010111 (23) 0-23 valid 
+	const	LOC_NUM_ROWS:		address = 36867;		// GEEEEEEF E=number of video rows
+
+	// Character Code Defs
+	const 	CLR_HOME: byte = 147;
+	const	HOME: byte = 19;
+	const	RETURN_KEY: byte = 13;
+	const	TEXT_MODE: byte = 14;
+	const	GRAPHIC_MODE: byte = 142;
+	const	CRSR_UP: byte = 145;
+ 	const	CRSR_RT: byte = 29;
+	const	CRSR_DN: byte = 17;
+	const	CRSR_LT: byte = 157;
+	const	RVS_ON: byte = 18;
+	const 	RVS_OFF: byte = 146;
+	const	CHR_SPC: byte = 32;
+	const	CHR_CURVED_TOP_LT_CORNER: byte = 213;
+	const	CHR_CURVED_TOP_RT_CORNER: byte = 201;
+	const	CHR_CURVED_BOT_LT_CORNER: byte = 202;
+	const	CHR_CURVED_BOT_RT_CORNER: byte = 203;
+	const	CHR_MID1_HORIZ_LN: byte = 196;
+	const	CHR_MID2_HORIZ_LN: byte = 195;
+	const	CHR_MID3_HORIZ_LN: byte = 198;
+	const	CHR_MID2_VERT_LN: byte = 194;
+	const	CHR_MID3_VERT_LN: byte = 221;
+	const	CHR_COL_BLK: byte = 144;
+	const	CHR_COL_WHT: byte = 5;
+	const	CHR_COL_RED: byte = 28;
+	const	CHR_COL_CYN: byte = 159;
+	const	CHR_COL_PUR: byte = 156;
+	const	CHR_COL_GRN: byte = 30;
+	const	CHR_COL_BLU: byte = 31;
+	const	CHR_COL_YEL: byte = 158;
+	
+	// Screen code defs
+	const	SCR_SOLID_BLOCK: 	byte = 160;
+	const	SCR_SHADED_BLOCK: 	byte = 102;
+	const	SCR_TRAIL_HORIZ: 	byte = 103;
+	const	SCR_TRAIL_VERT: 		byte = 104;
+	const	SCR_TRAIL_LB_CORNER:	byte = 105;
+	const	SCR_TRAIL_RB_CORNER:	byte = 106;
+	const	SCR_TRAIL_LT_CORNER:	byte = 107;
+	const	SCR_TRAIL_RT_CORNER:	byte = 108;
+	const	SCR_BIKE_LR_1: 		byte = 094;
+	const	SCR_BIKE_LR_2: 		byte = 095;
+	const	SCR_BIKE_UD_1: 		byte = 096;
+	const	SCR_BIKE_UD_2: 		byte = 097;
+	const	SCR_EXPLODE:			byte = 082;
+	const	SCR_CIRCLE_SM:		byte = 083;
+	const	SCR_CIRCLE_LG:		byte = 084;
+	const	SCR_BIKE_LT_MID_1:	byte = 113;
+	const	SCR_BIKE_LT_MID_3:	byte = 114;
+	const	SCR_BIKE_RT_MID_1:	byte = 115;
+	const	SCR_BIKE_RT_MID_3:	byte = 116;
+	const	SCR_BIKE_LR_MID_2:	byte = 117;
+	const	SCR_BIKE_UP_MID_1:	byte = 118;
+	const	SCR_BIKE_UP_MID_3:	byte = 119;
+	const	SCR_BIKE_DN_MID_1:	byte = 120;
+	const	SCR_BIKE_DN_MID_3:	byte = 121;
+	const	SCR_BIKE_UD_MID_2:	byte = 122;
+	const	SCR_GAME_TB_HORIZ:	byte = 86;
+	const	SCR_GAME_LT_VERT:	byte = 92;
+	const	SCR_GAME_RT_VERT:	byte = 87;
+	const	SCR_GAME_LB_CORNER:	byte = 88;
+	const	SCR_GAME_RB_CORNER:	byte = 89;
+	const	SCR_GAME_LT_CORNER:	byte = 90;
+	const	SCR_GAME_RT_CORNER:	byte = 91;
+
+	// Pointers
+	screen_loc:		pointer;
+	screen_loc_work:	pointer;
+	color_loc:		pointer;
+	color_loc_work:	pointer;
+	message_ptr:		pointer;
+	song_ptr:		pointer;
+
+	// Counters
+	i: byte at $00;	// temp variables
+	j: byte at $01;
+	k: byte at $02;
+	player_char_1: byte at $03;	// temp pointers for player chars
+	player_char_2: byte at $04;
+	player_char_3: byte at $05;
+	player_char_4: byte at $06;
+	
+	// Temp vars
+	tmp:				integer = 0;
+	tmp_irq:			byte = 0;
+	message_len:		byte = 0;
+	temp_byte1:		byte = 0;
+	temp_byte2:		byte = 0;
+	temp_byte3:		byte = 0;
+	
+	// Game vars
+	game_mode:		byte = 0;	// 0=One Player, 1=Two Player, 2=Two V.Sark
+	game_difficulty:	byte = 2;	// 1=Easy, 2=Moderate, 3=Hard
+	game_mode_changed: boolean = 1;
+	game_over_flag:	byte = 0;
+	game_run_flag:	byte = 0;
+	score_p1: 		byte = 0;
+	score_p2:		byte = 0;
+	scroll_speed: 	byte = DEF_SCROLL_SPEED;	// Speed of scrolling - lower is faster
+	game_speed:		byte = DEF_GAME_SPEED;	// Speed of game - lower is faster
+	anim_speed:		byte = DEF_ANIM_SPEED;	// Speed of animation
+	music_idx:		byte = 0;
+	music_sust_idx:	byte = 0;
+	sound_pitch:		byte = 255;
+	crash_anim_arr:	array[3] of byte = (SCR_CIRCLE_SM, SCR_EXPLODE, SCR_CIRCLE_LG, SCR_EXPLODE);
+	crash_color_arr:	array[3] of byte = (7, 2, 7, 2);	// yellow, red
+	crash_bord_arr:	array[3] of byte = (11, 12, 13, 14); // cyan, purple, green, blue
+	logo_color_arr:	array[3] of byte = (1, 3, 4, 6, 4, 3);
+
+	// dir_map_arr:	1=L, 2=R, 3=U, 4=D
+	dir_map_arr:		array[5] of integer = (0, -1, 1, -MYSCREEN_WIDTH, MYSCREEN_WIDTH);
+	dir_opp_arr:		array[5] of byte = (0, 2, 1, 4, 3);
+	turn_counter:	byte = 0;
+	player_1_anim:	byte = 0;
+	player_2_anim:	byte = 0;
+	player_1_input:	byte = 0;
+	player_2_input:	byte = 0;
+	keybd_input:		byte = 0;
+	player_1_head:	byte = 0;
+	player_2_head:	byte = 0;
+	player_1_head_c:	byte = 0;
+	player_2_head_c:	byte = 0;
+	player_1_fire:	boolean = 0;
+	player_2_fire:	boolean = 0;
+	player_1_crash:	boolean = 0;
+	player_2_crash:	boolean = 0;
+	player_1_xy:		integer = 0;
+	player_2_xy:		integer = 0;
+	player_1_trail:	array[3] of integer;
+	player_2_trail:	array[3] of integer;
+	player_1_trail_char:	byte;
+	player_2_trail_char:	byte;
+	trail_char_arr:	array[] of byte = (SCR_TRAIL_HORIZ, SCR_TRAIL_VERT, SCR_TRAIL_LT_CORNER, SCR_TRAIL_RT_CORNER, SCR_TRAIL_LB_CORNER, SCR_TRAIL_RB_CORNER);
+	scroll_num_char:	byte = 0;
+	scroll_x:		byte = 0;
+	scroll_y:		byte = 0;
+	scroll_num_trail:byte = 0;
+	scroll_inp_brk:	boolean = 0;
+	scroll_step:		byte = 0;
+	scroll_input:	boolean = 0;
+	scroll_ishelp:	boolean = 0;
+	scroll_istitle:	boolean = 0;
+	sm_cr_th:				byte = 5;	// crash threshold - min val 2
+	sm_boost_th:				byte = 8;	// boost threshold
+	sm_prox_th:				byte = 4;	// proximity threshold to seek player
+	sark_near_player_x_dist: byte = 0;
+	sark_near_player_x_neg:	boolean = 0;
+	sark_near_player_y_dist:	byte = 0;
+	sark_near_player_y_neg:	boolean = 0;
+
+	// Game screen locations
+    gamescreen_saddr: array[MYSCREEN_HEIGHT+1] of integer;  // Array to hold address table to screen memory
+    gamescreen_caddr: array[MYSCREEN_HEIGHT+1] of integer;  // Array to hold address table to color memory
+
+    gamescreen_char_arr: array[8] of byte = (	SCR_GAME_RT_CORNER, 
+										   	SCR_GAME_TB_HORIZ, 
+											SCR_GAME_LT_CORNER,
+											SCR_GAME_RT_VERT,
+											SCR_GAME_LB_CORNER,
+											SCR_GAME_TB_HORIZ,
+											SCR_GAME_RB_CORNER,
+											SCR_GAME_LT_VERT );
+											
+    gamescreen_color_arr: array[8] of byte = (13, 13, 13, 13, 13, 13, 13, 13);
+
+
+	// Message Strings
+	//title_msg_0:		string = (CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
+	//						,"PROGRAMS!!");
+	title_msg_1:		string = (CHR_CURVED_TOP_LT_CORNER,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_CURVED_TOP_RT_CORNER);
+	title_msg_2:		string = (CHR_MID2_VERT_LN,"LIGHT CYCLE DUEL",CHR_MID3_VERT_LN);
+	title_msg_3:		string = (CHR_CURVED_BOT_LT_CORNER,CHR_MID3_HORIZ_LN
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
+							,CHR_CURVED_BOT_RT_CORNER);
+	title_msg_4:		string = ("2023 FUZZYBAD");
+	title_msg_5:		string = ("SCORE FIVE TO WIN");
+	title_msg_6:		string = ("PRESS F1");
+	title_msg_7:		string = ("FOR INSTRUCTIONS");
+	
+	help_msg_0:		string = ("STANDARD");
+	help_msg_1:		string = ("SUB-STANDARD");
+	help_msg_2:		string = ("INSTRUCTIONS");
+	help_msg_3:		string = ("MENU CONTROLS");
+	help_msg_4:		string = ("MODE - LEFT/RIGHT");
+	help_msg_5:		string = ("LEVL - 1/2/3     ");
+	help_msg_6:		string = ("PLAYER 1    ");
+	help_msg_7:		string = ("MOVE - JOY OR WASD");
+	help_msg_8:		string = ("TRBO - FIRE OR SPC");
+	help_msg_9:		string = ("PLAYER 2    ");
+	help_msg_10:		string = ("MOVE - IJKL       ");
+	help_msg_11:		string = ("TRBO - RIGHT SHIFT");
+	help_msg_12:		string = ("STOP - ABORT GAME ");
+	
+	score_msg_0:		string = ("P1:");
+	score_msg_1:		string = (":P2 ");
+	score_msg_2:		string = ("PLAYER:");
+	score_msg_3:		string = (":SARK  ");
+	
+	msg_both_crash:	string = ("BOTH CRASHED");
+	msg_p1_crash:	string = ("PLAYER 1 CRASHED");
+	msg_p2_crash:	string = ("PLAYER 2 CRASHED");
+	msg_plr_crash:	string = ("PLAYER CRASHED");
+	msg_sark_crash:	string = ("SARK CRASHED");
+	msg_p1_wins:		string = ("PLAYER 1 WINS");
+	msg_p2_wins:		string = ("PLAYER 2 WINS");
+	msg_plr_wins:	string = ("PLAYER WINS");
+	msg_sark_wins:	string = ("SARK WINS");
+	msg_get_ready:	string = ("PRESS FIRE");
+	msg_blank:		string = ("                ");
+	
+	msg_one_player:	string = (">>> ",RVS_ON,"ONE PLAYER",RVS_OFF," >>>");
+	msg_two_player:	string = ("<<< ",RVS_ON,"TWO PLAYER",RVS_OFF," <<<");
+	//msg_tvs_player:	string = ("<<< ",RVS_ON,"TWO V.SARK",RVS_OFF," <<<");
+	msg_diff_select:	string = ("LEVEL:");	// 6 chars
+	msg_diff_one:	string = (RVS_ON,"1",RVS_OFF," 2 3 EASY");
+	msg_diff_two:	string = ("1 ",RVS_ON,"2",RVS_OFF," 3 MED "); // 13 chars
+	msg_diff_three:	string = ("1 2 ",RVS_ON,"3",RVS_OFF," HARD");
+
+	// Include charset
+	charset1: incbin("charsets/chargen-arcade-lightcycles.bin", LOC_CUST_CHAR);
+	
+	////////////////////////////////////////////////////////////////////////
+	/// SOUND SECTION
+	////////////////////////////////////////////////////////////////////////
+
+	// Music notes
+	const CONST_NOTE_1_C:	byte = 255;
+	const CONST_NOTE_1_CS:	byte = 134;
+	const CONST_NOTE_1_D:	byte = 141;
+	const CONST_NOTE_1_DS:	byte = 147;
+	const CONST_NOTE_1_E:	byte = 153;
+	const CONST_NOTE_1_F:	byte = 159;
+	const CONST_NOTE_1_FS:	byte = 164;
+	const CONST_NOTE_1_G:	byte = 170;
+	const CONST_NOTE_1_GS:	byte = 174;
+	const CONST_NOTE_1_A:	byte = 179;
+	const CONST_NOTE_1_AS:	byte = 183;
+	const CONST_NOTE_1_B:	byte = 187;
+
+	const CONST_NOTE_2_C:	byte = 191;
+	const CONST_NOTE_2_CS:	byte = 195;
+	const CONST_NOTE_2_D:	byte = 198;
+	const CONST_NOTE_2_DS:	byte = 201;
+	const CONST_NOTE_2_E:	byte = 204;
+	const CONST_NOTE_2_F:	byte = 207;
+	const CONST_NOTE_2_FS:	byte = 210;
+	const CONST_NOTE_2_G:	byte = 212;
+	const CONST_NOTE_2_GS:	byte = 215;
+	const CONST_NOTE_2_A:	byte = 217;
+	const CONST_NOTE_2_AS:	byte = 219;
+	const CONST_NOTE_2_B:	byte = 221;
+	
+	const CONST_NOTE_3_C:	byte = 223;
+	const CONST_NOTE_3_CS:	byte = 225;
+	const CONST_NOTE_3_D:	byte = 226;
+	const CONST_NOTE_3_DS:	byte = 228;
+	const CONST_NOTE_3_E:	byte = 230;
+	const CONST_NOTE_3_F:	byte = 231;
+	const CONST_NOTE_3_FS:	byte = 232;
+	const CONST_NOTE_3_G:	byte = 234;
+	const CONST_NOTE_3_GS:	byte = 235;
+	const CONST_NOTE_3_A:	byte = 236;
+	const CONST_NOTE_3_AS:	byte = 237;
+	const CONST_NOTE_3_B:	byte = 238;
+	
+	// Intro to "Anthem for Keyboard Solo" Tron theme - 7/4 time
+	// Transcribed from sheet music: https://www.sheetmusicplus.com/title/tron-theme-digital-sheet-music/22158340
+	// How to read sheet music: https://theonlinemetronome.com/blogs/8/treble-clef
+	//  Structure - note, sustain 
+	theme_music_arr: array[] of byte = (
+		0,7, 	// half measure rst
+		0,2,					CONST_NOTE_3_C,1,	CONST_NOTE_3_D,1,
+		CONST_NOTE_3_E,3,	0,1,					CONST_NOTE_3_C,1,
+		CONST_NOTE_3_D,1,	CONST_NOTE_3_E,2,	CONST_NOTE_3_C,2,
+		// note 8
+		CONST_NOTE_3_G,4,	CONST_NOTE_3_D,4,	CONST_NOTE_2_B,4,
+		CONST_NOTE_2_G,3,	0,2,					CONST_NOTE_2_A,1,
+		// note 13
+		CONST_NOTE_2_B,1,	CONST_NOTE_3_C,3,	0,1,
+		CONST_NOTE_2_A,1,	CONST_NOTE_2_B,1,	CONST_NOTE_3_C,2,
+		// note 18
+		CONST_NOTE_2_A,2,	CONST_NOTE_3_E,4,	CONST_NOTE_2_B,4,
+		CONST_NOTE_2_GS,4,	CONST_NOTE_2_E,3,	0,2,
+		// note 23
+		CONST_NOTE_2_A,1,	CONST_NOTE_2_G,1,	CONST_NOTE_2_F,2,
+		CONST_NOTE_2_A,2,	CONST_NOTE_2_B,6,	0,2,
+		// note 28
+		CONST_NOTE_3_C,1,	CONST_NOTE_2_B,1,	CONST_NOTE_2_A,2,
+		CONST_NOTE_3_C,2,	CONST_NOTE_3_D,6,	0,2,
+		// note 33
+		CONST_NOTE_3_DS,1,	CONST_NOTE_3_CS,1,	CONST_NOTE_2_B,2,
+		CONST_NOTE_3_DS,2,	CONST_NOTE_3_FS,4,	CONST_NOTE_3_CS,3,
+		// note 39
+		0,2,					CONST_NOTE_3_FS,1,	CONST_NOTE_3_E,1,
+		CONST_NOTE_3_D,2,	CONST_NOTE_3_FS,2,	CONST_NOTE_3_A,6,
+		0,7,	// half measure rst
+		0,0	// End
+	);
+
+	// Tron Scherzo hook - DAA, dah, da-DA, daa. DA-da-DA-DAAA!
+	//
+	// Couldn't find sheet music - notes suggested here:
+	//  https://www.reddit.com/r/piano/comments/14zix4y/tron_scherzo_wendy_carlos/
+	//
+	// Redditor "AccordionPianist" -
+	//	"I think the riff you are referring to is that repeating "build up" to the
+	//	first ascending pattern? Right hand plays B F C repeatedly (fingers 5,3,1) 
+	//	while left plays A,B,A,B…. Then it jumps to first "ascension" which left 
+	//	hand bass is G then G# then A while right plays D G C , C# G#, B A B E, 
+	//	respectively, then bass does a G# before the next "ascension". Similar pattern 
+	//	just playing up from A (instead of G) same kind of thing."
+	//
+	// Structure - note, sustain
+	game_end_music_arr: array[] of byte = (
+		0,7,		// half measure rest
+		CONST_NOTE_3_D,2,	CONST_NOTE_3_G,2,	CONST_NOTE_3_C,1,  
+		CONST_NOTE_3_CS,2,	CONST_NOTE_3_GS,2,	0,1,
+		CONST_NOTE_2_B,1,	CONST_NOTE_2_A,1,	CONST_NOTE_2_B,1,  
+		CONST_NOTE_3_E,4,
+		0,14,	// full measure rest
+		0,14,
+		0,0	// End
+	);
+
+/*
+	// Scale for testing
+	music_scale_arr: array[20] of byte = (
+		CONST_NOTE_B,2,
+		CONST_NOTE_BS,2,
+		CONST_NOTE_C,2,
+		CONST_NOTE_CS,2,
+		CONST_NOTE_D,2,
+		CONST_NOTE_DS,2,
+		CONST_NOTE_E,2,
+		CONST_NOTE_ES,2,
+		CONST_NOTE_F,2,
+		CONST_NOTE_FS,2,
+		CONST_NOTE_G,2,
+		CONST_NOTE_GS,2,
+		CONST_NOTE_A,2,
+		CONST_NOTE_AS,2,
+		0,4,	// rst
+		CONST_NOTE_B,2,
+		CONST_NOTE_BS,2,
+		CONST_NOTE_C,2,
+		CONST_NOTE_CS,2,
+		CONST_NOTE_D,2,
+		CONST_NOTE_DS,2,
+		CONST_NOTE_E,2,
+		CONST_NOTE_ES,2,
+		CONST_NOTE_F,2,
+		CONST_NOTE_FS,2,
+		CONST_NOTE_G,2,
+		CONST_NOTE_GS,2,
+		CONST_NOTE_A,2,
+		CONST_NOTE_AS,2,
+		0,4,	// rst
+		CONST_NOTE_B,2,	// these get painfully high
+		CONST_NOTE_BS,2,
+		CONST_NOTE_C,2,
+		CONST_NOTE_CS,2,
+		CONST_NOTE_D,2,
+		CONST_NOTE_DS,2,
+		CONST_NOTE_E,2,
+		CONST_NOTE_ES,2,
+		CONST_NOTE_F,2,
+		CONST_NOTE_FS,2,
+		CONST_NOTE_G,2,
+		CONST_NOTE_GS,2,
+		CONST_NOTE_A,2,
+		CONST_NOTE_AS,2,
+		0,4,	// rst
+		0,0	// end
+		);
+*/
+	
+// eof

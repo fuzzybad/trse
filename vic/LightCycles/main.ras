@@ -1,0 +1,124 @@
+/**
+ *	VIC Light Cycles
+ *	Supports SPT Dual Joystick Interface
+ *	JLP 2023 (fuzzybad@gmail.com)
+ */
+ 
+// TODO: 
+//	Add third game mode: TWO VS SARK - deferred
+
+program LightCycles;
+
+//@define DEBUG 1
+//@define PBMADDRESS $8000
+@VicMemoryConfig "8k"
+//@VicMemoryConfig "16k"
+// Adjust start of code to make room for char data at $1400-$1C00
+@startblock	$1C00 "Game"
+//@startblock	$2000 "Game"
+//@startblock	$2400 "Game"
+@userdata	$1400 $1BFF "Charset"
+
+//@use "gfx/gfx"
+@use "input/key"	
+//@use "screen"
+@use "text/txt"
+//@use "output/pbm"	
+
+// comment out if using multiplcation or division, otherwise save space
+@ignoremethod "init16x8mul"
+@ignoremethod "init16x8div"
+@ignoremethod "init8x8div"
+@ignoremethod "initeightbitmul"
+
+// deprecated commands - ensure not included
+@ignoremethod "initjoystick"
+@ignoremethod "initmoveto"
+
+// === includes =====================================
+@include "variables.ras"
+@include "support_functions.ras"
+@include "functions.ras"
+
+// === main logic ===================================
+procedure game_loop();
+begin
+	while (game_over_flag=0) do
+	begin
+	  	// check input devices
+	  	check_input();
+	  	
+	  	// DEBUG - only move on input
+//	  	@ifdef DEBUG	
+//	  	if ( player_1_input or player_1_fire) then
+//		begin
+//		@endif
+	
+		// update positions
+		update_positions();
+		// go vroom
+	  	alternate_engine_sound();
+	  	// check collisions
+	  	check_collisions();
+	  	// game state
+	  	check_game_state();
+	  	// update screen
+	  	update_screen();
+	
+	  	if( game_over_flag = 1 ) then return;
+
+	  	// DEBUG - only move on input
+//	  	@ifdef DEBUG	
+//	  	end;
+//		@endif
+	  	
+	  	// Slow it down
+	  	do_delay(game_speed);
+
+		// for testing speed of loop
+//		@ifdef DEBUG	
+//		debug_speed();
+//		@endif
+	end;
+end;
+
+// Init
+begin
+	// Disable Run/Stop-Restore
+//	poke(^$0328, 100, 0); // (808)
+
+	// Init screen mode
+	DefineScreen();
+	poke(#$E84C,0,12); // set uppercase
+	screen_loc := #SCREEN_CHAR_LOC;
+	color_loc := #SCREEN_COL_LOC;
+	
+	// Black screen, black border, inverse bit set
+	//	$900F	36879	AAAABCCC 
+	// 					AAAA----		SCREEN COLOR
+	//					----B---		INVERSE BIT
+	//					-----CCC		BORDER COLOR
+	LOC_SCREEN_BORD := %00001000;
+	
+	// Set number of screen columns & rows
+	//LOC_NUM_COLS := (peek(LOC_NUM_COLS,0) & 128) | 24;
+	//LOC_NUM_ROWS := (peek(LOC_NUM_ROWS,0) & 128) | %101110;
+	
+	// Set aux color: lt. orange
+	LOC_SOUND_VOL_AUX := (peek(LOC_SOUND_VOL_AUX,0) & $0F) | $90;	
+
+	// Copy CHARROM to RAM & set char loc to value defined by LOC_CUST_CHAR
+	SetCharsetLocation(LOC_CUST_CHAR);
+
+	// Primary loop
+	while(1) do
+	begin
+		game_over_flag := 0;
+		title_screen();
+		game_screen();
+		game_loop();
+	end;
+end.
+
+
+// eof

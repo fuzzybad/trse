@@ -1,0 +1,106 @@
+ /**
+ *	C64 Light Cycles
+ *	JLP 2023 (fuzzybad@gmail.com)
+ */
+ 
+// TODO: 
+//	Add third game mode: TWO VS SARK - deferred
+
+program LightCycles;
+
+//@define DEBUG 1
+
+// Adjust start of code 
+//@startblock	$1800 "Game"
+//@startblock	$6000 "Game"
+//@userdata	$0000 $3FFF "VIC_DATA"
+//@userdata	$4000 $7FFF "VIC_DATA"
+@userdata	$8000 $BFFF "VIC_DATA"
+//@userdata	$C000 $FFFF "VIC_DATA"
+
+@use "gfx/gfx"
+@use "input/key"	
+@use "screen/screen"
+@use "text/txt"
+
+// deprecated commands - ensure not included
+@ignoremethod "initjoystick"
+@ignoremethod "initmoveto"
+
+// === includes =====================================
+@include "variables.ras"
+@include "support_functions.ras"
+@include "functions.ras"
+
+// === main logic ===================================
+procedure game_loop();
+begin
+	while (game_over_flag=0) do
+	begin
+	  	// check input devices
+	  	check_input();
+	  	
+		// update positions
+		update_positions();
+		// go vroom
+	  	alternate_engine_sound();
+	  	// check collisions
+	  	check_collisions();
+	  	// game state
+	  	check_game_state();
+	  	// update screen
+	  	update_screen();
+	
+	  	if( game_over_flag = 1 ) then return;
+
+		// Slow it down	  	
+		do_delay(game_speed);
+	end;
+end;
+
+// for testing speed of loop
+//		@ifdef DEBUG	
+//		debug_speed();
+//		@endif
+
+
+// Init
+begin
+	// Disable BASIC ROM, Enable KERNAL & I/O
+	//LOC_IO_PORT := (peek(LOC_IO_PORT,0) & %11111000) | %110;
+	SetMemoryConfig(1, 1, 0);	// IO, KERNAL, BASIC
+	// Set VIC bank
+	SetBank(DEF_VIC_BANK);
+	// Value of the screen must be $X000, $X400, $X800 or $XC00 where X can be 0-F 
+	SetCharsetAndScreenLocation(LOC_CHAR_DEFS, LOC_CHAR_SCREEN);
+	// Tell KERNAL where to write chars
+	LOC_KERNAL_SCREEN := hi(LOC_CHAR_SCREEN);	
+
+	DefineScreen();
+	set_uppercase();
+	screen_loc := #LOC_CHAR_SCREEN;
+	color_loc := #SCREEN_COL_LOC;
+	
+	// Black screen, black border
+	LOC_SCREEN_BORD := 0;
+	LOC_SCREEN_BACK := 0;
+
+	// Set single color mode
+	LOC_SCROLX := %00001000;
+
+	// Set MC values
+	LOC_SCREEN_BGCOL1 := 14; // lt blue
+	LOC_SCREEN_BGCOL2 := 15;	// lt gray
+
+	// Primary loop
+	while(1) do
+	begin
+		game_over_flag := 0;
+		title_screen();
+		game_screen();
+		game_loop();
+	end;
+end.
+
+
+// eof

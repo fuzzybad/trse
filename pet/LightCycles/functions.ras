@@ -1,0 +1,1074 @@
+/* 
+Tron Light Cycles - Game Functions 
+*/
+
+// Predefine these to prevent error
+procedure init_gamestate();
+procedure init_engine_sound();
+procedure alternate_engine_sound();
+procedure player_crash();
+procedure stop_sound();
+procedure sark_move();
+procedure play_title_animation();
+
+// Read input devices - keyboard & SPT dual joys
+procedure check_input();
+var
+	check_input_val : byte;
+begin
+	// Initialize	
+	player_1_input	:= 0;
+	player_2_input	:= 0;
+	player_1_fire	:= 0;
+	player_2_fire	:= 0;
+	keybd_input		:= 0;
+
+	// Read controller values from Port B
+	check_input_val := LOC_PORT_B;
+	
+	// Check SPT Single Joystick
+	//if (not check_input_val & 1) then player_1_input := 1;	// Left
+	//if (not check_input_val & 2) then player_1_input := 2;	// Right
+	//if (not check_input_val & 4) then player_1_input := 3;	// Up
+	//if (not check_input_val & 8) then player_1_input := 4;	// Down
+	//if (not check_input_val & 32) then player_1_fire := 1;	// Fire
+
+	// Check SPT Double Joysticks
+	if (check_input_val & 3 = 0) then player_1_fire := 1;		// Fire
+	if (not check_input_val & 4) then player_1_input := 1;		// Left
+	if (not check_input_val & 8) then player_1_input := 2;		// Right
+	if (not check_input_val & 1) then player_1_input := 3;		// Up
+	if (not check_input_val & 2) then player_1_input := 4;		// Down
+
+	if (check_input_val & 48 = 0) then player_2_fire := 1;	 	// Fire
+	if (not check_input_val & 64) then player_2_input := 1;	// Left
+	if (not check_input_val & 128) then player_2_input := 2;	// Right
+	if (not check_input_val & 16) then player_2_input := 3;	// Up
+	if (not check_input_val & 32) then player_2_input := 4;	// Down
+	
+	// uncomment function in support_functions to debug keyboard codes
+	//check_keyboard_codes();
+	
+	// Read PET Keyboard
+	Key::Read();
+
+	if (not keybd_type_flag)	then
+	begin
+		// Values for "graphics" keyboard
+		if Key::Held($0104) then player_1_input := 1;	// A - P1 Left
+		if Key::Held($4004) then player_2_input := 1;	// 4 - P2 Left
+		if Key::Held($0204) then player_1_input := 2;	// D - P1 Right
+		if Key::Held($8004) then player_2_input := 2;	// 6 - P2 Right
+		if Key::Held($0103) then player_1_input := 3;	// W - P1 Up
+		if Key::Held($4003) then player_2_input := 3;	// 8 - P2 Up
+		if Key::Held($0105) then player_1_input := 4;	// S - P1 Down
+		if Key::Held($4005) then player_2_input := 4;	// 5 - P2 Down
+		if Key::Held($0409) then player_1_fire := 1;	// Space - P1 Fire
+		if Key::Held($2008) then player_2_fire := 1;	// RShift - P2 Fire
+		if Key::Held($4006) then keybd_input := 1;	// 1 Key
+		if Key::Held($4007) then keybd_input := 2;	// 2 Key
+		if Key::Held($8006) then keybd_input := 3;	// 3 Key
+		if Key::Held($2002) then keybd_input := 4;	// K Key (business)
+		if Key::Held($0805) then keybd_input := 4;	// K Key (graphics)
+		//if Key::Held($2000) then keybd_input := 5;	// Left Arrow Key - Abort game
+	end else
+	begin
+		// Values for "business" keyboard
+		if Key::Held($0103) then player_1_input := 1;	// A - P1 Left
+		if Key::Held($0201) then player_2_input := 1;	// 4 - P2 Left
+		if Key::Held($0203) then player_1_input := 2;	// D - P1 Right
+		if Key::Held($0409) then player_2_input := 2;	// 6 - P2 Right
+		if Key::Held($0204) then player_1_input := 3;	// W - P1 Up
+		if Key::Held($0400) then player_2_input := 3;	// 8 - P2 Up
+		if Key::Held($0202) then player_1_input := 4;	// S - P1 Down
+		if Key::Held($0200) then player_2_input := 4;	// 5 - P2 Down
+		if Key::Held($0408) then player_1_fire := 1;	// Space - P1 Fire
+		if Key::Held($4006) then player_2_fire := 1;	// RShift - P2 Fire
+		if Key::Held($0101) then keybd_input := 1;	// 1 Key -
+		if Key::Held($0100) then keybd_input := 2;	// 2 Key
+		if Key::Held($0209) then keybd_input := 3;	// 3 Key
+		if Key::Held($2002) then keybd_input := 4;	// K Key (business)
+		if Key::Held($0805) then keybd_input := 4;	// K Key (graphics)
+		//if Key::Held($0401) then keybd_input := 5;	// Left Arrow Key - Abort game
+	end;
+
+ 	if Key::Held(KEY_KRUNSTOP) then keybd_input := 5;	// Run/Stop Key - Abort game
+
+	// Get Sark's move when in single-player mode
+	if (game_mode = 0 and game_run_flag) then begin
+		sark_move();
+	end;
+	
+	if ( player_1_fire = 1 or player_2_fire = 1) then begin 
+		returnvalue(true);
+	end else begin
+		returnvalue(false);
+	end;
+end;
+
+// Displays game mode
+procedure display_game_mode();
+begin
+	tmp := (MYSCREEN_WIDTH - 18) / 2;
+	if game_mode = 0 then basic_printat(#msg_one_player,tmp,18);
+	if game_mode = 1 then basic_printat(#msg_two_player,tmp,18);
+	//if game_mode = 2 then basic_printat(#msg_tvs_player,tmp,20);
+end;
+
+// Displays game mode
+procedure display_game_difficulty();
+begin
+	tmp := (MYSCREEN_WIDTH - 23) / 2;
+	basic_printat(#msg_diff_select, tmp, 20);
+	
+	if (game_difficulty = 1) then basic_printat(#msg_diff_one, tmp+12, 20);
+	if (game_difficulty = 2) then basic_printat(#msg_diff_two, tmp+12, 20);
+	if (game_difficulty = 3) then basic_printat(#msg_diff_three, tmp+12, 20);
+end;
+
+// Handle additional input during cycle text routine
+procedure cycle_text_input_handler();
+begin
+	if ((player_1_input = 1 or player_2_input = 1) and game_mode = 1) then begin
+		game_mode := 0; 	// one player
+		game_mode_changed := 1;
+		display_game_mode();
+	end;
+	if ((player_1_input = 2 or player_2_input = 2) and game_mode = 0) then begin
+		game_mode := 1;	// two player
+		game_mode_changed := 1;
+		display_game_mode();
+	end;	
+
+	// one player mode difficulty selection
+	if (keybd_input <> 0 and (keybd_input <> game_difficulty)) then 
+	begin
+		game_mode_changed := 1;
+		
+		if ((keybd_input = 1 or keybd_input = 2) or keybd_input = 3) then begin
+			game_difficulty := keybd_input;
+		end;
+	end;
+
+	// update display for difficulty selection
+	if (game_mode_changed) then
+	begin
+		game_mode_changed := 0;
+		
+		if (game_mode = 0) then begin
+			display_game_difficulty();
+		end else begin
+			tmp := (MYSCREEN_WIDTH - 30) / 2;
+			basic_printat("                              ", tmp, 20);
+		end;
+	end;
+
+	// Check keyboard toggle
+	if (keybd_input = 4) then 
+	begin
+		moveto(1,1,hi(screen_char_loc));
+
+		if (keybd_type_flag = 0) then 
+		begin
+			keybd_type_flag := 1;
+			// show message
+			printstring("BUSINESS",0,8);
+		end else
+		begin
+			keybd_type_flag := 0;
+			// show message
+			printstring("GRAPHICS",0,8);			
+		end;
+		
+		do_delay(255);
+		do_delay(255);
+		
+		// erase message
+		moveto(1,1,hi(screen_char_loc));
+		printstring("         ",0,8);
+	end;
+
+	// Animate the scroll around title screen
+	// Ideally this would run by IRQ, but not able to solve crash..
+	play_title_animation();
+end;
+
+// Update score disp
+procedure update_score(us_do_beep:boolean);
+begin
+	// position of rightmost score
+	temp_byte := MYSCREEN_WIDTH-12;
+	
+	// Convert value from decimal number to screen code
+	screen_loc[11] := score_p1 + 48 + 128;
+	screen_loc[temp_byte] := score_p2 + 48 + 128;
+
+	// Beep and flash score change
+	if (us_do_beep) then
+	begin
+		for i := 0 to 6 do
+		begin
+			// Flash changed score
+			if (player_1_crash) then begin
+				screen_loc[temp_byte] := screen_loc[temp_byte] + 128;
+			end;
+			if (player_2_crash) then begin
+				screen_loc[11] := screen_loc[11] + 128;				
+			end;
+
+			// Enable sound
+			LOC_SOUND_REG	:= 16;
+			// Set octave
+			LOC_SOUND_OCT	:= sound_oct_arr[1];
+			// Set the pitch
+			LOC_SOUND_FREQ	:= CONST_NOTE_E;
+			// Sustain note
+			do_delay(128);
+			// Turn off sound
+			LOC_SOUND_REG := 0;
+			// Sustain pause		
+			do_delay(128);
+		end;
+	end;
+end;
+
+// Draw box around title screen
+procedure draw_title_screen_box();
+var
+	dtsb_tmp : byte;
+	dtsb_i : byte;
+begin	
+	// Draw top and bottom	
+	screen_loc_work := screen_loc + MYSCREEN_WIDTH * MYSCREEN_HEIGHT;
+	
+	for dtsb_i := 0 to MYSCREEN_WIDTH step 2 do
+	begin
+		screen_loc[dtsb_i]		:= SCR_SOLID_BLOCK;
+		screen_loc_work[dtsb_i]	:= SCR_SOLID_BLOCK;
+		screen_loc[dtsb_i+1]		:= SCR_SHADED_BLOCK;
+		screen_loc_work[dtsb_i+1]:= SCR_SHADED_BLOCK;
+    	end;
+	
+	// Draw sides
+	for dtsb_i := 0 to MYSCREEN_HEIGHT step 2 do
+	begin
+		dtsb_tmp := MYSCREEN_WIDTH-1;
+		screen_loc_work	:= screen_loc + (dtsb_tmp * dtsb_i);
+		screen_loc_work[dtsb_i]							:= SCR_SOLID_BLOCK;
+		screen_loc_work[dtsb_i+dtsb_tmp]					:= SCR_SHADED_BLOCK;
+		screen_loc_work[dtsb_i+MYSCREEN_WIDTH]			:= SCR_SHADED_BLOCK;
+		screen_loc_work[dtsb_i+MYSCREEN_WIDTH+dtsb_tmp]	:= SCR_SOLID_BLOCK;
+	end;
+end;
+
+// Show title
+procedure title_screen();
+begin
+	// Call CLR/HOME
+	cursor_clear();
+	
+	// Draw box around screen
+	draw_title_screen_box();
+	
+	// Print title strings
+	//basic_printat(#title_msg_0, 1, 19);
+	tmp := (MYSCREEN_WIDTH - 20) / 2;
+	basic_printat(#title_msg_1, tmp, 2);
+	basic_printat(#title_msg_2, tmp, 3);
+	basic_printat(#title_msg_3, tmp, 4);
+	tmp := (MYSCREEN_WIDTH - 13) / 2;
+	basic_printat(#title_msg_4, tmp, 6);
+	tmp := (MYSCREEN_WIDTH - 31) / 2;
+	basic_printat(#title_msg_5, tmp, 8);
+	tmp := (MYSCREEN_WIDTH - 27) / 2;
+	basic_printat(#title_msg_6, tmp, 9);	
+	tmp := (MYSCREEN_WIDTH - 23) / 2;
+	basic_printat(#title_msg_7, tmp, 11);
+	basic_printat(#title_msg_11, tmp, 16);
+	tmp := (MYSCREEN_WIDTH - 17) / 2;
+	basic_printat(#title_msg_8, tmp, 12);
+	basic_printat(#title_msg_10, tmp, 15);
+	tmp := (MYSCREEN_WIDTH - 25) / 2;
+	basic_printat(#title_msg_9, tmp, 14);
+	
+	// Start animation interrupt
+	//init_irq_animation();
+	
+	// Show game mode
+	display_game_mode();
+			
+	// Run input function within cycle routine
+	scroll_input := 1;
+	// Song to play	
+	song_ptr := #theme_music_arr;
+	// Adjust scroll speed to compensate additional
+	// CPU load for music & animation
+	scroll_speed := scroll_speed - 8;
+
+	// Center scroll message
+	tmp := (MYSCREEN_WIDTH - 19) / 2;
+	basic_printat(#title_msg_12, tmp, 22);
+
+	// Cycle text, wait for input, play music
+	// xpos, ypos, # chars, # cycles, direction, input break, play music
+	//song_ptr := #game_end_music_arr;
+	cycle_text(tmp, 22, 19, 0, 0, 1, 1);
+
+	// Reset input during text scroll 
+	scroll_input := 0;
+	// Reset scroll speed	
+	scroll_speed := DEF_SCROLL_SPEED;
+
+	// Stop animation interrupt
+	//Interrupts::Disable();
+		
+	//@@TODO: Animate pattern or cycles going around perimiter of title screen
+	//		  at a fixed distance from each other. 
+end;
+
+// Draw box around game screen
+procedure draw_game_screen_box();
+begin	
+	// Draw top line
+	screen_loc_work := screen_loc + MYSCREEN_WIDTH;
+	for i := 0 to MYSCREEN_WIDTH do screen_loc_work[i] := SCR_MID_HORIZ_LN;
+
+	// Draw bottom line
+	screen_loc_work := screen_loc + (MYSCREEN_WIDTH * MYSCREEN_HEIGHT);
+	for i := 0 to MYSCREEN_WIDTH do screen_loc_work[i] := SCR_MID_HORIZ_LN;
+		
+	// Draw sides
+	for i := 1 to MYSCREEN_HEIGHT do
+	begin
+		tmp := MYSCREEN_WIDTH -1;
+		screen_loc_work		:= screen_loc + tmp * i;
+		screen_loc_work[i]	:= SCR_MID_VERT_LN;
+		screen_loc_work[i+tmp]	:= SCR_MID_VERT_LN;
+	end;
+
+	// top left mid box corner
+	screen_loc_work := screen_loc + MYSCREEN_WIDTH;
+	screen_loc_work[0] := SCR_MID_TOP_LT_CORNER;
+
+	// top right mid box corner
+	screen_loc_work := screen_loc + (MYSCREEN_WIDTH * 2) -1;
+	screen_loc_work[0] := SCR_MID_TOP_RT_CORNER;
+	
+	// bot left mid box corner
+	screen_loc_work := screen_loc + (MYSCREEN_HEIGHT * MYSCREEN_WIDTH);
+	screen_loc_work[0] := SCR_MID_BOT_LT_CORNER;
+	
+	// bot right mid box corner
+	screen_loc_work := screen_loc + (MYSCREEN_HEIGHT * MYSCREEN_WIDTH) + MYSCREEN_WIDTH -1;
+	screen_loc_work[0] := SCR_MID_BOT_RT_CORNER;
+end;
+
+// Setup game screen
+procedure game_screen();
+begin
+	// Call CLR/HOME
+	cursor_clear();
+	// Draw box around screen
+	draw_game_screen_box();
+	// Draw score display (text, not score values)
+	if (game_mode = 0) then begin
+		tmp := MYSCREEN_WIDTH - 10;
+		basic_printat(#score_msg_2, 1, 0);	// string, x, y
+		basic_printat(#score_msg_3, tmp, 0);	// string, x, y
+	end;
+	if (game_mode = 1) then begin
+		tmp := MYSCREEN_WIDTH - 10;
+		basic_printat(#score_msg_0, 1, 0);	// string, x, y
+		basic_printat(#score_msg_1, tmp, 0);	// string, x, y
+	end;
+	
+	update_score(0);
+	init_engine_sound();
+	init_gamestate();
+end;
+
+// Start new round
+procedure new_round();
+begin
+	// Print crash message
+	do_delay(64);
+	tmp := (MYSCREEN_WIDTH - message_len) / 2;
+	basic_printat(message_ptr, tmp, 13);	// string, x, y
+	// xpos, ypos, # chars, # cycles, direction, input break, play music
+	cycle_text(tmp, 13, message_len, 3, 1, 0, 0);
+
+	// Beep and flash score change
+	update_score(1);
+	
+	// Print new round message & wait for input
+	do_delay(64);
+	message_len := length(msg_get_ready);
+	tmp := (MYSCREEN_WIDTH - message_len) / 2;
+	basic_printat(#msg_get_ready, tmp, 13);
+	// xpos, ypos, # chars, # cycles, direction, input break, play music
+	cycle_text(tmp, 13, message_len, 0, 0, 1, 0);
+
+	// Adjust game speed
+	if( score_p1 = 1 or score_p2 = 1 ) then game_speed := DEF_GAME_SPEED - 10;
+	if( score_p1 = 2 or score_p2 = 2 ) then game_speed := DEF_GAME_SPEED - 15;
+	if( score_p1 = 3 or score_p2 = 3 ) then game_speed := DEF_GAME_SPEED - 20;
+	if( score_p1 = 4 or score_p2 = 4 ) then game_speed := DEF_GAME_SPEED - 25;
+
+	// Redraw game screen
+	game_screen();
+end;
+
+// Start new game
+procedure end_game();
+begin
+	update_score(0);
+	
+	// Print Game Over message
+	tmp := (MYSCREEN_WIDTH - message_len) / 2;
+	basic_printat(message_ptr, tmp, 13);	// string, x, y
+
+	// Cycle text, wait for input, & play music
+	song_ptr := #game_end_music_arr;
+	// xpos, ypos, # chars, # cycles, direction, input break, play music
+	cycle_text(tmp, 13, message_len, 25, 0, 0, 1);
+	
+	// Reset scores, game speed & return to main loop
+	score_p1	:= 0;
+	score_p2	:= 0;
+	game_speed := DEF_GAME_SPEED;
+	game_over_flag := 1;
+end;
+
+// Game state
+procedure check_game_state();
+begin
+	// Check quit game hotkey 
+	if (keybd_input = 5) then 
+	begin
+		// Reset scores, game speed & return to main loop
+		game_run_flag	:= 0;
+		game_over_flag	:= 1;
+		score_p1			:= 0;
+		score_p2			:= 0;
+		stop_sound();
+		game_speed 		:= DEF_GAME_SPEED;
+		scroll_speed 	:= DEF_SCROLL_SPEED;
+		anim_speed		:= DEF_ANIM_SPEED;
+		do_delay(255);
+		do_delay(255);
+	end;	
+	
+	// Check for player crashed
+	if (player_1_crash = 1 or player_2_crash = 1) then begin
+		player_crash();
+		stop_sound();
+		game_run_flag := 0;
+	end;
+	
+	if (player_1_crash = 1 and player_2_crash = 1) then begin
+		message_ptr := #msg_both_crash;
+		message_len := length(msg_both_crash);
+		new_round();
+	end 
+	else if (player_1_crash = 1) then begin
+		// Increment score 
+		score_p2 := score_p2 + 1;
+		
+		if (score_p2 < SCORE_TO_WIN) then 
+		begin
+			if (game_mode = 0) then
+			begin
+				message_ptr := #msg_plr_crash;
+				message_len := length(msg_plr_crash);
+			end else begin
+				message_ptr := #msg_p1_crash;
+				message_len := length(msg_p1_crash);
+			end;
+			new_round();
+		end;
+	end
+	else if (player_2_crash = 1) then begin
+		// Increment score 
+		score_p1 := score_p1 + 1;
+		
+		if (score_p1 < SCORE_TO_WIN) then begin
+			if (game_mode = 0) then begin
+				message_ptr := #msg_sark_crash;
+				message_len := length(msg_sark_crash);
+			end else begin 
+				message_ptr := #msg_p2_crash;
+				message_len := length(msg_p2_crash);
+			end;
+			new_round();
+		end;
+	end;
+	
+	// Check for end of game
+	if (score_p1 >= SCORE_TO_WIN) then 
+	begin
+		if (game_mode = 0) then begin
+			message_ptr := #msg_plr_wins;
+			message_len := length(msg_plr_wins);
+		end else begin
+			message_ptr := #msg_p1_wins;
+			message_len := length(msg_p1_wins);
+		end;
+		end_game();
+	end
+	else if (score_p2 >= SCORE_TO_WIN) then 
+	begin
+		if (game_mode = 0) then begin
+			message_ptr := #msg_sark_wins;
+			message_len := length(msg_sark_wins);
+		end else begin
+			message_ptr := #msg_p2_wins;
+			message_len := length(msg_p2_wins);
+		end;
+		end_game();
+	end;
+end;
+
+// Check Collisions
+//	player_1_xy, player_2_xy 		- Player Coordinates
+//	player_1_crash, player_2_crash	- Crash Flags
+procedure check_collisions();
+begin
+	player_1_crash := 0;
+	player_2_crash := 0;
+
+	// Both crashed before trail is drawn. This solves edge case 
+	// when both players try to occupy the same location.
+	if (player_1_xy = player_2_xy) then begin
+		player_1_crash := 1;
+		player_2_crash := 1;
+	end;
+	
+	// P1 crashed
+	if (turn_counter or player_1_fire) then begin
+		screen_loc_work := screen_loc + player_1_xy;
+		if ( peek(screen_loc_work, 0) <> CHR_SPC ) then player_1_crash := 1;
+	end;
+
+	// P2 crashed
+	if (turn_counter or player_2_fire) then begin
+		screen_loc_work := screen_loc + player_2_xy;
+		if ( peek(screen_loc_work, 0) <> CHR_SPC ) then player_2_crash := 1;
+	end;
+end;
+
+// Check & return distance to crash_anim_arr
+function sark_crash_distance(scd_head:byte) : byte;
+var
+	scd_i:		byte;
+	scd_crash:	byte;
+	scd_tmp_int:	integer;
+begin
+	scd_i := 0;
+	scd_crash := 0;
+	scd_tmp_int := player_2_xy;
+
+	while (scd_crash = 0) do
+	begin
+		scd_i := scd_i + 1;	// number of moves until crash
+		
+		if( Model::Is_40Col() ) then begin
+			scd_tmp_int := scd_tmp_int + dir_map_arr[scd_head]; // increment pos
+		end else begin
+			scd_tmp_int := scd_tmp_int + dir_map_arr80[scd_head]; // increment pos			
+		end;
+		
+		screen_loc_work := screen_loc + scd_tmp_int;
+		if (peek(screen_loc_work, 0) <> CHR_SPC) then scd_crash := 1;
+	end;
+	
+	sark_crash_distance := scd_i;
+end;
+
+// Check Sark's distance to player in x and y dirs
+procedure sark_check_player_dist();
+var
+	scpd_sark_x : byte;
+	scpd_sark_y : byte;
+	scpd_player_x : byte;
+	scpd_player_y : byte;
+begin
+	//	sark_near_player_x_dist: byte;
+	//	sark_near_player_x_neg:	boolean;	// left is neg
+	//	sark_near_player_y_dist:	byte;
+	//	sark_near_player_y_neg:	boolean;	// up is neg
+
+	// Determine Sark's XY position
+	scpd_sark_y := player_2_xy / MYSCREEN_WIDTH;
+	scpd_sark_x := player_2_xy - (scpd_sark_y * MYSCREEN_WIDTH);
+	// Derermine player's XY position
+	scpd_player_y := player_1_xy / MYSCREEN_WIDTH;
+	scpd_player_x := player_1_xy - (scpd_player_y * MYSCREEN_WIDTH);
+
+	if (scpd_sark_y > scpd_player_y) then
+	begin
+		sark_near_player_y_neg := 1;	// player is above Sark
+		sark_near_player_y_dist := scpd_sark_y - scpd_player_y;
+	end else
+	begin
+		sark_near_player_y_neg := 0;	// player is below Sark
+		sark_near_player_y_dist := scpd_player_y - scpd_sark_y;
+	end;
+
+	if (scpd_sark_x > scpd_player_x) then
+	begin
+		sark_near_player_x_neg := 1;	// player is left of Sark
+		sark_near_player_x_dist := scpd_sark_x - scpd_player_x;
+	end else
+	begin
+		sark_near_player_x_neg := 0;	// player is right of Sark
+		sark_near_player_x_dist := scpd_player_x - scpd_sark_x;
+	end;
+	
+end;
+
+//	Sark's logic routine to box in opponent & avoid crashing.
+//  Sets: player_2_input, player_2_fire
+procedure sark_move();
+var
+	sm_tmp_int:		integer;
+	sm_cr_dist:		byte;
+	sm_cr_dist_l:	byte;
+	sm_cr_dist_r:	byte;
+	sm_cr_dist_u:	byte;
+	sm_cr_dist_d:	byte;
+	sm_cr_th:		byte;	// crash threshold
+	sm_boost_th:		byte;	// boost threshold
+	sm_prox_th:		byte;	// proximity threshold	
+	sm_head:			byte;	
+	sm_i:			byte;
+begin
+	player_2_input	:= 0;
+	player_2_fire	:= 0;
+	sm_boost_th		:= 8;	// proximity to boost
+	sm_prox_th		:= 3;	// proximity to cut off
+	sm_cr_th			:= 5;	// min val 2
+	sm_cr_dist		:= sark_crash_distance(player_2_head);
+	sm_cr_dist_l		:= sark_crash_distance(1);
+	sm_cr_dist_r		:= sark_crash_distance(2);
+	sm_cr_dist_u		:= sark_crash_distance(3);
+	sm_cr_dist_d		:= sark_crash_distance(4);
+
+	// Check relative position of player
+	sark_check_player_dist();
+
+	//	Check distance on current heading to obstacle.  
+	//	If both turn options are elegible, turn towards player.
+	//	Otherwise, turn in direction with greater distance.
+	if (sm_cr_dist < sm_cr_th) then
+	begin
+		// crash imminent, check other directions
+		if (player_2_head = 1 or player_2_head = 2) then
+		begin
+			// Sark is moving L or R. Check U/D
+			// If both alternatives have 'good' crash distance, randomly choose
+			if (sm_cr_dist_u > sm_cr_th and sm_cr_dist_d > sm_cr_th) then begin
+				// logic to choose random direction
+				if (Random() > 127) then begin
+					player_2_input := 4;
+				end else begin
+					player_2_input := 3;
+				end;				
+				
+				//	logic to turn towards player
+				//if (sark_near_player_y_neg) then begin
+				//	player_2_input := 3;
+				//end else begin
+				//	player_2_input := 4;
+				//end;
+			end else
+			begin
+				// Take direction with best crash distance
+				if (sm_cr_dist_u > sm_cr_dist_d and sm_cr_dist_u > sm_cr_dist) then begin
+					player_2_input := 3;
+				end else if(sm_cr_dist_d > sm_cr_dist) then begin
+					player_2_input := 4;
+				end;
+			end;
+
+		end else if (player_2_head = 3 or player_2_head = 4) then
+		begin
+			// Sark is moving U or D. Check L/R
+			// If both alternatives have 'good' crash distance, randomly choose
+			if (sm_cr_dist_l > sm_cr_th and sm_cr_dist_r > sm_cr_th) then begin
+				// logic to choose random direction
+				if (Random() > 127) then begin
+					player_2_input := 2;
+				end else begin
+					player_2_input := 1;
+				end;
+				
+				//	logic to turn towards player
+				//if (sark_near_player_x_neg) then begin
+				//	player_2_input := 1;
+				//end else begin
+				//	player_2_input := 2;
+				//end;
+			end else
+			begin
+				// Take direction with best crash distance
+				if (sm_cr_dist_l > sm_cr_dist_r and sm_cr_dist_l > sm_cr_dist) then begin
+					player_2_input := 1;
+				end else if(sm_cr_dist_r > sm_cr_dist) then begin
+					player_2_input := 2;
+				end;
+			end;
+		end;
+	end;
+
+	if( game_difficulty = 2 or game_difficulty = 3 ) then
+	begin
+		//	If opponent less than 'n' moves away, engage turbo boost 
+		//	unless it would cause a crash.
+		if (sm_cr_dist > 1) then
+		begin
+			if (sark_near_player_x_dist < sm_boost_th and 
+				sark_near_player_y_dist < sm_boost_th) then
+			begin
+				player_2_fire := 1;
+			end;
+		end;
+	end;
+
+	if( game_difficulty = 3 ) then
+	begin
+		//	If within player proximity, both have same heading, AND
+		//	player's row/col is open at Sark's row/col position,
+		//	then cut off the player 
+		if (sark_near_player_x_dist <= sm_prox_th and sark_near_player_y_dist <= sm_prox_th) then
+		begin
+			// Sark is moving left/right
+			if (player_2_head = 1 or player_2_head = 2) then
+			begin
+				if (sark_near_player_y_neg and sm_cr_dist_u > 1) then 
+				begin
+					// Player is above Sark, and move available
+					player_2_input := 3; // move up
+					player_2_fire := 0;  // can't boost & turn
+				end else if (sark_near_player_y_neg = 0 and sm_cr_dist_d > 1) then 
+				begin
+					// Player is below Sark, and move available
+					player_2_input := 4; // move down
+					player_2_fire := 0;  // can't boost & turn
+				end;	
+			end;
+	
+			// Sark is moving up/down
+			if (player_2_head = 3 or player_2_head = 4) then
+			begin
+				if (sark_near_player_x_neg and sm_cr_dist_l > 1) then 
+				begin
+					// Player is left of Sark, and move available
+					player_2_input := 1; // move left
+					player_2_fire := 0;  // can't boost & turn
+				end else if (sark_near_player_x_neg = 0 and sm_cr_dist_r > 1) then 
+				begin
+					// Player is below Sark, and move available
+					player_2_input := 2; // move right
+					player_2_fire := 0;  // can't boost & turn
+				end;			
+			end;
+		end;
+	end;
+
+	// DEBUG
+	//	moveto(1,1,hi(screen_char_loc));
+	//	printstring("MOVING DN",0,9);
+
+end;
+
+// Update Positions
+// 	player_1_xy, player_2_xy 		- Player Coordinates
+// 	player_1_head, player_2_head 		- Player Headings 
+// 	player_1_fire, player_2_fire 		- Turbo Engaged
+// 	player_1_trail, player_2_trail 	- Trail Positions 
+procedure update_positions();
+begin
+	// Check if move avail
+	turn_counter := turn_counter + 1;
+	if turn_counter > 1 then turn_counter := 0; 	// May need to tweak this value
+	
+	// Move P1 if normal move is available or turbo engaged
+	if (turn_counter = 1 or player_1_fire = 1) then
+	begin
+		// Direction change only allowed when turbo not engaged
+		if (player_1_fire = 0) then
+		begin
+			// Verify input was received and not opposite of current dir
+			if (player_1_input and (player_1_input <> dir_opp_arr[player_1_head])) then
+			begin
+				// Set new heading
+				player_1_head	:= player_1_input;
+			end;
+		end;
+		
+		// Draw Trail
+		player_1_trail[1]	:= player_1_trail[0];
+		player_1_trail[0]	:= screen_loc + player_1_xy;
+		
+		// Update Player 1 Position
+		if( Model::Is_40Col() ) then begin
+			if (player_1_head) then player_1_xy := player_1_xy + dir_map_arr[player_1_head];
+		end else begin
+			if (player_1_head) then player_1_xy := player_1_xy + dir_map_arr80[player_1_head];
+		end;
+	end;
+
+	// Move P2 if normal move is available or turbo engaged
+	if (turn_counter = 1 or player_2_fire = 1) then
+	begin
+		// Direction change only allowed when turbo not engaged
+		if (player_2_fire = 0) then
+		begin
+			// Verify input was received and not opposite of current dir
+			if (player_2_input and (player_2_input <> dir_opp_arr[player_2_head])) then
+			begin
+				// Set new heading
+				player_2_head	:= player_2_input;
+			end;
+		end;
+
+		// Draw Trail
+		player_2_trail[1]	:= player_2_trail[0];
+		player_2_trail[0]	:= screen_loc + player_2_xy;
+
+		// Update Player 2 Position
+		if (Model::Is_40Col()) then begin
+			if (player_2_head) then player_2_xy := player_2_xy + dir_map_arr[player_2_head];
+		end else begin
+			if (player_2_head) then player_2_xy := player_2_xy + dir_map_arr80[player_2_head];
+		end;
+	end;
+end;
+
+// Update Screen
+//	player_1_xy, player_2_xy - Player Coordinates 	
+//	player_1_trail, player_2_trail - Trail Coordinates
+procedure update_screen();
+begin
+	// P1 bike & trail
+	// Only update if player moving
+	if (turn_counter = 1 or player_1_fire = 1) then
+	begin
+		screen_loc_work		:= screen_loc + player_1_xy;
+		screen_loc_work[0]	:= SCR_DIAMOND;
+		screen_loc_work		:= player_1_trail[1];
+		screen_loc_work[0]	:= SCR_SOLID_BLOCK;
+	end;
+
+	// P2 bike & trail
+	// Only update if player moving
+	if (turn_counter = 1 or player_2_fire = 1) then
+	begin
+		screen_loc_work		:= screen_loc + player_2_xy;
+		screen_loc_work[0]	:= SCR_CIRCLE;
+		screen_loc_work		:= player_2_trail[1];
+		screen_loc_work[0]	:= SCR_SHADED_BLOCK;
+	end;
+end;
+
+// Init Variables
+procedure init_gamestate();
+begin
+	player_1_xy			:= 5 + (12 * MYSCREEN_WIDTH);
+	player_2_xy			:= MYSCREEN_WIDTH -6 + (12 * MYSCREEN_WIDTH);
+	player_1_head		:= 2; // heading right
+	player_2_head		:= 1; // heading left
+	player_1_trail[0]	:= 0;
+	player_1_trail[1]	:= 0;
+	player_2_trail[0]	:= 0;
+	player_2_trail[1]	:= 0;
+	player_1_crash		:= 0;
+	player_2_crash		:= 0;
+	player_1_input		:= 0;
+	player_2_input		:= 0;
+	player_1_fire		:= 0;
+	player_2_fire		:= 0;
+	turn_counter			:= 0;
+	game_run_flag		:= 1;
+	game_mode_changed	:= 1;
+end;
+
+// Play title screen animation 
+procedure play_title_animation();
+var
+	pta_tmp	: byte;
+	pta_i	: byte;
+	pta_screen_loc : pointer;
+begin
+	if anim_speed = 0 then
+	begin
+		// Top/bottom sides
+		for pta_i := 0 to MYSCREEN_WIDTH do
+		begin
+			// Top
+			pta_screen_loc := screen_loc + pta_i;
+			
+			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
+				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			end else begin
+				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+			end;		
+
+			// Bottom
+			pta_screen_loc := screen_loc + pta_i + (MYSCREEN_WIDTH * MYSCREEN_HEIGHT);
+			
+			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
+				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			end else begin
+				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+			end;		
+		end;
+
+		// Left/Right sides
+		for pta_i := 1 to MYSCREEN_HEIGHT do
+		begin
+			// Left
+			pta_screen_loc := screen_loc + pta_i * MYSCREEN_WIDTH;
+			
+			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
+				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			end else begin
+				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+			end;		
+
+			// Right
+			pta_screen_loc := screen_loc + (pta_i * MYSCREEN_WIDTH) + MYSCREEN_WIDTH -1;
+			
+			if (peek(pta_screen_loc, 0) = SCR_SOLID_BLOCK) then begin
+				pta_screen_loc[0] := SCR_SHADED_BLOCK;
+			end else begin
+				pta_screen_loc[0] := SCR_SOLID_BLOCK;			
+			end;	
+		end;
+		
+		// Reset animation counter 
+		anim_speed := DEF_ANIM_SPEED;
+	end;
+	
+	anim_speed := anim_speed - 1;
+end;
+	
+// Runs on IRQ
+// I must be doing something wrong here, stack seems to get corrupted
+/*
+procedure do_irq_animation();
+begin
+ 	Interrupts::StartIRQ();
+
+	// Play animation
+	play_title_animation();
+	
+	// Play music inside the cycle_text() function instead for 2001 compatibility
+	//play_music();
+	
+	tmp_irq := tmp_irq + 1;
+
+	// DEBUG counter
+	moveto(41,0,hi(screen_char_loc));
+	printdecimal(tmp_irq,2);
+	
+	Interrupts::CloseIRQ();
+end;
+
+// Routine to animate & play music via raster interrupt
+// NOTE: It seems only one interrupt can be running at a given time
+// NOTE: Raster not available on PET 2001 - use only for non-critical functions.
+procedure init_irq_animation();
+begin
+	tmp_irq := 0;
+	
+	// Set interrupt function & enable
+	Interrupts::Disable();
+	Interrupts::RasterIRQ(#do_irq_animation);
+	Interrupts::Enable();
+end;
+*/
+
+// crash visual & sound effect
+procedure player_crash();
+begin
+	// IDEA: Explode in all directions:
+	//
+	//  *  *  *
+	//   * * *
+	//    ***
+	//  *******
+	//    *** 
+	//   * * *
+	//  *  *  *
+	
+	// Animate crash & make sound
+	tmp := 0;
+	
+	for i := 160 to 127 step -1 do
+	begin
+		// Increment animation		
+		tmp := tmp + 1;
+		if tmp > 2 then tmp := 0;
+		
+		if player_1_crash then begin
+			screen_loc_work := screen_loc + player_1_xy;
+			screen_loc_work[0] := crash_anim_arr[tmp];
+		end;
+		if player_2_crash then begin
+			screen_loc_work := screen_loc + player_2_xy;
+			screen_loc_work[0] := crash_anim_arr[tmp];
+		end;
+
+		// Make sound
+		LOC_SOUND_FREQ := i;
+		
+		do_delay(16);
+	end;
+end;
+
+// init engine sound
+procedure init_engine_sound();
+begin
+	// enable sound
+	LOC_SOUND_REG	:= 16;
+	// set octave
+	LOC_SOUND_OCT	:= sound_oct_arr[0];
+	// set pitch 
+	sound_pitch		:= 200;
+	
+	alternate_engine_sound();
+end;
+	
+// alt engine sound
+procedure alternate_engine_sound();
+begin
+	// Higher octave when turbo is engaged
+	if (player_1_fire or player_2_fire) then begin
+		LOC_SOUND_OCT	:= sound_oct_arr[1];
+	end 	else begin
+		LOC_SOUND_OCT	:= sound_oct_arr[0];
+	end;
+	
+	// Iterate through several pitch values
+	if (sound_pitch = 200) then begin
+		sound_pitch := 205;
+	end
+	else if (sound_pitch = 205) then begin
+		sound_pitch := 195;
+	end
+	else if (sound_pitch = 195) then begin
+		sound_pitch := 200;
+	end;
+	
+	// Set the pitch
+	LOC_SOUND_FREQ	:= sound_pitch;
+end;
+
+// sound stop
+procedure stop_sound();
+begin
+	LOC_SOUND_REG := 0;
+end;
+
+// eof

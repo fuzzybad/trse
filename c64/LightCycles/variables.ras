@@ -1,0 +1,843 @@
+/* 
+ *	Tron Light Cycles - Variables 
+ */
+
+//
+//	$0400-$07E8    	1024-2024		Screen memory (default)
+//
+//	$D800-$DBFF		55296-56319		Color memory
+//
+// 	Colors:
+// 	0000 (0) Black		0001 (1) White		0010 (2) Red			0011 (3) Cyan
+//	0100 (4) Purple		0101 (5) Green		0110 (6) Blue		0111 (7) Yellow
+//	1000 (8) Orange		1001 (9) Brown		1010 (10) Lt Red		1011 (11) Dk Gray
+// 	1100 (12) Med Gray	1101 (13) Lt Green	1110 (14) Lt Blue	1111 (15) Lt Gray
+//
+// Difference from VIC-20 colors:
+// 	1001 lt. org (now brown)		1011 lt. cyn (now dk gray)
+// 	1100 lt. pur (now med gray) 	1111 lt. yel (now lt gray)
+//
+//
+//	JOY1 	$DC01 (56321)	...ABCDE		A = Fire
+//	JOY2		$DC00 (56320)	...ABCDE		B = Right
+//										C = Left
+//										D = Down
+//										E = Up
+//
+//	Loc $01 - 6510 On-Chip I/O Port 	....XYZ
+//		X CHAREN signal. Selects character ROM or I/O devices.		1=I/O,    0=ROM
+//		Y HIRAM signal. Selects ROM or RAM at 57344 ($E000).    	1=Kernal, 0=RAM
+//		Z LORAM signal. Selects ROM or RAM at 40960 ($A000).   	1=BASIC,  0=RAM
+//
+//	$D018 (53272) VMCSB VIC-II Memory Control Register	AAAABBBC
+//		C	Unused
+//		B 	CHAROM base address within VIC-II address space
+//		C	Video matrix base address within VIC-II address space
+//
+//	$DD00 (56576) CIA #2 Data Port A
+//	$DD01 (56577) CIA #2 Data Port B
+//
+//	Bits 0 and 1 of CIA #2 Port A control VIC-II memory block
+//		00 (bit value of 0) Bank 3 (49152-65535, $C000-$FFFF)
+//		01 (bit value of 1) Bank 2 (32768-49151, $8000-$BFFF)
+//		10 (bit value of 2) Bank 1 (16384-32767, $4000-$7FFF)
+//		11 (bit value of 3) Bank 0 (0-16383, $0-$3FFF) - DEFAULT
+//
+//	$DD02 (56578) C2DDRA	Data Direction Register A
+//	$D015 (53269) SPENA	Sprite Enable Register
+//	$D016 (53270) SCROLX	Horizontal Fine Scrolling and Control Register
+//							..ABCDDD
+//							A	Video off/on (1/0)
+//							B	Multicolor on/off (1/0)
+//							C	40/38 column display (1/0) 
+//							D	X-Scroll offset (0-7)
+//
+//	$D022 (53282) BGCOL1		Background Color 1 (01 bit-pairs)
+//	$D023 (53283) BGCOL2		Background Color 2 (10 bit-pairs)
+//	$D024 (53284) BGCOL3		Background Color 3 (Extended background color mode)
+//	$D025 (53285) SPMCO		Sprite Multicolor Register 0 (01 bit-pairs)
+//	$D026 (53286) SPMC1		Sprite Multicolor Register 1 (11 bit-pairs)
+//	$D027-$D02E (53287-53294) Sprite Color registers (single color or MC 10 bit-pairs)
+//
+//
+// 	$D400-$D41C (54272-54300) SID Registers
+//
+//		$D400 (54272) FRELO1			Voice 1 Frequency Control (low byte)
+//		$D401 (54273) FREHI1			Voice 1 Frequency Control (high byte)
+// 		$D402 (54274) PWLO1			Voice 1 Pulse Waveform Width (low byte)
+//		$D403 (54275) PWHI1			Voice 1 Pulse Waveform Width (high nybble)
+// 		$D404 (54276) VCREG1			Voice 1 Control Register
+//			Bit 0: Gate Bit: 1=Start attack/decay/sustain, 0 = Start release
+//			Bit 1: Sync Bit: 1= Synchronize Oscillator with Oscillator 3 frequency
+//			Bit 2: Ring Modulation: l=Ring modulate Oscillators 1 and 3
+//			Bit 3: Test Bit: 1=Disable Oscillator 1
+//			Bit 4: Select triangle waveform
+//			Bit 5: Select sawtooth waveform
+//			Bit 6: Select pulse waveform
+//			Bit 7: Select random noise waveform
+//
+//		$D405 (54277) ATDCY1			Voice 1 Attack/Decay Register
+//			Bits 0-3: Select decay cycle duration (0-15)
+//			Bits 4-7: Select attack cycle duration (0-15)
+//			Bits 4-7 control the duration of the attack cycle.
+//
+//		$D406 (54278) SURELI			Voice 1 Sustain/Release Control Register
+//			Bits 0-3: Select release cycle duration (0-15)
+//			Bits 4-7: Select sustain volume level (0-15)
+//			Bits 4-7 select the volume level at which the note is sustained.
+//
+//		$D407-$D40D (54279-54285) Voice 2 Controls
+//		$D40E-$D414 (54286-54292) Voice 3 Controls
+//		$D415-$D418 (54293-54296) Filter Controls
+//
+//		$D415 (54293)  CUTLO
+//			Bits 0-2: Low portion of filter cutoff frequency
+//			Bits 5-7: Unused
+//
+//		$D416 (54294) CUTHI			Filter Cutoff Frequency (high byte)
+//
+//		$D417 (54295) RESON			Filter Resonance Control Register
+//			Bit 0: Filter the output of voice 1? l=yes
+//			Bit 1: Filter the output of voice 2? l=yes
+//			Bit 2: Filter the output of voice 3? l=yes
+//			Bit 3: Filter the output from the external input? l=yes
+//			Bits 4-7: Select filter resonance 0-15
+//			Bits 0-3 are used to control which of the voices will be altered by the filters.
+//
+//		$D418 (54296) SIGVOL			Volume and Filter Select Register
+//			Bits 0-3: Select output volume (0-15)
+//			Bit 4: Select low-pass filter, 1= low-pass on
+//			Bit 5: Select band-pass filter, 1= band-pass on
+//			Bit 6: Select high-pass filter, 1= high-pass on
+//			Bit 7: Disconnect output of voice 3, 1= voice 3 off
+//		
+//		$D419-$D41A (54297-54298) 	Game Paddle Inputs
+//		$D41B (54299) RANDOM			Read Oscillator 3/Random Number Generator
+//		$D41C (54300) ENV3			Envelope Generator 3 Output
+//
+
+var
+	// Game Constants
+	const	MYSCREEN_WIDTH:		byte = 40;
+	const	MYSCREEN_HEIGHT:		byte = 24; // actually 25, but this is easier than doing -1 everywhere
+	const	SCORE_TO_WIN:		byte = 5;
+	const	DEF_VIC_BANK:		byte = VIC_BANK2;	// 0=$0000, 1=$4000, 2=$8000, 3=$C000
+	const	DEF_GAME_SPEED:		byte = 35;	// Speed of game - lower is faster
+	const	DEF_ANIM_SPEED:		byte = 6;	// Speed of animation - lower is faster
+	const	DEF_SCROLL_SPEED:	byte = 14; 	// Speed of scrolling - lower is faster
+	const	DEF_SONG_TEMPO:		byte = 7;	// Multiplier value for note sustain
+	const	DEF_SPRITE_DEF_LOC:	byte = 16;	// Block where sprite data is located	 1k/$0400 
+	
+	const	LOC_PORT_A:			address = 56320;		// Port A - Joystick 2
+	const	LOC_PORT_B:			address = 56321;		// Port B - Joystick 1
+	const	LOC_SCREEN_BORD:		address = 53280; 	// Border color 
+	const	LOC_SCREEN_BACK:		address = 53281; 	// Background color 0
+	const	LOC_SCREEN_BGCOL1:	address = 53282; 	// Background color 1
+	const	LOC_SCREEN_BGCOL2:	address = 53283; 	// Background color 2
+	const	LOC_IO_PORT:			address = $1;
+	const	LOC_VIC_CONTROL:		address = 53272;
+	const	LOC_CIA2_PORT_A:		address = 56576;
+	const	LOC_CIA2_DDR_A:		address = 56578;
+	const	LOC_SCROLX:			address = 53270;		// Horiz scroll & multicolor register
+	//	bank 1
+//	const	LOC_CHAR_DEFS:		address = $4000; 	// Location for CHAR data
+//	const	LOC_SPRITE_DEFS:		address = $4C00; 	// Location for sprite data
+//	const	LOC_CHAR_SCREEN:		address = $4800;		// Location for text screen
+	//	bank 2 (VIC sees CHARROM at $9000-9FFF)
+	const	LOC_CHAR_DEFS:		address = $8800; 	// Location for CHAR data (2k)
+	const	LOC_SPRITE_DEFS:		address = $8400; 	// Location for sprite data (1k - 16 shapes)
+	const	LOC_CHAR_SCREEN:		address = $8000;		// Location for text screen (1k)
+	const	LOC_SPRITE_PTRS:		address = LOC_CHAR_SCREEN + 1016;		// Location of sprite pointers
+	const	LOC_KERNAL_SCREEN:	address = $288;		// Location where Kernal writes to screen
+	
+	const	LOC_FRELO1:			address = $D400;		// Voice 1 Frequency Control (low byte)
+	const	LOC_FREHI1:			address = $D401;		// Voice 1 Frequency Control (high byte)
+	const	LOC_PWLO1:			address = $D402;		// Voice 1 Pulse Waveform Width (low byte)
+	const	LOC_PWHI1:			address = $D403;		// Voice 1 Pulse Waveform Width (high nybble)
+	const	LOC_VCREG1:			address = $D404;		// Voice 1 Control Register
+	const	LOC_ATDCY1:			address = $D405;		// Voice 1 Attack/Decay Register
+	const	LOC_SUREL1:			address = $D406;		// Voice 1 Sustain/Release Control Register
+
+	const	LOC_FRELO2:			address = $D407;		// Voice 2 Frequency Control (low byte)
+	const	LOC_FREHI2:			address = $D408;		// Voice 2 Frequency Control (high byte)
+	const	LOC_PWLO2:			address = $D409;		// Voice 2 Pulse Waveform Width (low byte)
+	const	LOC_PWHI2:			address = $D40A;		// Voice 2 Pulse Waveform Width (high nybble)
+	const	LOC_VCREG2:			address = $D40B;		// Voice 2 Control Register
+	const	LOC_ATDCY2:			address = $D40C;		// Voice 2 Attack/Decay Register
+	const	LOC_SUREL2:			address = $D40D;		// Voice 2 Sustain/Release Control Register
+
+	const	LOC_FRELO3:			address = $D40E;		// Voice 3 Frequency Control (low byte)
+	const	LOC_FREHI3:			address = $D40F;		// Voice 3 Frequency Control (high byte)
+	const	LOC_PWLO3:			address = $D410;		// Voice 3 Pulse Waveform Width (low byte)
+	const	LOC_PWHI3:			address = $D411;		// Voice 3 Pulse Waveform Width (high nybble)
+	const	LOC_VCREG3:			address = $D412;		// Voice 3 Control Register
+	const	LOC_ATDCY3:			address = $D413;		// Voice 3 Attack/Decay Register
+	const	LOC_SUREL3:			address = $D414;		// Voice 3 Sustain/Release Control Register
+
+	const	LOC_CUTLO:			address = $D415;		// Low part of filter cutoff
+	const	LOC_CUTHI:			address = $D416;		// High part of filter cutoff
+	const	LOC_RESON:			address = $D417;		// Filter resonance control
+	const	LOC_SIGVOL:			address = $D418;		// Volume and Filter Select Register (0:no sound, 15:max vol)
+
+	const	LOC_POTX:			address = $D419;		// Pot X
+	const	LOC_POTY:			address = $D41A;		// Pot Y
+	const	LOC_RANDOM:			address = $D41B;		// Random #
+	const	LOC_ENV3:			address = $D41C;		// Envelope Generator 3 Output
+	
+
+	// Character Code Defs
+	const 	CLR_HOME: byte = 147;
+	const	HOME: byte = 19;
+	const	RETURN_KEY: byte = 13;
+	const	TEXT_MODE: byte = 14;
+	const	GRAPHIC_MODE: byte = 142;
+	const	CRSR_UP: byte = 145;
+ 	const	CRSR_RT: byte = 29;
+	const	CRSR_DN: byte = 17;
+	const	CRSR_LT: byte = 157;
+	const	RVS_ON: byte = 18;
+	const 	RVS_OFF: byte = 146;
+	const	CHR_SPC: byte = 32;
+	const	CHR_CURVED_TOP_LT_CORNER: byte = 213;
+	const	CHR_CURVED_TOP_RT_CORNER: byte = 201;
+	const	CHR_CURVED_BOT_LT_CORNER: byte = 202;
+	const	CHR_CURVED_BOT_RT_CORNER: byte = 203;
+	const	CHR_MID1_HORIZ_LN: byte = 196;
+	const	CHR_MID2_HORIZ_LN: byte = 195;
+	const	CHR_MID3_HORIZ_LN: byte = 198;
+	const	CHR_MID2_VERT_LN: byte = 194;
+	const	CHR_MID3_VERT_LN: byte = 221;
+	const	CHR_COL_BLK: byte = 144;
+	const	CHR_COL_WHT: byte = 5;
+	const	CHR_COL_RED: byte = 28;
+	const	CHR_COL_CYN: byte = 159;
+	const	CHR_COL_PUR: byte = 156;
+	const	CHR_COL_GRN: byte = 30;
+	const	CHR_COL_BLU: byte = 31;
+	const	CHR_COL_YEL: byte = 158;
+	const	CHR_COL_ORG: byte = 129;
+	const	CHR_COL_BRN: byte = 149;
+	const	CHR_COL_LRED: byte = 150;
+	const	CHR_COL_DGRY: byte = 151;
+	const	CHR_COL_MGRY: byte = 152;
+	const	CHR_COL_LGRN: byte = 153;
+	const	CHR_COL_LBLU: byte = 154;
+	const	CHR_COL_LGRY: byte = 155;
+	const	CHR_MID_VERT_LN: byte = 98;
+	const	CHR_MID_HORIZ_LN: byte = 99;
+	const	CHR_BIKE_HORIZ_1: byte = 255;
+	const	CHR_BIKE_HORIZ_2: byte = 223;
+	const	CHR_BIKE_VERT_1:	byte = 160;
+	const	CHR_BIKE_VERT_2:	byte = 161;
+	const	CHR_BUSH_TOP:	byte = 204;	// screen code 76 
+	const	CHR_BUSH_LEFT:	byte = 205;	// screen code 77  
+	const	CHR_BUSH_BOTTOM:	byte = 206;	// screen code 78  
+	const	CHR_BUSH_RIGHT:	byte = 207;	// screen code 79  
+	const	CHR_BUSH_NONE:	byte = 208;	// screen code 80
+	const	CHR_BLOCK_MC:	byte = 209;	// screen code 81
+	
+	// Screen code defs
+	const	SCR_SPC:				byte = 32;
+	const	SCR_BLOCK_MC:		byte = 81;
+	const	SCR_SOLID_BLOCK: 	byte = 160;
+	const	SCR_SHADED_BLOCK: 	byte = 102;
+	const	SCR_TRAIL_HORIZ: 	byte = 103;
+	const	SCR_TRAIL_VERT: 		byte = 104;
+	const	SCR_TRAIL_LB_CORNER:	byte = 105;
+	const	SCR_TRAIL_RB_CORNER:	byte = 106;
+	const	SCR_TRAIL_LT_CORNER:	byte = 107;
+	const	SCR_TRAIL_RT_CORNER:	byte = 108;
+	const	SCR_BIKE_LR_1: 		byte = 094;
+	const	SCR_BIKE_LR_2: 		byte = 095;
+	const	SCR_BIKE_UD_1: 		byte = 096;
+	const	SCR_BIKE_UD_2: 		byte = 097;
+	const	SCR_EXPLODE:			byte = 082;
+	const	SCR_CIRCLE_SM:		byte = 083;
+	const	SCR_CIRCLE_LG:		byte = 084;
+	const	SCR_BIKE_LT_MID_1:	byte = 113;
+	const	SCR_BIKE_LT_MID_3:	byte = 114;
+	const	SCR_BIKE_RT_MID_1:	byte = 115;
+	const	SCR_BIKE_RT_MID_3:	byte = 116;
+	const	SCR_BIKE_LR_MID_2:	byte = 117;
+	const	SCR_BIKE_UP_MID_1:	byte = 118;
+	const	SCR_BIKE_UP_MID_3:	byte = 119;
+	const	SCR_BIKE_DN_MID_1:	byte = 120;
+	const	SCR_BIKE_DN_MID_3:	byte = 121;
+	const	SCR_BIKE_UD_MID_2:	byte = 122;
+	const	SCR_GAME_TB_HORIZ:	byte = 86;
+	const	SCR_GAME_LT_VERT:	byte = 92;
+	const	SCR_GAME_RT_VERT:	byte = 87;
+	const	SCR_GAME_LB_CORNER:	byte = 88;
+	const	SCR_GAME_RB_CORNER:	byte = 89;
+	const	SCR_GAME_LT_CORNER:	byte = 90;
+	const	SCR_GAME_RT_CORNER:	byte = 91;
+
+	// Pointers
+	screen_loc:		pointer;
+	screen_loc_work:	pointer;
+	color_loc:		pointer;
+	color_loc_work:	pointer;
+	message_ptr:		pointer;
+	song_ptr:		pointer;
+	song_bass_ptr:	pointer;
+	temp_ptr:		pointer;
+	
+	// Counters
+	i: byte;		// temp variables
+	j: byte;
+	k: byte;
+	player_char_1: byte;	// temp pointers for player chars
+	player_char_2: byte;
+	player_char_3: byte;
+	player_char_4: byte;
+	
+	// Temp vars
+	tmp:				integer = 0;
+	tmp_irq:			byte = 0;
+	message_len:		byte = 0;
+	temp_byte1:		byte = 0;
+	temp_byte2:		byte = 0;
+	temp_byte3:		byte = 0;
+	temp_spr_x:		integer = 0;	// needs to be integer to calculate values above 255
+	temp_spr_y:		byte = 0;
+	
+	// Game vars
+	game_mode:		byte = 0;	// 0=One Player, 1=Two Player, 2=Two V.Sark
+	game_difficulty:	byte = 2;	// 1=Easy, 2=Moderate, 3=Hard
+	control_mode:	byte = 1;	// 0=keyboard, 1=joysticks
+	game_mode_changed: boolean = 1;	// indicates game mode was changed
+	game_over_flag:	byte = 0;	// indicates if game over
+	game_run_flag:	byte = 0;	// indicates if game running
+	egg_flag:		byte = 0;	// indicates if easter egg triggered
+	wiped_flag:		byte = 0; 	// indicates if screen wiped
+	trail_flag:		byte = 1;	// indicates if bikes leave trails
+	song_tempo:		byte = DEF_SONG_TEMPO;	// multiplier value for note sustain
+	song_play_bass:	boolean = 0;	// play bass part
+	score_p1: 		byte = 0;
+	score_p2:		byte = 0;
+	scroll_speed: 	byte = DEF_SCROLL_SPEED;	// Speed of scrolling - lower is faster
+	game_speed:		byte = DEF_GAME_SPEED;	// Speed of game - lower is faster
+	anim_speed:		byte = DEF_ANIM_SPEED;	// Speed of animation
+	music_idx:		integer = 0;
+	music_sust_idx:	byte = 0;
+	music_bass_idx:	integer = 0;
+	music_bass_sust_idx:	byte = 0;	
+	sound_pitch:		byte = 0;
+	egg_arr_idx:		byte = 0;
+	sprite_def_loc:	byte = DEF_SPRITE_DEF_LOC;
+	sprite1_anim_idx: byte = 0;
+	sprite2_anim_idx: byte = 0;
+	bee_anim_idx:	byte = 0;
+	title_anim_idx:	byte = 0;
+	explode_anim_idx: byte = 0;
+	
+	crash_anim_arr:	array[3] of byte = (SCR_CIRCLE_SM, SCR_EXPLODE, SCR_CIRCLE_LG, SCR_EXPLODE);
+	crash_color_arr:	array[3] of byte = (7, 2, 7, 2);	// yellow, red
+	crash_bord_arr:	array[3] of byte = (11, 12, 13, 14); // cyan, purple, green, blue
+//	logo_color_arr:	array[3] of byte = (1, 15, 12, 11, 12, 15);
+	logo_color_arr:	array[3] of byte = (1, 3, 14, 4, 6, 4, 14, 3);
+	egg_move_arr:	array[100] of byte = (3, 3, 3, 
+										 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+										 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1,  
+										 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
+										 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 
+										 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+										 0);
+	title_spr_arr_1:	array[] of byte = (2, 3, 4, 5, 6, 6);	// bottom flip
+	title_spr_arr_2:	array[] of byte = (2, 1, 0, 7, 6);	// top flip
+	bee_spr_arr: array[] of byte = (8, 9);
+	explode_spr_arr: array[] of byte = (10, 11, 12, 13, 14, 15);
+
+// 	0000 (0) Black		0001 (1) White		0010 (2) Red			0011 (3) Cyan
+//	0100 (4) Purple		0101 (5) Green		0110 (6) Blue		0111 (7) Yellow
+//	1000 (8) Orange		1001 (9) Brown		1010 (10) Lt Red		1011 (11) Dk Gray
+// 	1100 (12) Med Gray	1101 (13) Lt Green	1110 (14) Lt Blue	1111 (15) Lt Gray
+
+	// dir_map_arr:	1=L, 2=R, 3=U, 4=D
+	dir_map_arr:		array[5] of integer = (0, -1, 1, -MYSCREEN_WIDTH, MYSCREEN_WIDTH);
+	dir_opp_arr:		array[5] of byte = (0, 2, 1, 4, 3);
+	turn_counter:	byte = 0;
+	player_1_anim:	byte = 0;
+	player_2_anim:	byte = 0;
+	player_1_input:	byte = 0;
+	player_2_input:	byte = 0;
+	keybd_input:		byte = 0;
+	player_1_head:	byte = 0;
+	player_2_head:	byte = 0;
+	player_1_head_c:	byte = 0;
+	player_2_head_c:	byte = 0;
+	player_1_fire:	boolean = 0;
+	player_2_fire:	boolean = 0;
+	player_1_crash:	boolean = 0;
+	player_2_crash:	boolean = 0;
+	player_1_xy:		integer = 0;
+	player_2_xy:		integer = 0;
+	player_1_trail:	array[3] of integer;
+	player_2_trail:	array[3] of integer;
+	player_1_trail_char:	byte;
+	player_2_trail_char:	byte;
+	trail_char_arr:	array[] of byte = (SCR_TRAIL_HORIZ, SCR_TRAIL_VERT, SCR_TRAIL_LT_CORNER, SCR_TRAIL_RT_CORNER, SCR_TRAIL_LB_CORNER, SCR_TRAIL_RB_CORNER);
+	scroll_num_char:	byte = 0;
+	scroll_x:		byte = 0;
+	scroll_y:		byte = 0;
+	scroll_num_trail:byte = 0;
+	scroll_inp_brk:	boolean = 0;
+	scroll_step:		byte = 0;
+	scroll_input:	boolean = 0;
+	scroll_ishelp:	boolean = 0;
+	scroll_istitle:	boolean = 0;
+	scroll_iseegg:	boolean = 0;
+	sark_boost_thold:	byte = 10;	// Sark proximity to boost
+	sark_prox_thold:		byte = 4;	// Sark proximity to cut off
+	sark_crash_thold:	byte = 5;	// Sark crash threshold (min val 2)
+	sark_near_player_x_dist: byte = 0;
+	sark_near_player_x_neg:	boolean = 0;
+	sark_near_player_y_dist:	byte = 0;
+	sark_near_player_y_neg:	boolean = 0;
+
+	// Game screen locations
+    gamescreen_saddr: array[MYSCREEN_HEIGHT+1] of integer;  // Array to hold address table to screen memory
+    gamescreen_caddr: array[MYSCREEN_HEIGHT+1] of integer;  // Array to hold address table to color memory
+
+    gamescreen_char_arr: array[8] of byte = (	SCR_GAME_RT_CORNER, 
+										   	SCR_GAME_TB_HORIZ, 
+											SCR_GAME_LT_CORNER,
+											SCR_GAME_RT_VERT,
+											SCR_GAME_LB_CORNER,
+											SCR_GAME_TB_HORIZ,
+											SCR_GAME_RB_CORNER,
+											SCR_GAME_LT_VERT );
+											
+    gamescreen_color_arr: array[8] of byte = (13, 13, 13, 13, 13, 13, 13, 13);
+
+	// Message Strings
+	//title_msg_0:		string = (CRSR_DN,CRSR_DN,RVS_ON,"GREETINGS",RVS_OFF," ",RVS_ON
+	//						,"PROGRAMS!!");
+	title_msg_1:		string = (CHR_CURVED_TOP_LT_CORNER,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN,CHR_MID1_HORIZ_LN
+							,CHR_CURVED_TOP_RT_CORNER);
+	title_msg_2:		string = (CHR_MID2_VERT_LN,"LIGHT CYCLE DUEL",CHR_MID3_VERT_LN);
+	title_msg_3:		string = (CHR_CURVED_BOT_LT_CORNER,CHR_MID3_HORIZ_LN
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
+							,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN,CHR_MID3_HORIZ_LN
+							,CHR_CURVED_BOT_RT_CORNER);
+	title_msg_4:		string = ("2023 FUZZYBAD");
+	title_msg_5:		string = ("SCORE FIVE TO WIN");
+	title_msg_6:		string = ("F1 INSTRUCTIONS     ");
+	title_msg_7:		string = ("F3 MODE:            ");
+	title_msg_8:		string = ("F5 DIFFICULTY:      ");
+	title_msg_9:		string = ("F7 CONTROLS:        ");
+	msg_one_player:	string = (RVS_ON,"ONE PLAYER",RVS_OFF);
+	msg_two_player:	string = (RVS_ON,"TWO PLAYER",RVS_OFF);
+	//msg_tvs_player:	string = (RVS_ON,"TWO V.SARK");
+	//msg_diff_select:	string = ("LEVEL:");	// 6 chars
+	msg_diff_one:	string = (RVS_ON,"EASY",RVS_OFF,"  ");
+	msg_diff_two:	string = (RVS_ON,"MEDIUM",RVS_OFF); // 13 chars
+	msg_diff_three:	string = (RVS_ON,"HARD",RVS_OFF,"  ");
+	msg_control_1:	string = (RVS_ON,"KEYBOARD",RVS_OFF);
+	msg_control_2:	string = (RVS_ON,"JOYSTICK",RVS_OFF);
+
+	help_msg_0:		string = ("STANDARD SUB-STANDARD INSTRUCTIONS");
+	help_msg_1:		string = ("AVOID CRASHING TO WIN");
+	help_msg_2:		string = ("PRESS RUN/STOP TO ABORT GAME");
+	help_msg_3:		string = ("MENU CONTROLS");
+	help_msg_4:		string = ("TOGGLE MODE     - F3");
+	help_msg_5:		string = ("TOGGLE LEVEL    - F5");
+	help_msg_6:		string = ("TOGGLE CONTROLS - F7");
+	help_msg_7:		string = ("PLAYER 1    ");
+	help_msg_8:		string = (" MOVE - JOY1 OR WASD   ");
+	help_msg_9:		string = ("TURBO - FIRE OR SPACE  ");
+	help_msg_10:		string = ("PLAYER 2    ");
+	help_msg_11:		string = (" MOVE - JOY2 OR IJKL   ");
+	help_msg_12:		string = ("TURBO - FIRE OR R.SHIFT");
+	help_msg_13:		string = ("ESCAPING GAME GRID IS PROHIBITED");
+
+	score_msg_0:		string = ("PLAYER 1:");
+	score_msg_1:		string = (":PLAYER 2");
+	score_msg_2:		string = ("PLAYER:");
+	score_msg_3:		string = (":SARK  ");
+	
+	msg_both_crash:	string = ("BOTH CRASHED");
+	msg_p1_crash:	string = ("PLAYER 1 CRASHED");
+	msg_p2_crash:	string = ("PLAYER 2 CRASHED");
+	msg_plr_crash:	string = ("PLAYER CRASHED");
+	msg_sark_crash:	string = ("SARK CRASHED");
+	msg_p1_wins:		string = ("PLAYER 1 WINS");
+	msg_p2_wins:		string = ("PLAYER 2 WINS");
+	msg_plr_wins:	string = ("PLAYER WINS");
+	msg_sark_wins:	string = ("SARK WINS");
+	msg_get_ready:	string = ("PRESS FIRE TO START");
+	msg_press_key:	string = ("PRESS SPACE");
+	msg_congrats_1:	string = ("CONGRATULATIONS!");
+	msg_congrats_2:	string = ("YOU ESCAPED THE GAME GRID, NOW FACE");
+	msg_congrats_3:	string = ("THE CHALLENGE OF PARKING AT VCF");
+	msg_blank:		string = ("              ");
+	
+	// character defs for easter egg screen
+	egg_screen_1:	string = (CHR_CURVED_TOP_LT_CORNER,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		CHR_MID_HORIZ_LN,CHR_CURVED_TOP_RT_CORNER);
+		
+	egg_screen_2:	string = (CHR_MID_VERT_LN,CHR_BUSH_NONE,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,
+		CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,
+		CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_NONE,"       ",CHR_BUSH_NONE,
+		CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_NONE," ",CHR_BIKE_HORIZ_1,
+		CHR_BIKE_HORIZ_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+
+	egg_screen_3:	string = (CHR_MID_VERT_LN,CHR_BUSH_RIGHT,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BUSH_LEFT,RVS_ON,"       ",RVS_OFF,CHR_BUSH_RIGHT,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BUSH_LEFT," ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,
+		CHR_MID_VERT_LN);
+
+	egg_screen_4:	string = (CHR_MID_VERT_LN,CHR_BUSH_RIGHT,CHR_BLOCK_MC,RVS_ON,"VINTAGE",RVS_OFF,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BUSH_LEFT,RVS_ON,"       ",RVS_OFF,CHR_BUSH_RIGHT,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BUSH_LEFT," ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",
+		CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+	
+	egg_screen_5:	string = (CHR_MID_VERT_LN,CHR_BUSH_RIGHT,CHR_BLOCK_MC,RVS_ON,"COMPUTING",RVS_OFF,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BUSH_LEFT,RVS_ON,"       ",RVS_OFF,CHR_BUSH_RIGHT,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BUSH_LEFT," ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+		
+	egg_screen_6:	string = (CHR_MID_VERT_LN,CHR_BUSH_RIGHT,CHR_BLOCK_MC,RVS_ON,"FESTIVAL",RVS_OFF,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BUSH_LEFT,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,
+		CHR_BUSH_BOTTOM,CHR_BUSH_BOTTOM,CHR_BUSH_RIGHT,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BUSH_LEFT," ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,
+		CHR_MID_VERT_LN);
+		
+	egg_screen_7:	string = (CHR_MID_VERT_LN,CHR_BUSH_RIGHT,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BUSH_LEFT," ",CHR_BIKE_HORIZ_1,
+		CHR_BIKE_HORIZ_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+		
+	egg_screen_8:	string = (CHR_MID_VERT_LN,CHR_BUSH_RIGHT,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BUSH_LEFT," ",CHR_BIKE_HORIZ_1,
+		CHR_BIKE_HORIZ_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+		
+	egg_screen_9:	string = (CHR_MID_VERT_LN,CHR_BUSH_RIGHT,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BUSH_LEFT," ",CHR_BIKE_HORIZ_1,
+		CHR_BIKE_HORIZ_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+
+	egg_screen_10:	string = (CHR_MID_VERT_LN,CHR_BUSH_NONE,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,
+		CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_TOP,
+		CHR_BUSH_TOP,CHR_BUSH_TOP,CHR_BUSH_NONE," ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",CHR_BIKE_HORIZ_1,
+		CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+
+	egg_screen_11:	string = (CHR_MID_VERT_LN,"          ",CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,"             ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,
+		CHR_MID_VERT_LN);
+		
+	egg_screen_12:	string = (CHR_MID_VERT_LN,CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",
+		CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,"  ",CHR_BLOCK_MC,CHR_BLOCK_MC,CHR_BLOCK_MC,
+		CHR_BLOCK_MC,CHR_BLOCK_MC,"  ",CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,
+		CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,
+		CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+		
+	egg_screen_13:	string = (CHR_MID_VERT_LN,CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",
+		CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,"         ",
+		CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,
+		CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,
+		CHR_BIKE_VERT_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+	
+	egg_screen_14:	string = (CHR_MID_VERT_LN,CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"                              ",
+		CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+		
+	egg_screen_15:	string = (CHR_MID_VERT_LN,CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"                              ",
+		CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+		
+	egg_screen_16:	string = (CHR_MID_VERT_LN,CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",
+		CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,
+		CHR_BIKE_VERT_1,"  .  ",CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,
+		CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,
+		CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,CHR_BIKE_VERT_1,
+		CHR_BIKE_VERT_1,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+		
+	egg_screen_17:	string = (CHR_MID_VERT_LN,CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"  ",
+		CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,
+		"  .  ",CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,
+		CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,
+		CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,CHR_BIKE_VERT_2,"  ",CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+		
+	egg_screen_18:	string = (CHR_MID_VERT_LN,CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,"          .                   ",
+		CHR_BIKE_HORIZ_1,CHR_BIKE_HORIZ_2,CHR_MID_VERT_LN);
+		
+/*	egg_screen_18:	string = (CHR_CURVED_BOT_LT_CORNER,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		,CHR_MID_HORIZ_LN,CHR_CURVED_TOP_RT_CORNER,"   ",CHR_CURVED_TOP_LT_CORNER
+		,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,CHR_MID_HORIZ_LN,
+		CHR_MID_HORIZ_LN,CHR_CURVED_BOT_RT_CORNER);
+*/
+	// Include charset
+	charset1: incbin("assets/chargen-arcade-lightcycles.bin", LOC_CHAR_DEFS);
+	// Import sprite data
+	sprites: incbin("assets/light-cycle-sprites.bin", LOC_SPRITE_DEFS); 
+
+	////////////////////////////////////////////////////////////////////////
+	/// SOUND SECTION
+	////////////////////////////////////////////////////////////////////////
+
+	// Music notes (high byte only)
+	/*
+	const NOTE_0_C:	byte = 1; // 268;
+	const NOTE_0_CS:	byte = 1; // 284;
+	const NOTE_0_D:	byte = 1; // 301;
+	const NOTE_0_DS:	byte = 1; // 318;
+	const NOTE_0_E:	byte = 1; // 337;
+	const NOTE_0_F:	byte = 1; // 358;
+	const NOTE_0_FS:	byte = 1; // 379;
+	const NOTE_0_G:	byte = 1; // 401;
+	const NOTE_0_GS:	byte = 1; // 425;
+	const NOTE_0_A:	byte = 1; // 451;
+	const NOTE_0_AS:	byte = 1; // 477;
+	const NOTE_0_B:	byte = 1; // 506;
+	*/
+
+	const NOTE_1_C:	byte = 2; // 536;
+	const NOTE_1_CS:	byte = 2; // 568;
+	const NOTE_1_D:	byte = 2; // 602;
+	const NOTE_1_DS:	byte = 2; // 637;
+	const NOTE_1_E:	byte = 2; // 675;
+	const NOTE_1_F:	byte = 2; // 716;
+	const NOTE_1_FS:	byte = 2; // 758;
+	const NOTE_1_G:	byte = 3; // 803;
+	const NOTE_1_GS:	byte = 3; // 851;
+	const NOTE_1_A:	byte = 3; // 902;
+	const NOTE_1_AS:	byte = 3; // 955;
+	const NOTE_1_B:	byte = 3; // 1012;
+
+	const NOTE_2_C:	byte = 4; // 1072;
+	const NOTE_2_CS:	byte = 4; // 1136;
+	const NOTE_2_D:	byte = 4; // 1204;
+	const NOTE_2_DS:	byte = 4; // 1275;
+	const NOTE_2_E:	byte = 5; // 1351;
+	const NOTE_2_F:	byte = 5; // 1432;
+	const NOTE_2_FS:	byte = 5; // 1517;
+	const NOTE_2_G:	byte = 6; // 1607;
+	const NOTE_2_GS:	byte = 6; // 1703;
+	const NOTE_2_A:	byte = 7; // 1804;
+	const NOTE_2_AS:	byte = 7; // 1911;
+	const NOTE_2_B:	byte = 7; // 2025;
+	
+	const NOTE_3_C:	byte = 8; // 2145;
+	const NOTE_3_CS:	byte = 8; // 2273;
+	const NOTE_3_D:	byte = 9; // 2408;
+	const NOTE_3_DS:	byte = 9; // 2551;
+	const NOTE_3_E:	byte = 10; // 2703;
+	const NOTE_3_F:	byte = 11; // 2864;
+	const NOTE_3_FS:	byte = 11; // 3034;
+	const NOTE_3_G:	byte = 12; // 3215;
+	const NOTE_3_GS:	byte = 13; // 3406;
+	const NOTE_3_A:	byte = 14; // 3608;
+	const NOTE_3_AS:	byte = 14; // 3823;
+	const NOTE_3_B:	byte = 15; // 4050;
+	
+	const NOTE_4_C:	byte = 16; // 4291;
+	const NOTE_4_CS:	byte = 17; // 4547;
+	const NOTE_4_D:	byte = 18; // 4817;
+	const NOTE_4_DS:	byte = 19; // 5103;
+	const NOTE_4_E:	byte = 21; // 5407;
+	const NOTE_4_F:	byte = 22; // 5728;
+	const NOTE_4_FS:	byte = 23; // 6069;
+	const NOTE_4_G:	byte = 25; // 6430;
+	const NOTE_4_GS:	byte = 26; // 6812;
+	const NOTE_4_A:	byte = 28; // 7217;
+	const NOTE_4_AS:	byte = 29; // 7647;
+	const NOTE_4_B:	byte = 31; // 8101;
+
+	const NOTE_5_C:	byte = 33; // 8583;
+	const NOTE_5_CS:	byte = 35; // 9094;
+	const NOTE_5_D:	byte = 37; // 9634;
+	const NOTE_5_DS:	byte = 39; // 10207;
+	const NOTE_5_E:	byte = 42; // 10814;
+	const NOTE_5_F:	byte = 44; // 11457;
+	const NOTE_5_FS:	byte = 47; // 12139;
+	const NOTE_5_G:	byte = 50; // 12860;
+	const NOTE_5_GS:	byte = 53; // 13625;
+	const NOTE_5_A:	byte = 56; // 14435;
+	const NOTE_5_AS:	byte = 59; // 15294;
+	const NOTE_5_B:	byte = 63; // 16203;
+	
+	const NOTE_6_C:	byte = 67; // 17167;
+	const NOTE_6_CS:	byte = 71; // 18188;
+	const NOTE_6_D:	byte = 75; // 19269;
+	const NOTE_6_DS:	byte = 79; // 20415;
+	const NOTE_6_E:	byte = 84; // 21629;
+	const NOTE_6_F:	byte = 89; // 22915;
+	const NOTE_6_FS:	byte = 94; // 24278;
+	const NOTE_6_G:	byte = 100; // 25721;
+	const NOTE_6_GS:	byte = 106; // 27251;
+	const NOTE_6_A:	byte = 112; // 28871;
+	const NOTE_6_AS:	byte = 119; // 30588;
+	const NOTE_6_B:	byte = 126; // 32407;
+	
+	const NOTE_7_C:	byte = 134; // 34334;
+	const NOTE_7_CS:	byte = 142; // 36376;
+	const NOTE_7_D:	byte = 150; // 38539;
+	const NOTE_7_DS:	byte = 159; // 40830;
+	const NOTE_7_E:	byte = 168; // 43258;
+	const NOTE_7_F:	byte = 179; // 45830;
+	const NOTE_7_FS:	byte = 189; // 48556;
+	const NOTE_7_G:	byte = 200; // 51443;
+	const NOTE_7_GS:	byte = 212; // 54502;
+	const NOTE_7_A:	byte = 225; // 57743;
+	const NOTE_7_AS:	byte = 238; // 61176;
+	const NOTE_7_B:	byte = 253; // 64814;
+	
+	// Intro to "Anthem for Keyboard Solo" Tron theme - 7/4 time
+	// Transcribed from sheet music: https://www.sheetmusicplus.com/title/tron-theme-digital-sheet-music/22158340
+	// How to read sheet music: https://theonlinemetronome.com/blogs/8/treble-clef
+	//  Structure - note, sustain 
+	theme_music_arr: array[] of byte = (
+		0,7, 	// half measure rst
+		0,2,			NOTE_5_C,1,	NOTE_5_D,1,
+		NOTE_5_E,3,	0,1,			NOTE_5_C,1,
+		NOTE_5_D,1,	NOTE_5_E,2,	NOTE_5_C,2,
+		// note 8
+		NOTE_5_G,4,	NOTE_5_D,4,	NOTE_4_B,4,
+		NOTE_4_G,3,	0,2,			NOTE_4_A,1,
+		// note 13
+		NOTE_4_B,1,	NOTE_5_C,3,	0,1,
+		NOTE_4_A,1,	NOTE_4_B,1,	NOTE_5_C,2,
+		// note 18
+		NOTE_4_A,2,	NOTE_5_E,4,	NOTE_4_B,4,
+		NOTE_4_GS,4,	NOTE_4_E,3,	0,2,
+		// note 23
+		NOTE_4_A,1,	NOTE_4_G,1,	NOTE_4_F,2,
+		NOTE_4_A,2,	NOTE_4_B,6,	0,2,
+		// note 28
+		NOTE_5_C,1,	NOTE_4_B,1,	NOTE_4_A,2,
+		NOTE_5_C,2,	NOTE_5_D,6,	0,2,
+		// note 33
+		NOTE_5_DS,1,	NOTE_5_CS,1,	NOTE_4_B,2,
+		NOTE_5_DS,2,	NOTE_5_FS,4,	NOTE_5_CS,3,
+		// note 39
+		0,2,			NOTE_5_FS,1,	NOTE_5_E,1,
+		NOTE_5_D,2,	NOTE_5_FS,2,	NOTE_5_A,6,
+		0,7,	// half measure rst
+		0,0	// End
+	);
+
+	// Tron Scherzo hook - DAA, dah, da-DA, daa. DA-da-DA-DAAA!
+	//
+	// Couldn't find sheet music - notes suggested here:
+	//  https://www.reddit.com/r/piano/comments/14zix4y/tron_scherzo_wendy_carlos/
+	//
+	// Redditor "AccordionPianist" -
+	//	"I think the riff you are referring to is that repeating "build up" to the
+	//	first ascending pattern? Right hand plays B F C repeatedly (fingers 5,3,1) 
+	//	while left plays A,B,A,B…. Then it jumps to first "ascension" which left 
+	//	hand bass is G then G# then A while right plays D G C , C# G#, B A B E, 
+	//	respectively, then bass does a G# before the next "ascension". Similar pattern 
+	//	just playing up from A (instead of G) same kind of thing."
+	//
+	// Structure - note, sustain
+	game_end_music_arr: array[] of byte = (
+		0,7,		// half measure rest
+		NOTE_5_D,2,	NOTE_5_G,2,	NOTE_5_C,1,  
+		NOTE_5_CS,2,	NOTE_5_GS,2,	0,1,
+		NOTE_4_B,1,	NOTE_4_A,1,	NOTE_4_B,1,  
+		NOTE_5_E,4,
+		0,14,	// full measure rest
+		0,14,
+		0,0	// End
+	);
+
+	// Are You Keeping Up With the Commodore?
+	//
+	// https://www.hooktheory.com/theorytab/view/woxy/keeping-up-with-the-commodore
+	// https://musescore.com/user/28997854/scores/5282820
+	// 
+	// 2/4 time - 2 divisions per beat, 4 beats per measure
+	//
+	//  A & B go down an octave from sheet
+	//	DS, FS goes up an octave from sheet
+	// Structure - note, sustain
+	keeping_up_music_arr: array[] of byte = (
+		// Verse 1st measure
+		0,4,			NOTE_4_GS,2,	NOTE_4_GS,2,
+		NOTE_4_GS,4,	NOTE_4_GS,4,
+		NOTE_4_GS,4,	NOTE_4_FS,2,	NOTE_4_AS,4,		// carries to next measure
+		NOTE_4_FS,2,	NOTE_4_FS,4,
+		0,6,			NOTE_4_DS,2,
+		NOTE_4_FS,4,	NOTE_4_GS,4,
+		NOTE_4_GS,4,	NOTE_4_FS,2,	NOTE_4_GS,4,		// carries to next measure
+		0,10,		// carries to next measure
+		NOTE_4_DS,2,	NOTE_4_DS,2,	
+		NOTE_4_GS,4,	NOTE_4_GS,4,
+		// Verse 11th measure
+		NOTE_4_GS,4,	NOTE_4_FS,2,	NOTE_4_AS,4,		// carries to next measure
+		NOTE_4_FS,2,	NOTE_4_FS,4,
+		0,8,
+		NOTE_4_FS,4,	NOTE_4_GS,4,
+		NOTE_4_GS,4,	NOTE_4_FS,2,	NOTE_4_GS,4,		// carries to next measure
+		0,12,		// carries to next measure
+		NOTE_4_DS,2,	
+		// Chorus 1st measure
+		NOTE_4_DS,2,	0,2,			NOTE_4_DS,2,	NOTE_3_B,2,
+		NOTE_4_CS,2,	0,2,			NOTE_4_CS,2,	NOTE_3_B,2,
+		NOTE_4_CS,2,	NOTE_4_DS,2,	NOTE_4_DS,2,	0,2,
+		0,4,			NOTE_3_GS,2,	NOTE_3_GS,2,
+		NOTE_3_B,2,	NOTE_3_B,2,	NOTE_3_B,2,	NOTE_3_B,2,	
+		NOTE_4_CS,2,	NOTE_4_CS,2,	NOTE_4_CS,2,	NOTE_4_DS,2,
+		NOTE_4_DS,2,	0,10,	// carries to next measure
+		NOTE_4_DS,2,	0,2,			NOTE_4_DS,2,	NOTE_3_B,2,
+		NOTE_4_CS,2,	0,2,			NOTE_4_CS,2,	NOTE_3_B,2,
+		// Chorus 11th measure
+		NOTE_4_CS,2,	NOTE_4_DS,2,	NOTE_4_DS,2,	0,6,		// carries to next measure
+		NOTE_3_GS,2,	NOTE_3_GS,2,
+		NOTE_3_B,2,	NOTE_3_B,2,	NOTE_3_B,2,	NOTE_3_B,2,	
+		NOTE_4_CS,2,	NOTE_4_CS,2,	NOTE_4_CS,2,	NOTE_3_B,2,
+		NOTE_3_B,2,	0,10,	// carries to next measure
+		NOTE_3_B,4,
+		NOTE_4_FS,1,	NOTE_4_GS,5,	0,2,
+		NOTE_4_FS,2,	0,2,			NOTE_4_FS,4,
+		NOTE_4_DS,4,	0,8,		// carries to next measure	
+		NOTE_3_B,2,	NOTE_3_B,2,
+		// Chorus 21th measure
+		NOTE_4_E,2,	NOTE_4_E,2,	NOTE_4_E,2,	NOTE_4_E,2,	
+		NOTE_4_FS,2,	NOTE_4_FS,2,	NOTE_4_FS,2,	NOTE_4_CS,2,
+		NOTE_4_DS,4,	0,8,		// carries to next measure
+		NOTE_3_B,4,	
+		NOTE_4_FS,1,	NOTE_4_GS,5,	0,2,
+		NOTE_4_FS,2,	0,2,			NOTE_4_FS,4,
+		NOTE_4_DS,4,	0,8,		// carries to next measure
+		NOTE_3_GS,2,	NOTE_3_GS,2,	
+		NOTE_3_B,2,	NOTE_3_B,2,	NOTE_3_B,2,	NOTE_3_B,2,	
+		NOTE_4_CS,2,	NOTE_4_CS,2,	NOTE_4_CS,2,	NOTE_3_B,6,	// held into next measure
+		// Chorus 31th measure
+		0,8,	// half measure rest
+		0,0	// End
+	);
+
+	// Are You Keeping Up With the Commodore? - Bass line
+	// 
+	// 2/4 time - 2 divisions per beat, 4 beats per measure
+	//
+	//  A & B go down an octave from sheet
+	//
+	// Structure - note, sustain
+	keeping_up_bass_music_arr: array[] of byte = (
+		NOTE_2_B,2,	NOTE_2_CS,2,
+		0,0 // End
+	);
+	
+// eof
