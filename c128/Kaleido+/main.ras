@@ -33,7 +33,7 @@ var
 	num_chars	  	: byte = 6;	// Number of chars in the array
 	speed 		  	: byte = 0;	// Recommended values 0-9
 	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
-	pattern_type  	: byte = 1;	// 0=4-Point Pattern, 1=8-Point Pattern
+	pattern_type  	: byte = 2;	// 0=4-Point X Pattern, 1=8-Point Pattern, 2=4-Point + Pattern
 	curr_color		: byte = 1;	// Current color
 	char_arr 	  	: array[20] of byte;
 	p 			  	: pointer;	// Generic pointer
@@ -60,17 +60,26 @@ var
 	// 8	  $08 orange,	9 $09 brown, 		10 $0A pink,		11 $0B dark grey
 	// 12 $0C grey, 		13 $0D lt green,		14 $0E lt blue,	15 $0F lt grey
 
-	// Text for splash screen  	
+	// Text for splash screen
 	titlemsg:	cstring = ("KALEIDOSCOPE+");
-	authormsg1: 	cstring = ("JESSICA PETERSEN <FUZZYBAD>, 2021");
-	authormsg2: 	cstring = ("BASED ON ROUTINE BY");
-	authormsg3: 	cstring = ("RUGG AND FELDMAN, 1979");
-	inst1: 		cstring = ("0-9 - ADJUST SPEED");
-	inst2: 		cstring = ("Q   - QUIT");
-	inst3:		cstring = ("SUPPORTS 40 AND 80 COL");
+	authormsg1:	cstring = ("J. PETERSEN <FUZZYBAD>, 2021");
+	authormsg2:	cstring = ("BASED ON ROUTINE BY");
+	authormsg3:	cstring = ("RUGG AND FELDMAN, 1979");
+	authormsg4:	cstring = ("(32 BASIC PROGRAMS FOR THE PET COMPUTER)");
+	inst1:		cstring = ("RUN CONTROLS");
+	inst2: 		cstring = ("0-9 - ADJUST SPEED");
+	inst3: 		cstring = ("      (9 FASTEST)");
+	inst4: 		cstring = ("Q   - QUIT");
+	inst5:		cstring = ("SUPPORTS 40 AND 80 COL");
+
 	// PRESS ANY KEY
-	//promptmsg: cstring = (208, 210, 197, 211, 211, 32, 193, 206, 217, 32, 203, 197, 217);
-	promptmsg: cstring = ("PRESS ANY KEY");
+	promptmsg:	cstring = ("PRESS ANY KEY TO BEGIN");
+	colorred:	cstring = ("BBBBBBBBBBBBBBBBBBBBBB");
+	colorcyan:	cstring = ("CCCCCCCCCCCCCCCCCCCCCC");
+	colorviolet:	cstring = ("DDDDDDDDDDDDDDDDDDDDDD");
+	colorgreen:	cstring = ("EEEEEEEEEEEEEEEEEEEEEE");
+	colorblue:	cstring = ("FFFFFFFFFFFFFFFFFFFFFF");
+	coloryellow:	cstring = ("GGGGGGGGGGGGGGGGGGGGGG");
 	
 	// NOTES:
 	//	
@@ -112,7 +121,7 @@ begin
 	Print80(#titlemsg, length(titlemsg));
 	// Fill color for string
 	MoveTo80(x1, 1, $08);
-	Fill80(13, length(titlemsg)); // yellow
+	Fill80(7, length(titlemsg)); // cyan
 
 	// Center the author message
 	x1 := myscreenwidth / 2 - length(authormsg1) / 2;
@@ -121,7 +130,7 @@ begin
    	Print80(#authormsg1, length(authormsg1));
 	// Fill color for string
 	MoveTo80(x1, 3, $08);
-	Fill80(5, length(authormsg1)); // green
+	Fill80(7, length(authormsg1)); // cyan
 
 	x1 := myscreenwidth / 2 - length(authormsg2) / 2;
 	// Display text	
@@ -139,29 +148,51 @@ begin
 	MoveTo80(x1, 8, $08);
 	Fill80(7, length(authormsg3)); // cyan
 
-	// Display Controls
-	x1 := 31;
+	x1 := myscreenwidth / 2 - length(authormsg4) / 2;
 	// Display text	
-	MoveTo80(x1, 12, 0);
+	MoveTo80(x1, 10, 0);
+   	Print80(#authormsg4, length(authormsg4));
+	// Fill color for string
+	MoveTo80(x1, 10, $08);
+	Fill80(7, length(authormsg4)); // cyan
+
+
+	// Display Controls
+	x1 := myscreenwidth / 2 - length(inst1) / 2;
+	MoveTo80(x1, 13, 0);
     Print80(#inst1, length(inst1));
 	// Fill color for string
-	MoveTo80(x1, 12, $08);
-	Fill80(15, length(inst1)); // white
+	MoveTo80(x1, 13, $08);
+	Fill80(4, length(inst1)); // green
 
-	// Display text	
-	MoveTo80(x1, 14, 0);
+	x1 := 31;
+	MoveTo80(x1, 15, 0);
     Print80(#inst2, length(inst2));
 	// Fill color for string
-	MoveTo80(x1, 14, $08);
-	Fill80(15, length(inst2)); // white
+	MoveTo80(x1, 15, $08);
+	Fill80(4, length(inst2)); // green
 
-	// Center 40/80 message 
-	x1 := myscreenwidth / 2 - length(inst3) / 2;
-	MoveTo80(x1, 18, 0);
+	x1 := 31; 
+	MoveTo80(x1, 16, 0);
    	Print80(#inst3, length(inst3));
 	// Fill color for string
-	MoveTo80(x1, 14, $08);
-	Fill80(15, length(inst2)); // white
+	MoveTo80(x1, 16, $08);
+	Fill80(4, length(inst3)); // green
+
+	x1 := 31;
+	MoveTo80(x1, 18, 0);
+   	Print80(#inst4, length(inst4));
+	// Fill color for string
+	MoveTo80(x1, 18, $08);
+	Fill80(4, length(inst4)); // green
+
+	x1 := myscreenwidth / 2 - length(inst5) / 2;
+	MoveTo80(x1, 20, 0);
+   	Print80(#inst5, length(inst5));
+	// Fill color for string
+	MoveTo80(x1, 20, $08);
+	Fill80(4, length(inst5)); // green
+	
 
 	// Center prompt to continue
 	x1 := myscreenwidth / 2 - length(promptmsg) / 2;
@@ -171,7 +202,7 @@ begin
 	//	Fill80(23, length(promptmsg)); // cyan blinking
 	//	Fill80(71, length(promptmsg)); // cyan reverse
 	MoveTo80(x1, 24, $08);
-	Fill80(87, length(promptmsg)); // cyan blinking reverse
+	Fill80(13, length(promptmsg)); // yellow 
    	
    	// VIC Screen
 	myscreenwidth := 40;
@@ -190,42 +221,74 @@ begin
 	clearscreen(3, SCREEN_COL_LOC);
 		
 	// Center the title text
-	x1 := myscreenwidth / 2 - length(titlemsg) / 2;
-	moveto(x1, 1, hi(SCREEN_CHAR_LOC));
-   	printString(titlemsg, 0, length(titlemsg));
+	x1 := SCREEN_WIDTH / 2 - length(titlemsg) / 2;
+	moveto(x1, 0, hi(SCREEN_CHAR_LOC));
+   	printString(#titlemsg, 0, length(titlemsg));
+   	moveto(x1, 0, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(titlemsg));
 
 	// Center the author message
-	x1 := myscreenwidth / 2 - length(authormsg1) / 2;
+	x1 := SCREEN_WIDTH / 2 - length(authormsg1) / 2;
 	moveto(x1, 3, hi(SCREEN_CHAR_LOC));
-   	printString(authormsg1, 0, length(authormsg1));
+   	printString(#authormsg1, 0, length(authormsg1));
+   	moveto(x1, 3, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(authormsg1));
 
-	x1 := myscreenwidth / 2 - length(authormsg2) / 2;
-	moveto(x1, 6, hi(SCREEN_CHAR_LOC));
-   	printString(authormsg2, 0, length(authormsg2));
+	x1 := SCREEN_WIDTH / 2 - length(authormsg2) / 2;
+	moveto(x1, 5, hi(SCREEN_CHAR_LOC));
+   	printString(#authormsg2, 0, length(authormsg2));
+   	moveto(x1, 5, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(authormsg2));
 
-	x1 := myscreenwidth / 2 - length(authormsg3) / 2;
-	moveto(x1, 8, hi(SCREEN_CHAR_LOC));
-   	printString(authormsg3, 0, length(authormsg3));
+	x1 := SCREEN_WIDTH / 2 - length(authormsg3) / 2;
+	moveto(x1, 7, hi(SCREEN_CHAR_LOC));
+   	printString(#authormsg3, 0, length(authormsg3));
+   	moveto(x1, 7, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(authormsg3));
+
+	x1 := SCREEN_WIDTH / 2 - length(authormsg4) / 2;
+	moveto(x1, 9, hi(SCREEN_CHAR_LOC));
+   	printString(#authormsg4, 0, length(authormsg4));
+   	moveto(x1, 9, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(authormsg4));
+
 
 	// Display Controls
-	x1 := 11;
-	moveto(x1, 12, hi(SCREEN_CHAR_LOC));
-    printString(inst1, 0, length(inst1));
+	x1 := SCREEN_WIDTH / 2 - 6;
+	moveto(x1, 13, hi(SCREEN_CHAR_LOC));
+    printString(#inst1, 0, length(inst1));
+   	moveto(x1, 13, hi(SCREEN_COL_LOC));
+   	printString(#colorgreen, 0, length(inst1));
 
-	moveto(x1, 14, hi(SCREEN_CHAR_LOC));
-    printString(inst2, 0, length(inst2));
+	x1 := SCREEN_WIDTH / 2 - 9;
+	moveto(x1, 15, hi(SCREEN_CHAR_LOC));
+    printString(#inst2, 0, length(inst2));
+   	moveto(x1, 15, hi(SCREEN_COL_LOC));
+   	printString(#colorgreen, 0, length(inst2));
 
-	// Show 40/80 message 
-	x1 := SCREEN_WIDTH / 2 - length(inst3) / 2;
-	MoveTo(x1, 18, hi(SCREEN_CHAR_LOC));
-   	PrintString(#inst3, 0, length(inst3));
+	moveto(x1, 16, hi(SCREEN_CHAR_LOC));
+    printString(#inst3, 0, length(inst3));
+   	moveto(x1, 16, hi(SCREEN_COL_LOC));
+   	printString(#colorgreen, 0, length(inst3));
 
-	// Center prompt to continue
-	// TRSE seems bugged at counting length of numeric strings
-	x1 := myscreenwidth / 2 - 13 / 2;
+	moveto(x1, 18, hi(SCREEN_CHAR_LOC));
+    printString(#inst4, 0, length(inst4));
+   	moveto(x1, 18, hi(SCREEN_COL_LOC));
+   	printString(#colorgreen, 0, length(inst4));
+	
+	x1 := SCREEN_WIDTH / 2 - length(inst5) / 2;
 	moveto(x1, 20, hi(SCREEN_CHAR_LOC));
-   	printString(promptmsg, 0, length(promptmsg));
-   	
+    printString(#inst5, 0, length(inst5));
+   	moveto(x1, 20, hi(SCREEN_COL_LOC));
+   	printString(#colorgreen, 0, length(inst5));
+	
+	// Center prompt to continue
+	x1 := SCREEN_WIDTH / 2 - length(promptmsg) / 2;
+	moveto(x1, 24, hi(SCREEN_CHAR_LOC));
+   	printString(#promptmsg, 0, length(promptmsg));
+   	moveto(x1, 24, hi(SCREEN_COL_LOC));
+   	printString(#coloryellow, 0, length(promptmsg));
+	
 	WaitForKeypress();
 end;		// End ShowTitle
 
@@ -356,21 +419,24 @@ begin
 		y1 := centerY - mainIndex;			// line 240
 		Plot();								// line 240
 
-		// Lower right
-		x1 := centerX + mainIndex;			// line 250
-		y1 := centerY + mainIndex;			// line 250
-		Plot();								// line 250
-		// Upper left
-		x1 := centerX - mainIndex;			// line 260
-		y1 := centerY - mainIndex;			// line 260
-		Plot();								// line 260
-		// Lower left
-		y1 := centerY + mainIndex;			// line 270
-		Plot();								// line 270
-		// Upper right
-		x1 := centerX + mainIndex; 			// line 280
-		y1 := centerY - mainIndex;			// line 280
-		Plot();								// line 280
+		if( pattern_type <> 2 ) then
+		begin
+			// Lower right
+			x1 := centerX + mainIndex;			// line 250
+			y1 := centerY + mainIndex;			// line 250
+			Plot();								// line 250
+			// Upper left
+			x1 := centerX - mainIndex;			// line 260
+			y1 := centerY - mainIndex;			// line 260
+			Plot();								// line 260
+			// Lower left
+			y1 := centerY + mainIndex;			// line 270
+			Plot();								// line 270
+			// Upper right
+			x1 := centerX + mainIndex; 			// line 280
+			y1 := centerY - mainIndex;			// line 280
+			Plot();								// line 280
+		end;
 		
 		// Check user input	
 		CheckInputs();
@@ -393,12 +459,17 @@ begin
 	if( dir = 1 ) then
 	begin
 		// Toggle pattern type
-		if( pattern_type = 1 ) then 
-		begin						// 4-point pattern
+		if( pattern_type = 2 ) then 
+		begin						// 4-point X pattern
 			pattern_type := 0;
 			num_chars := myscreenheight / 2;
 		end
-		else begin 					// 8-point pattern
+		else if( pattern_type = 1 ) then
+		begin						// 4-point + pattern
+			pattern_type := 2;
+			num_chars := myscreenheight / 2;			
+		end
+ 		else begin 					// 8-point pattern
 			pattern_type := 1;
 			num_chars := myscreenheight / 4;
 		end;
@@ -433,8 +504,7 @@ begin
 		begin
 			char_start_st	:= 116;			// Angles
 			char_offset_st	:= 11;	
-		end
-		else
+		end else
 		begin
 			char_start_st	:= 64;			// Graphics Chars
 			char_offset_st	:= 63;
@@ -448,35 +518,37 @@ begin
 		dir := 1;	// Set pattern moving outward
 		start_pos := 1;
 		stop_pos := Random() & 8 + 12;
-	end;
 
-	// Update color palette	
-	if( cycleCtr >= 4 ) then
-	begin
-		rando := Random();
-		
-		if( rando < 51 ) then begin
-			cArrPtr := #cArr1;
-			cArrLen := length(cArr1);
-		end
-		else if( rando < 102 ) then begin
-			cArrPtr := #cArr2;
-			cArrLen := length(cArr2);	
-		end
-		else if (rando < 153 ) then begin
-			cArrPtr := #cArr3;
-			cArrLen := length(cArr3);
-		end
-		else if (rando < 204 ) then begin
-			cArrPtr := #cArr4;
-			cArrLen := length(cArr4);
-		end
-		else begin
-			cArrPtr := #cArr5;
-			cArrLen := length(cArr5);
+		// Update color palette	
+		if( cycleCtr >= 4 ) then
+		begin
+			rando := Random();
+			
+			if( rando < 51 ) then begin
+				cArrPtr := #cArr1;
+				cArrLen := length(cArr1);
+			end
+			else if( rando < 102 ) then begin
+				cArrPtr := #cArr2;
+				cArrLen := length(cArr2);	
+			end
+			else if (rando < 153 ) then begin
+				cArrPtr := #cArr3;
+				cArrLen := length(cArr3);
+			end
+			else if (rando < 204 ) then begin
+				cArrPtr := #cArr4;
+				cArrLen := length(cArr4);
+			end
+			else begin
+				cArrPtr := #cArr5;
+				cArrLen := length(cArr5);
+			end;
+			
+			cycleCtr := 0;
+			clearscreen($20, SCREEN_CHAR_LOC);
+			Clear80(32, 0);
 		end;
-		
-		cycleCtr := 0;
 	end;	
 end;		// End DoMutations
 
