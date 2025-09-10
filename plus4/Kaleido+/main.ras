@@ -1,0 +1,413 @@
+/**
+ * This was created using the Turbo Rascal Syntax Error development platform.
+ * 
+ * https://turborascal.com
+ * https://github.com/leuat/TRSE
+ *
+ * License: GPL V3
+ *
+ * Enhanced version of KALEIDOSCOPE from:
+ *  "32 BASIC Programs for the PET Computer" Tom Rugg and Phil Feldman (1979)
+ * 
+ * Author: Jessica Petersen <fuzzybad@gmail.com> (Nov 2021)]
+ *
+ * This is a much extended version of the KALEIDO routine. The pattern will reverse,
+ * randomly select different characters and move about the screen over time.
+ * It also supports full-screen mode (original was 24x24 only) and supports 80-col PETs.
+ * 
+ */
+program Kaleido;
+var  
+	// Main program vars
+	centerX 	  		: byte = SCREEN_WIDTH / 2;
+	centerY 	  		: byte = SCREEN_HEIGHT / 2;
+	start_pos 	  	: byte = 1;
+	stop_pos 	  	: byte = 20;
+	dir			  	: byte = 1;
+	char_start 	  	: byte;
+	char_offset		: byte;
+	char_start_st 	: byte = 64;	// Graphics chars
+	char_offset_st  	: byte = 63;
+	num_chars	  	: byte = 6;	// Number of chars in the array
+	speed 		  	: byte = 3;	// Recommended values 0-9
+	rev_enable	  	: byte = 0;	// 0=Disable, 1=Enable reverse chars
+	pattern_type  	: byte = 2;	// 0=4-Point X Pattern, 1=8-Point Pattern, 2=4-Point + Pattern
+	curr_color		: byte = 1;	// Current color
+	curr_luma		: byte = 1;	// Current luminance
+	dir_luma		 	: byte = 16;	// Value to incremenet luminance
+	char_arr 	  	: array[20] of byte;
+	p 			  	: pointer;
+	plotIndex, plotIndexMax, mainIndex, colSelect, i, temp, rando : byte;
+	x1, y1, x2, y2	: signed byte;
+	key 				: byte; 		// Used for keyboard input
+    saddr : array[25] of integer;	// Array for screen AddressTable
+    caddr : array[25] of integer;	// Array for color AddressTable
+	
+	// Text for splash screen
+	titlemsg:	string = ("KALEIDOSCOPE+");
+	authormsg1:	string = ("J. PETERSEN <FUZZYBAD>, 2021");
+	authormsg2:	string = ("BASED ON ROUTINE BY");
+	authormsg3:	string = ("RUGG AND FELDMAN, 1979");
+	authormsg4:	string = ("(32 BASIC PROGRAMS FOR THE PET COMPUTER)");
+	inst1:		string = ("RUN CONTROLS");
+	inst2: 		string = ("0-9 - ADJUST SPEED");
+	inst3: 		string = ("      (9 FASTEST)");
+	inst4: 		string = ("Q   - QUIT");
+	// PRESS ANY KEY
+	promptmsg: string = (208, 210, 197, 211, 211, 32, 193, 206, 217, 32, 203, 197, 217);
+	colorcyan:	string = ("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
+	colorgreen:	string = ("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
+	coloryellow:	string = ("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG");
+    
+// Include common functions
+@include "functions.ras"
+
+
+//	Method which shows title screen and checks screen width
+procedure ShowTitle();
+begin
+	// Using AddressTable for screen updates
+    definescreen();
+    CreateAddressTable( #saddr, SCREEN_CHAR_LOC, 40, 25 );	// $0C00
+    CreateAddressTable( #caddr, SCREEN_COL_LOC, 40, 25 );	// $0800
+    
+	// Set uppercase
+	poke(^59468, 0, 12);	 // 59468 or $E84C
+	
+	// Set background/border colors
+	poke(SCREEN_BG_COL, 0, BLACK);
+	poke(SCREEN_FG_COL, 0, BLACK);
+	
+	// Clear screen
+	clearscreen($20, SCREEN_CHAR_LOC);
+	
+	// Set default colormemory
+	clearscreen(LIGHT_GREY, SCREEN_COL_LOC);
+
+	// Center the title text
+	x1 := SCREEN_WIDTH / 2 - length(titlemsg) / 2;
+	moveto(x1, 0, hi(SCREEN_CHAR_LOC));
+   	printString(#titlemsg, 0, length(titlemsg));
+   	moveto(x1, 0, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(titlemsg));
+
+	// Center the author message
+	x1 := SCREEN_WIDTH / 2 - length(authormsg1) / 2;
+	moveto(x1, 3, hi(SCREEN_CHAR_LOC));
+   	printString(#authormsg1, 0, length(authormsg1));
+   	moveto(x1, 3, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(authormsg1));
+
+	x1 := SCREEN_WIDTH / 2 - length(authormsg2) / 2;
+	moveto(x1, 5, hi(SCREEN_CHAR_LOC));
+   	printString(#authormsg2, 0, length(authormsg2));
+   	moveto(x1, 5, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(authormsg2));
+
+	x1 := SCREEN_WIDTH / 2 - length(authormsg3) / 2;
+	moveto(x1, 7, hi(SCREEN_CHAR_LOC));
+   	printString(#authormsg3, 0, length(authormsg3));
+   	moveto(x1, 7, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(authormsg3));
+
+	x1 := SCREEN_WIDTH / 2 - length(authormsg4) / 2;
+	moveto(x1, 9, hi(SCREEN_CHAR_LOC));
+   	printString(#authormsg4, 0, length(authormsg4));
+   	moveto(x1, 9, hi(SCREEN_COL_LOC));
+   	printString(#colorcyan, 0, length(authormsg4));
+
+	// Display Controls
+	x1 := SCREEN_WIDTH / 2 - 6;
+	moveto(x1, 13, hi(SCREEN_CHAR_LOC));
+    printString(#inst1, 0, length(inst1));
+   	moveto(x1, 13, hi(SCREEN_COL_LOC));
+   	printString(#colorgreen, 0, length(inst1));
+
+	x1 := SCREEN_WIDTH / 2 - 9;
+	moveto(x1, 15, hi(SCREEN_CHAR_LOC));
+    printString(#inst2, 0, length(inst2));
+   	moveto(x1, 15, hi(SCREEN_COL_LOC));
+   	printString(#colorgreen, 0, length(inst2));
+
+	moveto(x1, 16, hi(SCREEN_CHAR_LOC));
+    printString(#inst3, 0, length(inst3));
+   	moveto(x1, 16, hi(SCREEN_COL_LOC));
+   	printString(#colorgreen, 0, length(inst3));
+
+	moveto(x1, 17, hi(SCREEN_CHAR_LOC));
+    printString(#inst4, 0, length(inst4));
+   	moveto(x1, 17, hi(SCREEN_COL_LOC));
+   	printString(#colorgreen, 0, length(inst4));
+	
+	// Center prompt to continue
+	// TRSE seems bugged at counting length of numeric strings
+	x1 := SCREEN_WIDTH / 2 - 13 / 2;
+	moveto(x1, 23, hi(SCREEN_CHAR_LOC));
+   	printString(#promptmsg, 0, length(promptmsg));
+   	moveto(x1, 23, hi(SCREEN_COL_LOC));
+   	printString(#coloryellow, 0, length(promptmsg));
+    
+	WaitForKeypress();
+end;		// End ShowTitle
+
+// Fill char array
+procedure InitData();
+begin	
+	for i := 0 to num_chars do							// line 150
+	begin
+		// Populate char_arr 
+		char_start := char_start_st;
+		char_offset := char_offset_st;
+		
+		// Option for reverse chars
+		if( rev_enable = 1 ) then
+		begin
+			if( Random() > 127 ) then				// line 165
+				char_start := char_start + 128;		// line 165
+		end;
+		
+		char_arr[i] := Random() & char_offset + char_start;
+	end;
+end; 
+
+//////////////////////////
+// Plot chars on screen
+//////////////////////////
+procedure Plot();
+begin
+	// Debug
+	//PrintXYZ(x2, y2, 0);
+	//WaitForKeypress();
+
+	// Call timing delay
+	DoDelay(speed);
+
+	// Map chars in the up/down/across indexes
+	PokeAddr(x1, y1, char_arr[0], curr_color);	// line 900
+
+	if( mainIndex = 1 ) then return;				// line 910
+	
+	colSelect := mainIndex / 2 + 1;				// line 920
+
+	// Modifies character range selection and will take effect 
+	// next time InitData() runs
+	char_start := mainIndex - colSelect - 1;		// line 920
+
+	// Select pattern style
+	if( pattern_type = 1 ) then plotIndexMax := colSelect 
+	else plotIndexMax := mainIndex;
+
+	// Map chars surrounding the up/down/across indexes
+	for plotIndex := 1 to plotIndexMax do			// line 930
+	begin
+		if( x1 = centerX ) then					// line 940
+		begin
+			x2 := x1 + plotIndex;
+			y2 := y1;
+			// Fills right of vertical
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
+			x2 := x1 - plotIndex;
+			// Fills left of vertical
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
+		end 
+		else if( y1 = centerY ) then			// line 950
+		begin
+			x2 := x1;
+			y2 := y1 + plotIndex;
+			// Fills below horizontal
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
+			y2 := y1 - plotIndex;
+			// Fills above horizontal
+			PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
+		end
+		else begin
+			y2 := y1;							// line 970
+			if( x1 < centerX ) then				// line 970
+			begin
+				// Fills left side diagonal
+				x2 := x1 + plotIndex;
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
+			end else begin
+				// Fills right side diagonal
+				x2 := x1 - plotIndex;		// line 980
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
+			end;
+			
+			x2 := x1;						// line 990
+			
+			if( y1 < centerY ) then			// line 990
+			begin
+				// Fills top corners
+				y2 := y1 + plotIndex;
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);					
+			end
+			else begin
+				// Fills bottom corners
+				y2 := y1 - plotIndex;		// line 1000
+				PokeAddr(x2, y2, char_arr[plotIndex], curr_color);
+			end;
+		end;
+	end;		// End for
+end;		// End Plot
+
+// Update the display
+procedure MainLoop();
+begin
+	for mainIndex := start_pos to stop_pos step dir do	// line 200
+	begin		
+		// Iterate through luminance levels for curent color
+		curr_color := curr_color + dir_luma;
+		if(curr_color < 0 or curr_color > 127) then  
+		begin
+			dir_luma := -dir_luma;
+			curr_color := curr_color + dir_luma;	
+		end;
+		
+		// Map the data
+		// Right
+		x1 := centerX + mainIndex;			// line 210
+		y1 := centerY;						// line 210
+		Plot();								// line 210
+		// Left
+		x1 := centerX - mainIndex;			// line 220
+		Plot();								// line 220
+		// Down
+		x1 := centerX;						// line 230
+		y1 := centerY + mainIndex;			// line 230
+		Plot();								// line 230
+		// Up
+		y1 := centerY - mainIndex;			// line 240
+		Plot();								// line 240
+
+		if( pattern_type <> 2 ) then
+		begin
+			// Lower right
+			x1 := centerX + mainIndex;			// line 250
+			y1 := centerY + mainIndex;			// line 250
+			Plot();								// line 250
+			// Upper left
+			x1 := centerX - mainIndex;			// line 260
+			y1 := centerY - mainIndex;			// line 260
+			Plot();								// line 260
+			// Lower left
+			y1 := centerY + mainIndex;			// line 270
+			Plot();								// line 270
+			// Upper right
+			x1 := centerX + mainIndex; 			// line 280
+			y1 := centerY - mainIndex;			// line 280
+			Plot();								// line 280
+		end;
+
+		// Check user input
+		CheckInputs();
+	end;
+end;		// End MainLoop
+
+// Various Pattern Mutations
+procedure DoMutations();
+begin
+	rando := Random();
+
+	// Reverse direction (1/2 cycle)
+	dir			:= -dir;
+	temp			:= start_pos;
+	start_pos	:= stop_pos;
+	stop_pos		:= temp;
+
+	// Select new color
+	curr_luma := Random() & 15;
+	// If black, pick another color..
+	while( curr_luma = 0 ) do curr_luma := Random() & 15;
+	
+	// Alternate color selection logic
+	//curr_luma := curr_luma + 1;
+	//if( curr_luma > 15 ) then curr_luma :=1;
+	curr_color := curr_luma;
+
+	// Mutations every full cycle
+	if( dir = 1 ) then
+	begin
+		// Toggle pattern type
+		if( pattern_type = 2 ) then 
+		begin						// 4-point X pattern
+			pattern_type := 0;
+			num_chars := SCREEN_HEIGHT / 2;
+		end
+		else if( pattern_type = 1 ) then
+		begin						// 4-point + pattern
+			pattern_type := 2;
+			num_chars := SCREEN_HEIGHT / 2;
+		end
+ 		else begin 					// 8-point pattern
+			pattern_type := 1;
+			num_chars := SCREEN_HEIGHT / 4;
+		end;
+
+		// Randomly change center point
+		if( rando < 64 ) then
+		begin
+			temp := SCREEN_WIDTH / 5;
+			centerX := Random() & temp + (SCREEN_WIDTH - temp) / 2;
+			centerY := Random() & 5 + 10;
+			clearscreen($20, SCREEN_CHAR_LOC);
+		end;
+
+		// One in 16 chance of mutation
+		if( rando < 16 ) then
+		begin
+			// Select new char range
+			if( rando < 4 ) then
+			begin
+				char_start_st	:= 76;			// Balls and lines pattern
+				char_offset_st	:= 5;
+			end
+			else if( rando < 8 ) then
+			begin
+				char_start_st	:= 95;			// Triangles
+				char_offset_st	:= 11;	
+			end
+			else if( rando < 12 ) then
+			begin
+				char_start_st	:= 116;			// Angles
+				char_offset_st	:= 11;	
+			end	else
+			begin
+				char_start_st	:= 64;			// Graphics Chars
+				char_offset_st	:= 63;
+			end;
+			
+			// Toggle reverse chars
+			if( rev_enable = 1 ) then rev_enable := 0 
+			else rev_enable := 1;
+	
+			// Adjust pattern size		
+			dir := 1;	// Set pattern moving outward
+			start_pos := 1;
+			stop_pos := Random() & 8 + 12;
+			clearscreen($20, SCREEN_CHAR_LOC);
+		end;
+	end;
+end;		// End DoMutations
+
+begin
+	// Show the title and check number of columns
+	ShowTitle();	
+
+	// Init char array	
+	InitData();
+
+	// Clear screen
+	clearscreen($20, SCREEN_CHAR_LOC);
+	
+	while (true) do begin
+		MainLoop();
+		
+		// Do Pattern Mutations
+		DoMutations();
+
+		// Get fresh array of chars
+		InitData();
+	end;
+end.
+
+// eof

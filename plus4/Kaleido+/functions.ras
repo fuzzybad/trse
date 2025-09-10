@@ -73,7 +73,7 @@ begin
 end;
 
 // Poke value into an address
-procedure PokeAddr(pokeaddr_x:byte, pokeaddr_y:byte, pokeaddr_v:byte, pokeaddr_c:byte);
+procedure PokeAddr(pokeaddr_x:signed byte, pokeaddr_y:signed byte, pokeaddr_v:byte, pokeaddr_c:byte);
 begin
 	if( pokeaddr_x > SCREEN_WIDTH - 1 ) then return;
 	if( pokeaddr_x < 0) then return;
