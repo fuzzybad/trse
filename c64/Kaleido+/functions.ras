@@ -2,18 +2,20 @@
 
 //	Method to get a char from the keyboard buffer
 //	TRSE procedures return accumulator value
-procedure GetKey();
-begin
-	call(^$ffe4);	// getin
-end;
+//procedure GetKey();
+//begin
+//	call(^$ffe4);	// getin
+//end;
 
 // Wait for user input
 procedure WaitForKeypress();
-begin
+begin	
 	// Pause until key pressed
 	temp := 0;
 	while( temp = 0 ) do begin
-		temp := GetKey();
+		//temp := GetKey();
+		Key::Read();
+		if(Key::Held(KEY_KSPACE)) then temp := 1;
 	end;
 end;
 
@@ -30,71 +32,151 @@ begin
 	end;
 end;
 
-// Debug up to 3 numeric vars
-procedure PrintXYZ( myX:integer, myY:signed byte, myZ:signed byte );
-begin
-	// Erase & print values
-	moveto(1, 5, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 4);
-	PrintDecimal(myX, 4);
-
-	moveto(1, 6, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myY, 2);
-
-	moveto(1, 7, hi(SCREEN_CHAR_LOC));
-	PrintDecimal(0, 2);
-	PrintDecimal(myZ, 2);
-end;
-
 // Check for any user inputs
 procedure CheckInputs();
-begin	
-	key := GetKey();
+begin
+	// Read Keyboard
+	Key::Read();
 
 	// Q - Quit
-	if(key = 81) then begin
+	if(Key::Held(KEY_KQ)) then begin
 		clearscreen($20, SCREEN_CHAR_LOC);
 		call(^$FCE2);	// RESET	 (SYS 64738)
 	end;
 	
-	// 0-9 Adjust speed 
-	if(key = 48) then speed := 9; // (slowest)
-	if(key = 49) then speed := 8;
-	if(key = 50) then speed := 7;
-	if(key = 51) then speed := 6;
-	if(key = 52) then speed := 5;
-	if(key = 53) then speed := 4;
-	if(key = 54) then speed := 3;
-	if(key = 55) then speed := 2;
-	if(key = 56) then speed := 1;
-	if(key = 57) then speed := 0; // (fastest)
+	if(Key::Held(KEY_K9)) then speed := 9; // (slowest)
+	if(Key::Held(KEY_K8)) then speed := 8;
+	if(Key::Held(KEY_K7)) then speed := 7;
+	if(Key::Held(KEY_K6)) then speed := 6;
+	if(Key::Held(KEY_K5)) then speed := 5;
+	if(Key::Held(KEY_K4)) then speed := 4;
+	if(Key::Held(KEY_K3)) then speed := 3;
+	if(Key::Held(KEY_K2)) then speed := 2;
+	if(Key::Held(KEY_K1)) then speed := 1;
+	if(Key::Held(KEY_K0)) then speed := 0; // (fastest)
 end;
 
 // Poke value into an address
-procedure PokeAddr(pokeaddr_x:byte, pokeaddr_y:byte, pokeaddr_v:byte, pokeaddr_c:byte);
+procedure PlotCharacter(pokeaddr_x:signed byte, pokeaddr_y:signed byte, pokeaddr_v:byte, pokeaddr_c:byte);
 begin
-	if(pokeaddr_x > SCREEN_WIDTH - 1) then return;
+	//print_at(pokeaddr_x, pokeaddr_y, pokeaddr_v, 1, pokeaddr_c);
+
+	if(pokeaddr_x > MYSCREEN_WIDTH - 1) then return;
 	if(pokeaddr_x < 0) then return;
-	if(pokeaddr_y > SCREEN_HEIGHT - 1) then return;
+	if(pokeaddr_y > MYSCREEN_HEIGHT - 1) then return;
 	if(pokeaddr_y < 0) then return;
+
+	//screen_loc_work		:= screen_loc + pokeaddr_x + (MYSCREEN_WIDTH * pokeaddr_y);
+	//screen_loc_work[0]	:= pokeaddr_v;
+	
+	//color_loc_work		:= color_loc + pokeaddr_x + (MYSCREEN_WIDTH * pokeaddr_y);
+	//color_loc_work[0]	:= pokeaddr_c;
 
 	// Using AddressTable for screen updates
 	// This is faster than using poke()
 	p := AddressTable( #saddr, pokeaddr_x, pokeaddr_y ); // pick row 24 (range is 0 to 24) and column 39 (range is 0 to 39)
-	p[0] := pokeaddr_v;  // place a character at the bottom right of the display
+	p[0] := pokeaddr_v;
 
 	p := AddressTable( #caddr, pokeaddr_x, pokeaddr_y ); // pick same location in colour RAM
 	p[0] := pokeaddr_c;
 
-	/*
-	// Pointer value to screen RAM
-	p := SCREEN_CHAR_LOC + SCREEN_WIDTH * pokeaddr_y + pokeaddr_x;
-	poke(p, 0, pokeaddr_v);
-
-	// Pointer value to color RAM
-	p := SCREEN_COL_LOC + SCREEN_WIDTH * pokeaddr_y + pokeaddr_x;
-	poke(p, 0, pokeaddr_c);
-	*/
 end;
 
+
+// Clear Screen
+/*
+procedure cls();
+begin
+	ClearScreen($20, LOC_CHAR_SCREEN);
+	moveto(0,0,hi(LOC_CHAR_SCREEN));
+end;
+*/
+
+// Convert PETSCII char code to screen code
+// PARAMS: character, charset 0|1
+function convert_chr_to_scr(ccts_char:byte, ccts_charset:boolean) : byte;
+var
+	ccts_out : byte;
+begin
+	// Convert letters A-Z from PETSCII to screen code
+	if (ccts_char > 63 and ccts_char < 96) then 
+	begin
+		if (ccts_charset = 0) then 
+		begin
+			// Convert to normal codes
+			ccts_out := ccts_char-64;
+		end else 
+		begin
+			// Convert to reversed codes
+			ccts_out := ccts_char+64;
+		end;
+	end else if (ccts_char > 128) then
+	begin
+		// Codes > 128 are for PETSCII graphic chars. 
+		// We need to convert these back to normal.
+		ccts_out := ccts_char-128;			
+	end else begin
+		// Numbers, punctuation, etc
+		if (ccts_charset = 0) then 
+		begin
+			// No conversion
+			ccts_out := ccts_char;
+		end else 
+		begin
+			// Convert to reversed codes
+			ccts_out := ccts_char+128;
+		end;
+	end;
+
+	convert_chr_to_scr := ccts_out;
+end;
+
+
+// Native text print routine.
+// PARAMS: X, Y, String ptr, # chars, color
+procedure print_at(pa_myx:byte, pa_myy:byte, pa_ptr:pointer, pa_num_char:byte, pa_color:byte);
+var
+	pa_i: byte;
+	pa_char: byte;
+	pa_charset: boolean;
+	pa_char_pos: byte;
+begin
+	pa_i := 0;
+	pa_charset := 0; // Normal charset
+	pa_char_pos := 0;
+
+	fori pa_i := 0 to pa_num_char do 
+	begin
+		// Exit on null
+		if (pa_ptr[pa_i] = 0) then break;
+		
+		// RVS ON
+		if (pa_ptr[pa_i] = 18) then begin
+			pa_charset := 1;
+			continue;
+		end;
+		
+		// RVS OFF
+		if (pa_ptr[pa_i] = 146) then begin
+			pa_charset := 0;
+			continue;
+		end;
+				
+		pa_char := convert_chr_to_scr(pa_ptr[pa_i], pa_charset);
+		
+		// Set char symbol
+		screen_loc_work	:= #screen_loc + pa_myx + (pa_myy * MYSCREEN_WIDTH);
+		screen_loc_work[pa_char_pos] := pa_char;
+
+		// Set char color, if value in range 0-15
+		// Setting color is optional and can be skipped by passing value > 15
+		if (pa_color < 16) then begin
+			color_loc_work	:= #color_loc + pa_myx + (pa_myy * MYSCREEN_WIDTH);
+			color_loc_work[pa_char_pos]  := pa_color;
+		end;
+
+		inc(pa_char_pos);
+	end;
+end;
+
+// eof
