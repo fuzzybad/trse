@@ -40,20 +40,21 @@ begin
 
 	// Q - Quit
 	if(Key::Held(KEY_KQ)) then begin
-		clearscreen($20, SCREEN_CHAR_LOC);
+		//clearscreen($20, SCREEN_CHAR_LOC);
 		call(^$FCE2);	// RESET	 (SYS 64738)
+//		load_menu();	// Return to main menu
 	end;
 	
-	if(Key::Held(KEY_K9)) then speed := 9; // (slowest)
-	if(Key::Held(KEY_K8)) then speed := 8;
-	if(Key::Held(KEY_K7)) then speed := 7;
-	if(Key::Held(KEY_K6)) then speed := 6;
-	if(Key::Held(KEY_K5)) then speed := 5;
-	if(Key::Held(KEY_K4)) then speed := 4;
-	if(Key::Held(KEY_K3)) then speed := 3;
-	if(Key::Held(KEY_K2)) then speed := 2;
-	if(Key::Held(KEY_K1)) then speed := 1;
-	if(Key::Held(KEY_K0)) then speed := 0; // (fastest)
+	if(Key::Held(KEY_K9)) then speed := 0; // (slowest)
+	if(Key::Held(KEY_K8)) then speed := 1;
+	if(Key::Held(KEY_K7)) then speed := 2;
+	if(Key::Held(KEY_K6)) then speed := 3;
+	if(Key::Held(KEY_K5)) then speed := 4;
+	if(Key::Held(KEY_K4)) then speed := 5;
+	if(Key::Held(KEY_K3)) then speed := 6;
+	if(Key::Held(KEY_K2)) then speed := 7;
+	if(Key::Held(KEY_K1)) then speed := 8;
+	if(Key::Held(KEY_K0)) then speed := 9; // (fastest)
 end;
 
 // Poke value into an address
