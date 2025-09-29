@@ -1,0 +1,909 @@
+// Program to display KoalaPainter image
+
+program C64Project;
+
+//@userdata	$6000 $8712 "PIC_DATA"
+
+//@use "gfx/gfx"
+@use "input/key"	
+//@use "system"	
+//@use "screen/screen"
+//@use "text/txt"
+
+// deprecated commands - ensure not included
+@ignoremethod "initjoystick"
+@ignoremethod "initmoveto"
+
+// === includes =====================================
+@startblock $2000 "ORIGINATE" // move start of code so it doesn't interfere with data
+//@include "variables.ras"
+//@endblock
+
+var
+	const USE_KERNAL: byte = 1;
+	const LOC_BITMAP_SCREEN:	address = $6000;		// Location for bitmap data
+	const LOC_CHAR_SCREEN:	address = $5C00;		// Location for text screen (1k)
+	const LOC_CHAR_COLOR:	address = $D800;		// Location for color data (1k)
+	const LOC_SPRITE_DATA:	address = $4000;		// Location for sprite data
+	const LOC_CHAR_DATA:		address = $1200; 	// Location for CHAR data (1k)
+	const LOC_SPRITE_WORK:	address = $1400;		// Location where sprite data gets updated
+	const LOC_SPRITE_PTRS:	address = LOC_CHAR_SCREEN + 1016;		// Location of sprite pointers
+	const SCROLL_ANIM_DEF:	integer = 200;		// Default delay value for text scrolling animation
+	const SPRITE_ANIM_DEF:	integer = 5;			// Default delay value for sprite animation
+	const SPR_LIMIT_LEFT: 	byte = 46;
+	const SPR_LIMIT_RIGHT: 	integer = 298;
+	const ANIM_PATTERN_CTR_DEF: byte = 80;
+	const LOC_VCREG1:		address = $D404;		// Voice 1 Control Register
+	const LOC_VCREG2:		address = $D40B;		// Voice 2 Control Register
+	const LOC_VCREG3:		address = $D412;		// Voice 3 Control Register
+	const LOC_SIGVOL:		address = $D418;		// Volume and Filter Select Register (0:no sound, 15:max vol)
+
+	i : byte = 0;
+	j : byte = 0;
+	k : byte = 0;
+	temp_byte_1		: byte = 0;
+	temp_byte_2		: byte = 0;
+	temp_byte_3		: byte = 0;
+	char_bit_pos		: byte = 7;
+	char_pos			: integer = 0;
+	scroll_anim_ctr 	: byte = 0;
+	sprite_anim_ctr	: byte = 0;
+	anim_pattern_idx	: byte = 0;
+	anim_pattern_ctr	: byte = ANIM_PATTERN_CTR_DEF;
+	pointer_1		: pointer;
+	pac_rt_spr_arr	: array[3] of byte = (6, 7, 8, 7);
+	pac_lt_spr_arr	: array[3] of byte = (9, 10, 11, 10);
+	ghost_rt_spr_arr	: array[2] of byte = (12, 13);
+	ghost_lt_spr_arr	: array[2] of byte = (14, 15);
+	ghost_stun_spr_arr : array[2] of byte = (16, 17);
+	ghost_flash_spr_arr : array[2] of byte = (18, 19);
+	ghost_eyes_spr_arr : array[2] of byte = (20, 21);
+	sprite_mask		: byte = 4;
+	sprite_blank		: byte = 5;
+	irq_save_lo		: byte = 0;	// $0314
+	irq_save_hi		: byte = 0;	// $0315
+	//irq_save_vic		: byte = 0;	// $D019 
+	irq_save_mask	: byte = 0;	// $D01A
+	
+	// $d011		SCROLY
+	// $d012		RASTER
+	
+	// centered X position of animation sprites
+	sprite_anim_xpos_center : array[4] of integer = (76, 132, 188, 244);
+	//sprite_anim_xpos : array[4] of integer = (SPR_LIMIT_LEFT, SPR_LIMIT_RIGHT, 180, 252); // for sptites 4,5,6,7
+	sprite_anim_xpos : array[4] of integer = (76, 132, 188, 244); // for sptites 4,5,6,7
+	sprite_anim_ypos : array[4] of byte = (198, 198, 198, 198); // for sptites 4,5,6,7
+	pac_spr_idx		: byte = 0;
+	ghost_spr_idx	: byte = 0;
+	
+	// Import image data
+	imagedata: incbin("assets/wrigley-sign-newmessage.koa", $8000); // new welcome message
+
+	// Grand Slam Baseball 1987 Cosmi
+	sidfile: incsid("assets/Grand_Slam_Baseball.sid",2); 
+
+	// Import sprite data
+	sprites: incbin("assets/demo-sprites.spr.bin", LOC_SPRITE_DATA);
+	
+	// Import char data
+	chars: incbin("assets/demo-charset.bin", LOC_CHAR_DATA);
+	
+	// Scrolling message
+	scrollText: string	= (" ALL THE WORLD'S A STAGE, AND WE ARE MERELY PLAYERS.. "
+						 , "SET YOUR COMMODORES TO 60HZ FOR BEST RESULTS. FUZZYBAD COMIN' "
+						 , "AT YA FROM VCF-MW 2025! GREETS TO MY HOMIES DR OBSOLETO, "
+					  	 , "DANNYK, SIX, JIM-64, JESUS ERIC, MACBETH, JIM BRAIN, "
+						 , "COMMODOREZ, SUPER MIKE, TIMMONS, COMPTON, ADRIAN G, MAGERVALP, "
+						 , "JERI, ELLA, LEIF, AND ALL VCF FRIENDS! IT'S TIME TO COAX VINTAGE CIRCUITS INTO "
+						 , "ACTION ONCE AGAIN.. MAY THE FREE PILE BE GENEROUS, AND MAY "
+						 , "THE FORCE BE WITH US ALL..    COMMODORE 4EVER! "
+						 , "           ");
+
+procedure scrollMessageSprites();
+
+//	Sid music is played by calling the sidfile_1_play address for each raster interupt trigger
+interrupt irSidPlayer();
+begin
+	StartIRQ(USE_KERNAL);
+
+	//screen_bg_col := green;
+	call(sidfile_1_play);	
+	//screen_bg_col := black;
+		
+	CloseIRQ();
+end;
+
+// Show Koala-format image
+procedure displayKoalaScreen();
+begin
+	SetBank(VIC_BANK1);	// Bank #1, $4000-$7FFF
+	SetBitmapMode();	// Enable bitmap
+	SetMultiColorMode();	// Enable MC
+	
+	// $D018 VIC-II Chip Memory Control Register
+	//
+	// Bit 0: Unused
+	// Bits 1-3: Text character dot-data base address within VIC-II address space
+	// Bits 4-7: Video matrix base address within VIC-II address space
+	//
+	// Set screen address to $5C00 CPU ($1C00 VIC)
+	// Set bitmap loc to $6000 CPU ($2000 VIC) 
+	// Sprite data loads at $4000 CPU ($0000 VIC) - Allowing room for up to 106 sprite definitions
+	// Theoretically, there should be 384 bytes free at $1A80-$1BFF but TRSE throws an error.
+	poke(^$D018, 0, %01111100);
+	
+	// Copy bitmap data
+	BlockMemCpy(^$8002, LOC_BITMAP_SCREEN, 16); // Copy 4,096 bytes
+	BlockMemCpy(^$9002, LOC_BITMAP_SCREEN + $1000, 16); // Copy 4,096 bytes
+	
+	// Copy screen memory
+	BlockMemCpy(^$9F42, LOC_CHAR_SCREEN, 4);
+	
+	// Copy color memory
+	BlockMemCpy(^$A32A, LOC_CHAR_COLOR, 4);
+
+	// Set BG/Border colors
+	SCREEN_BG_COL[0] := blue;
+	SCREEN_FG_COL[0] := Peek(^$A712, 0);
+end;
+
+// Initialize sprites
+procedure initSprites();
+begin
+	// $D01B Sprite to Foreground Display Priority Register
+	// value of 0 = sprite appears above foreground
+	// value of 1 = sprite appears behind foreground 
+	// Bit 0: priority of sprite 0 
+	// Bit 1: priority of sprite 1
+	// Etc..
+	// Sprites with lower numbers appear above higher numbers (sprite 0 above all, etc)
+	poke(^$d01b, 0, %00000000); 
+	
+	SPRITE_BITMASK			:= %11111111;
+	SPRITE_STRETCH_X			:= %11111111;
+	SPRITE_STRETCH_Y			:= %11111111;
+	SPRITE_MULTICOLOR		:= %11110000;
+	SPRITE_MULTICOLOR_REG1	:= light_red;
+	SPRITE_MULTICOLOR_REG2	:= white;	
+	SPRITE_COLOR[0]			:= yellow;
+	SPRITE_COLOR[1]			:= yellow;
+	SPRITE_COLOR[2]			:= yellow;
+	SPRITE_COLOR[3]			:= yellow;
+	SPRITE_COLOR[4]			:= light_red;
+	SPRITE_COLOR[5]			:= cyan;
+	SPRITE_COLOR[6]			:= purple;
+	SPRITE_COLOR[7]			:= orange;
+	
+	//SetSpriteLoc( [ sprite=[0:7], [ dataloc ], [bank=[0:3] );
+	LOC_SPRITE_PTRS[0]	:= 0;
+	LOC_SPRITE_PTRS[1]	:= 1;
+	LOC_SPRITE_PTRS[2]	:= 2;
+	LOC_SPRITE_PTRS[3]	:= 3;
+	
+	LOC_SPRITE_PTRS[4]	:= ghost_lt_spr_arr[ghost_spr_idx];
+	LOC_SPRITE_PTRS[5]	:= ghost_lt_spr_arr[ghost_spr_idx];
+	LOC_SPRITE_PTRS[6]	:= ghost_rt_spr_arr[ghost_spr_idx];
+	LOC_SPRITE_PTRS[7]	:= ghost_rt_spr_arr[ghost_spr_idx];
+	
+	SpritePos(88, 150, 0);	// message area
+	SpritePos(136, 150, 1);	// message area
+	SpritePos(184, 150, 2);	// message area
+	SpritePos(232, 150, 3);	// message area
+	
+	// animation area
+	SpritePos(sprite_anim_xpos_center[0], sprite_anim_ypos[0], 4);
+	SpritePos(sprite_anim_xpos_center[1], sprite_anim_ypos[1], 5);
+	SpritePos(sprite_anim_xpos_center[2], sprite_anim_ypos[2], 6);
+	SpritePos(sprite_anim_xpos_center[3], sprite_anim_ypos[3], 7);
+
+	// Init sprite working area
+	fill(LOC_SPRITE_WORK, 0, 255);
+end;
+
+// ASM routine to bit-shift byte to the left, with input for carry value and 
+// returning result carry value.
+//
+//	Equivalent TRSE code:
+//				
+//	prevByte 	:= pointer_1[0] & %10000000;		// save bit 7
+//	pointer_1[0]	:= pointer_1[0] << 1;			// rotate byte	
+//	if (bitShift1 = 1) then	
+//		pointer_1[0]	:= pointer_1[0] | 1; 		// apply bit 0//
+//
+procedure asmRollLeft();
+begin
+	asm("
+		; set carry bit based on input value
+		lda #1
+		cmp bitShift1
+		bne clrbit
+		sec
+		jmp rotbyte
+clrbit	
+		clc
+		
+rotbyte	; rotate byte left
+		rol byteVal
+		bcs setbit
+		lda #0
+		jmp retn
+setbit	
+		lda #1
+retn 	
+		sta bitShift1
+
+		; repeat for bit 2
+		; set carry bit based on input value
+		lda #1
+		cmp bitShift2
+		bne clrbit2
+		sec
+		jmp rotbyte2
+clrbit2	
+		clc
+		
+rotbyte2	; rotate byte left
+		rol byteVal
+		bcs setbit2
+		lda #0
+		jmp retn2
+setbit2	
+		lda #1
+retn2 	
+		sta bitShift2
+	");	
+end;
+
+// Rotate a single sprite row (3 bytes)
+// Input value of 1 will activate bit zero of first byte
+// Returns leftmost value that was rotated out
+procedure rotateSpriteRow(rowId:byte, bitShift1:byte, bitShift2:byte);
+var
+	bytePos: byte;
+	byteVal: byte;
+begin
+	//	CopyBytesShift(^@charPos+^@orgChar*^8,^@charPos+^@charCopyPos*^8+^8,8,k,1);
+
+	// byte of current sprite row
+	bytePos		:= rowId * 3;
+	
+	// Get pointer to sprite data
+	pointer_1	:= #LOC_SPRITE_WORK + bytePos + (3 * 64) + 2;
+	byteVal		:= pointer_1[0];		// Update right byte
+	asmRollLeft();					// Rotate byte left (uses bitShift1, bitShift2, and byteVal)
+	pointer_1[0]	:= byteVal;			// set new value
+
+	// Update middle byte
+	dec(pointer_1);
+	byteVal		:= pointer_1[0];		// Get current value
+	asmRollLeft();					// Rotate byte left 
+	pointer_1[0]	:= byteVal;			// set new value
+	
+	// Update left byte
+	dec(pointer_1);	
+	byteVal		:= pointer_1[0];		// Get current value
+	asmRollLeft();					// Rotate byte left 
+	pointer_1[0]	:= byteVal;			// set new value
+	
+	
+	// Get pointer to sprite data
+	pointer_1	:= #LOC_SPRITE_WORK + bytePos + (2 * 64) + 2;
+	byteVal		:= pointer_1[0];		// Update right byte
+	asmRollLeft();					// Rotate byte left
+	pointer_1[0]	:= byteVal;			// set new value
+
+	// Update middle byte
+	dec(pointer_1);
+	byteVal		:= pointer_1[0];		// Get current value
+	asmRollLeft();					// Rotate byte left
+	pointer_1[0]	:= byteVal;			// set new value
+	
+	// Update left byte
+	dec(pointer_1);	
+	byteVal		:= pointer_1[0];		// Get current value
+	asmRollLeft();					// Rotate byte left
+	pointer_1[0]	:= byteVal;			// set new value
+	
+
+	// Get pointer to sprite data
+	pointer_1	:= #LOC_SPRITE_WORK + bytePos + (1 * 64) + 2;
+	byteVal		:= pointer_1[0];		// Update right byte
+	asmRollLeft();					// Rotate byte left
+	pointer_1[0]	:= byteVal;			// set new value
+
+	// Update middle byte
+	dec(pointer_1);
+	byteVal		:= pointer_1[0];		// Get current value
+	asmRollLeft();					// Rotate byte left
+	pointer_1[0]	:= byteVal;			// set new value
+	
+	// Update left byte
+	dec(pointer_1);	
+	byteVal		:= pointer_1[0];		// Get current value
+	asmRollLeft();					// Rotate byte left
+	pointer_1[0]	:= byteVal;			// set new value
+
+
+	// Get pointer to sprite data
+	pointer_1	:= #LOC_SPRITE_WORK + bytePos + 2;
+	byteVal		:= pointer_1[0];		// Update right byte
+	asmRollLeft();					// Rotate byte left
+	pointer_1[0]	:= byteVal;			// set new value
+
+	// Update middle byte
+	dec(pointer_1);
+	byteVal		:= pointer_1[0];		// Get current value
+	asmRollLeft();					// Rotate byte left
+	pointer_1[0]	:= byteVal;			// set new value
+	
+	// Update left byte
+	dec(pointer_1);	
+	byteVal		:= pointer_1[0];		// Get current value
+	asmRollLeft();					// Rotate byte left
+	pointer_1[0]	:= byteVal;			// set new value
+
+end;
+
+
+// Bit-shift message sprite data from right to left
+// Affects sprites 0-4
+procedure scrollMessageSprites();
+var
+	spriteRow: byte;
+	spriteColArr1: array[21] of byte;
+	spriteColArr2: array[21] of byte;
+	currChar: byte;
+begin
+	// Get current character from message
+	pointer_1 := #scrollText + (char_pos);
+	currChar := pointer_1[0];
+	
+	// Check for end of message
+	if (currChar = 0) then begin
+		char_pos := 0;
+		currChar := 32; // space
+		char_bit_pos := 7;
+	end else if (currChar >= 65 and currChar <= 90) then
+	begin
+		currChar := currChar - 64; // Letter conversion
+	end;
+
+	// input value to rightmost sprite
+
+	// Init bits to zero
+	fori i := 0 to 20 do begin
+		spriteColArr1[i] := 0;
+		spriteColArr2[i] := 0;
+	end;
+
+	// Pointer to current character
+	pointer_1 := #LOC_CHAR_DATA + (8 * currChar);
+
+	// Read char data
+	j := 0;
+	fori i := 0 to 14 step 2 do 
+	begin	
+		// This is a little weird - pass value of 1 to populate bit zero in rotateSpriteRow()
+		// Doing step 2 on loop and using extra counter to make char double height
+		if (GetBit(pointer_1[j], char_bit_pos)) then begin
+			spriteColArr1[i+4] := 1;
+			spriteColArr1[i+5] := 1;
+		end;
+
+		if (GetBit(pointer_1[j], char_bit_pos-1)) then begin
+			spriteColArr2[i+4] := 1;
+			spriteColArr2[i+5] := 1;
+		end;
+
+		inc(j);
+	end;
+
+	// loop over sprite rows
+	// Normally this would be 0-20 but there's no reason to bit-shift rows that are empty
+	fori spriteRow := 4 to 18 do 
+	begin
+		// Rotate a single sprite row (3 bytes)
+		// Returns leftmost value that was rotated out
+		rotateSpriteRow(spriteRow, spriteColArr1[spriteRow], spriteColArr2[spriteRow]);
+	end;
+	
+	// Move to next bit/char
+	dec(char_bit_pos);
+	dec(char_bit_pos);
+	if (char_bit_pos = 255) then 
+	begin
+		char_bit_pos := 7;
+		inc(char_pos);
+	end;
+
+	// Copy sprite data from work area to sprite data area
+	BlockMemCpy(#LOC_SPRITE_WORK, #LOC_SPRITE_DATA, 1); // Copy 256 bytes	
+end;
+
+///////////////////////////////////////////////////////////////////////////////////
+// Start animation functions
+///////////////////////////////////////////////////////////////////////////////////
+
+// Update sprite animation pattern
+procedure update_animation_pattern();
+begin
+	inc(anim_pattern_idx);
+	if (anim_pattern_idx = 18) then anim_pattern_idx := 0;
+
+	if (anim_pattern_idx = 0) then
+	begin
+		// Show 4 centered ghosts 
+		SPRITE_BITMASK		:= %11111111;
+		SPRITE_STRETCH_X		:= %11111111;
+		SPRITE_COLOR[4]		:= light_red;
+		SPRITE_COLOR[5]		:= cyan;
+		SPRITE_COLOR[6]		:= purple;
+		SPRITE_COLOR[7]		:= orange;
+		sprite_anim_xpos[0]	:= sprite_anim_xpos_center[0];
+		sprite_anim_xpos[1]	:= sprite_anim_xpos_center[1];
+		sprite_anim_xpos[2]	:= sprite_anim_xpos_center[2];
+		sprite_anim_xpos[3]	:= sprite_anim_xpos_center[3];
+		anim_pattern_ctr		:= ANIM_PATTERN_CTR_DEF;
+		
+	end else if (anim_pattern_idx = 1) then
+	begin
+		// Turn off sprites & pause
+		SPRITE_BITMASK		:= %00001111;
+		anim_pattern_ctr		:= 10;
+
+	end else if (anim_pattern_idx = 2) then
+	begin
+		// Introduce ms-pac from right side, stop in middle
+		SPRITE_BITMASK		:= %00111111;
+		SPRITE_STRETCH_X		:= %11101111;
+		SPRITE_COLOR[4]		:= red;		// mask
+		SPRITE_COLOR[5]		:= yellow;	// ms-pac
+		SPRITE_COLOR[6]		:= cyan;		// ghost 1
+		SPRITE_COLOR[7]		:= orange;	// ghost 2
+		LOC_SPRITE_PTRS[4]	:= sprite_mask;
+		LOC_SPRITE_PTRS[5]	:= pac_lt_spr_arr[pac_spr_idx];
+		LOC_SPRITE_PTRS[6]	:= sprite_blank;
+		LOC_SPRITE_PTRS[7]	:= sprite_blank;
+		sprite_anim_xpos[0]	:= SPR_LIMIT_RIGHT;
+		sprite_anim_xpos[1]	:= SPR_LIMIT_RIGHT - 24;
+		sprite_anim_xpos[2]	:= 0;
+		sprite_anim_xpos[3]	:= 0;
+		anim_pattern_ctr		:= 40;
+	end else if (anim_pattern_idx = 3) then
+	begin
+		// Turn ms-pac to the right and pause while ghost enters
+		SPRITE_BITMASK		:= %11111111;
+		LOC_SPRITE_PTRS[5]	:= pac_rt_spr_arr[pac_spr_idx];
+		LOC_SPRITE_PTRS[6]	:= ghost_lt_spr_arr[ghost_spr_idx];
+		sprite_anim_xpos[2]	:= SPR_LIMIT_RIGHT - 24;
+		anim_pattern_ctr		:= 20;
+		
+	end else if (anim_pattern_idx = 4) then
+	begin
+		// Turn ms-pac left again and introduce another ghost
+		SPRITE_STRETCH_X		:= %11101111;
+		LOC_SPRITE_PTRS[5]	:= pac_lt_spr_arr[pac_spr_idx];
+		sprite_anim_xpos[3]	:= SPR_LIMIT_RIGHT - 24;
+		anim_pattern_ctr		:= 20;
+		
+	end else if (anim_pattern_idx = 5) then
+	begin
+		// Move mask sprite to left side
+		sprite_anim_xpos[0]	:= SPR_LIMIT_LEFT;
+		anim_pattern_ctr		:= 90;
+		
+	end else if (anim_pattern_idx = 6) then
+	begin
+		// Introduce ms-pac from the left
+		SPRITE_BITMASK		:= %00111111;
+		LOC_SPRITE_PTRS[5]	:= pac_rt_spr_arr[pac_spr_idx];
+		sprite_anim_xpos[1]	:= SPR_LIMIT_LEFT;
+		anim_pattern_ctr		:= 20;
+
+	end else if (anim_pattern_idx = 7) then
+	begin
+		// Introduce ghost 1 from the left
+		SPRITE_BITMASK		:= %01111111;
+		SPRITE_COLOR[6]		:= light_red;
+		LOC_SPRITE_PTRS[6]	:= ghost_rt_spr_arr[ghost_spr_idx];
+		sprite_anim_xpos[2]	:= SPR_LIMIT_LEFT;
+		anim_pattern_ctr		:= 20;
+		
+	end else if (anim_pattern_idx = 8) then
+	begin
+		// Introduce ghost 2 from the left
+		SPRITE_BITMASK		:= %11111111;
+		SPRITE_COLOR[7]		:= purple;
+		LOC_SPRITE_PTRS[7]	:= ghost_rt_spr_arr[ghost_spr_idx];
+		sprite_anim_xpos[3]	:= SPR_LIMIT_LEFT;
+		anim_pattern_ctr		:= 20;
+	
+	end else if (anim_pattern_idx = 9) then
+	begin
+		// Move mask sprite to right side
+		sprite_anim_xpos[0]	:= SPR_LIMIT_RIGHT;
+		anim_pattern_ctr		:= 90;
+		
+	end else if (anim_pattern_idx = 10) then
+	begin
+		// Introduce stunned Ghost 1 from the right
+		SPRITE_BITMASK		:= %01011111;
+		SPRITE_COLOR[6]		:= blue;
+		LOC_SPRITE_PTRS[6]	:= ghost_stun_spr_arr[ghost_spr_idx];
+		sprite_anim_xpos[2]	:= SPR_LIMIT_RIGHT-24;
+		anim_pattern_ctr		:= 30;
+		
+	end else if (anim_pattern_idx = 11) then
+	begin
+		// Introduce stunned Ghost 2 from the right
+		SPRITE_BITMASK		:= %11011111;
+		SPRITE_COLOR[7]		:= blue;
+		LOC_SPRITE_PTRS[7]	:= ghost_stun_spr_arr[ghost_spr_idx];
+		sprite_anim_xpos[3]	:= SPR_LIMIT_RIGHT-24;
+		anim_pattern_ctr		:= 55;
+		
+	end else if (anim_pattern_idx = 12) then
+	begin
+		// Introduce ms-pac from the right
+		SPRITE_BITMASK		:= %11111111;
+		LOC_SPRITE_PTRS[5]	:= pac_lt_spr_arr[pac_spr_idx];
+		sprite_anim_xpos[1]	:= SPR_LIMIT_RIGHT-24;
+		anim_pattern_ctr		:= 20;		
+	
+	end else if (anim_pattern_idx = 13) then
+	begin
+		// Move mask sprite to left side
+		sprite_anim_xpos[0]	:= SPR_LIMIT_LEFT;
+		anim_pattern_ctr		:= 80;
+
+	end else if (anim_pattern_idx = 14) then
+	begin
+		// Introduce ghost 1 eyes from the left
+		SPRITE_BITMASK		:= %01011111;
+		SPRITE_COLOR[6]		:= blue;
+		LOC_SPRITE_PTRS[6]	:= ghost_eyes_spr_arr[ghost_spr_idx];
+		sprite_anim_xpos[2]	:= SPR_LIMIT_LEFT;
+		anim_pattern_ctr		:= 20;
+
+	end else if (anim_pattern_idx = 15) then
+	begin
+		// Introduce ghost 2 eyes from the left
+		SPRITE_BITMASK		:= %11011111;
+		SPRITE_COLOR[7]		:= blue;
+		LOC_SPRITE_PTRS[7]	:= ghost_eyes_spr_arr[ghost_spr_idx];
+		sprite_anim_xpos[3]	:= SPR_LIMIT_LEFT;
+		anim_pattern_ctr		:= 20;
+
+	end else if (anim_pattern_idx = 16) then
+	begin
+		// Move mask sprite to right side
+		sprite_anim_xpos[0]	:= SPR_LIMIT_RIGHT;
+		anim_pattern_ctr		:= 40;
+
+	end else if (anim_pattern_idx = 17) then
+	begin
+		// Disable animation sprites
+		SPRITE_BITMASK		:= %00001111;
+		anim_pattern_ctr		:= 30;
+	end;
+end;
+
+// Update sprite data pointers
+procedure update_sprite_pointers();
+begin
+	if (anim_pattern_idx = 0) then
+	begin
+		// animate ghosts
+		LOC_SPRITE_PTRS[4] := ghost_lt_spr_arr[ghost_spr_idx];
+		LOC_SPRITE_PTRS[5] := ghost_lt_spr_arr[ghost_spr_idx];
+		LOC_SPRITE_PTRS[6] := ghost_rt_spr_arr[ghost_spr_idx];
+		LOC_SPRITE_PTRS[7] := ghost_rt_spr_arr[ghost_spr_idx];
+	end else if (anim_pattern_idx = 1) then
+	begin
+		// no animation
+	end else if (anim_pattern_idx = 2) then
+	begin
+		// animate ms-pac
+		LOC_SPRITE_PTRS[5] := pac_lt_spr_arr[pac_spr_idx];
+	end else if (anim_pattern_idx = 3) then
+	begin
+		// animate ms-pac & ghost
+		LOC_SPRITE_PTRS[5] := pac_rt_spr_arr[pac_spr_idx];
+		LOC_SPRITE_PTRS[6] := ghost_lt_spr_arr[ghost_spr_idx];
+
+	end else if ((anim_pattern_idx = 4) or anim_pattern_idx = 5) then
+	begin
+		// animate ms-pac, ghosts 1 & 2 left
+		LOC_SPRITE_PTRS[5] := pac_lt_spr_arr[pac_spr_idx];
+		LOC_SPRITE_PTRS[6] := ghost_lt_spr_arr[ghost_spr_idx];
+		LOC_SPRITE_PTRS[7] := ghost_lt_spr_arr[ghost_spr_idx];
+	
+	end else if ((((anim_pattern_idx = 6) or anim_pattern_idx = 7) 
+		or anim_pattern_idx = 8) or anim_pattern_idx = 9) then
+	begin
+		// animate ms-pac, ghosts 1 & 2 right
+		LOC_SPRITE_PTRS[5] := pac_rt_spr_arr[pac_spr_idx];
+		LOC_SPRITE_PTRS[6] := ghost_rt_spr_arr[ghost_spr_idx];
+		LOC_SPRITE_PTRS[7] := ghost_rt_spr_arr[ghost_spr_idx];	
+	
+	end else if ((((anim_pattern_idx = 10) or anim_pattern_idx = 11) 
+		or anim_pattern_idx = 12) or anim_pattern_idx = 13) then
+	begin
+		// animate ms-pac, ghosts 1 & 2 left
+		LOC_SPRITE_PTRS[5] := pac_lt_spr_arr[pac_spr_idx];
+		LOC_SPRITE_PTRS[6] := ghost_stun_spr_arr[ghost_spr_idx];
+		LOC_SPRITE_PTRS[7] := ghost_stun_spr_arr[ghost_spr_idx];
+		
+	end else if (((anim_pattern_idx = 14) or anim_pattern_idx = 15) 
+		or anim_pattern_idx = 16) then
+	begin
+		// animate ghosts eyes 1 & 2 right
+		LOC_SPRITE_PTRS[6] := ghost_eyes_spr_arr[0];
+		LOC_SPRITE_PTRS[7] := ghost_eyes_spr_arr[0];	
+
+	end else if (anim_pattern_idx = 17) then
+	begin
+		// no animation
+	end;
+	
+	inc(pac_spr_idx);
+	if(pac_spr_idx >= 4) then pac_spr_idx := 0;
+
+	inc(ghost_spr_idx);
+	if(ghost_spr_idx >= 2) then ghost_spr_idx := 0;
+end;
+
+// Update positions of sprites
+procedure update_sprite_positions();
+begin
+	if ((anim_pattern_idx = 0) or anim_pattern_idx = 1) then
+	begin
+		// no movement
+	end else if (anim_pattern_idx = 2) then
+	begin
+		// move ms-pac to the left
+		dec(sprite_anim_xpos[1]);	dec(sprite_anim_xpos[1]);	dec(sprite_anim_xpos[1]);
+
+	end else if (anim_pattern_idx = 3) then
+	begin
+		// move ghost 1 to the left
+		dec(sprite_anim_xpos[2]);	dec(sprite_anim_xpos[2]);	dec(sprite_anim_xpos[2]);
+
+	end else if ((anim_pattern_idx = 4) or anim_pattern_idx = 5) then
+	begin
+		// move ms-pac & ghosts 1 & 2 left until they reach the limit, then disable
+		dec(sprite_anim_xpos[1]);	dec(sprite_anim_xpos[1]);	dec(sprite_anim_xpos[1]);
+		if (sprite_anim_xpos[1] <= SPR_LIMIT_LEFT) then SPRITE_BITMASK	:= %11011111;
+
+		dec(sprite_anim_xpos[2]);	dec(sprite_anim_xpos[2]);	dec(sprite_anim_xpos[2]);
+		if (sprite_anim_xpos[2] <= SPR_LIMIT_LEFT) then SPRITE_BITMASK	:= %10011111;
+		
+		dec(sprite_anim_xpos[3]);	dec(sprite_anim_xpos[3]);	dec(sprite_anim_xpos[3]);
+		if (sprite_anim_xpos[3] <= SPR_LIMIT_LEFT) then SPRITE_BITMASK	:= %00011111;
+		
+	end else if (anim_pattern_idx = 6) then
+	begin
+		// move ms-pac to the right
+		inc(sprite_anim_xpos[1]);	inc(sprite_anim_xpos[1]);	inc(sprite_anim_xpos[1]);
+	
+	end else if (anim_pattern_idx = 7) then
+	begin
+		// move ms-pac & ghost 1 to the right
+		inc(sprite_anim_xpos[1]);	inc(sprite_anim_xpos[1]);	inc(sprite_anim_xpos[1]);
+		inc(sprite_anim_xpos[2]); 	inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);
+		
+	end else if ((anim_pattern_idx = 8) or anim_pattern_idx = 9) then
+	begin
+		// move ms-pac & 2 ghosts right until they reach the limit, then disable
+		inc(sprite_anim_xpos[1]);	inc(sprite_anim_xpos[1]);	inc(sprite_anim_xpos[1]);
+		if (sprite_anim_xpos[1] >= SPR_LIMIT_RIGHT-24) then SPRITE_BITMASK	:= %11011111;
+
+		inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);
+		if (sprite_anim_xpos[2] >= SPR_LIMIT_RIGHT-24) then SPRITE_BITMASK	:= %10011111;
+		
+		inc(sprite_anim_xpos[3]);	inc(sprite_anim_xpos[3]);	inc(sprite_anim_xpos[3]);
+		if (sprite_anim_xpos[3] >= SPR_LIMIT_RIGHT-24) then SPRITE_BITMASK	:= %00011111;
+		
+	end else if (anim_pattern_idx = 10) then
+	begin
+		// move ghost 1 left
+		dec(sprite_anim_xpos[2]);	dec(sprite_anim_xpos[2]);
+	
+	end else if (anim_pattern_idx = 11) then
+	begin
+		// move ghosts 1 & 2 left
+		dec(sprite_anim_xpos[2]);	dec(sprite_anim_xpos[2]);
+		dec(sprite_anim_xpos[3]);	dec(sprite_anim_xpos[3]);
+	end else if ((anim_pattern_idx = 12) or anim_pattern_idx = 13) then
+	begin
+		// move ghosts 1 & 2 & ms-pac left until they reach the limit, then disable
+		dec(sprite_anim_xpos[2]);	dec(sprite_anim_xpos[2]);
+		if (sprite_anim_xpos[2] <= SPR_LIMIT_LEFT) then SPRITE_BITMASK	:= %10111111;
+		
+		dec(sprite_anim_xpos[3]);	dec(sprite_anim_xpos[3]);
+		if (sprite_anim_xpos[3] <= SPR_LIMIT_LEFT) then SPRITE_BITMASK	:= %00111111;
+	
+		dec(sprite_anim_xpos[1]);	dec(sprite_anim_xpos[1]);	dec(sprite_anim_xpos[1]);
+		if (sprite_anim_xpos[1] <= SPR_LIMIT_LEFT) then SPRITE_BITMASK	:= %00011111;
+
+	end else if (anim_pattern_idx = 14) then
+	begin
+		// move ghost eyes 1 right
+		inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);
+	
+	end else if (anim_pattern_idx = 15) then
+	begin
+		// move ghost eyes 1 & 2 right
+		inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);
+		inc(sprite_anim_xpos[3]);	inc(sprite_anim_xpos[3]);	inc(sprite_anim_xpos[3]);	inc(sprite_anim_xpos[3]);
+	end else if (anim_pattern_idx = 16) then
+	begin
+		// move ghost eyes 1 & 2 right until they reach the limit, then disable
+		inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);	inc(sprite_anim_xpos[2]);
+		if (sprite_anim_xpos[2] >= SPR_LIMIT_RIGHT-24) then SPRITE_BITMASK	:= %10011111;
+		
+		inc(sprite_anim_xpos[3]);	inc(sprite_anim_xpos[3]);	inc(sprite_anim_xpos[3]);	inc(sprite_anim_xpos[3]);
+		if (sprite_anim_xpos[3] >= SPR_LIMIT_RIGHT-24) then SPRITE_BITMASK	:= %00011111;
+	
+	end else if (anim_pattern_idx = 17) then
+	begin
+		// no movement
+	end;
+
+	// Set sprite positions
+	SpritePos(sprite_anim_xpos[0], sprite_anim_ypos[0], 4);
+	SpritePos(sprite_anim_xpos[1], sprite_anim_ypos[1], 5);
+	SpritePos(sprite_anim_xpos[2], sprite_anim_ypos[2], 6);
+	SpritePos(sprite_anim_xpos[3], sprite_anim_ypos[3], 7);
+end;
+
+///////////////////////////////////////////////////////////////////////////////////
+// End animation functions
+///////////////////////////////////////////////////////////////////////////////////
+
+/*
+@startblock $C100 "ORIGINATE"
+procedure load_menu();
+var
+	menuFileName: string = ("MENU");
+	loadedFlag: byte = 0;
+	loadDevice: byte = 0;
+begin
+	// Restore defaults
+	preventirq();
+	disableciainterrupts();
+	poke(^$0314, 0, irq_save_lo); // Restore old IRQ handler address 
+	poke(^$0315, 0, irq_save_hi);
+	//poke(^$D019, 0, irq_save_vic); // Restore VICIRQ value	
+	poke(^$D01A, 0, irq_save_mask	); // Restore IRQMSK value
+	
+	SetMemoryConfig(1,1,1); // Enable I/O, Enable KERNAL, Enable BASIC
+	poke(LOC_VCREG1, 0, 0); // Disable SID Voice 1
+	poke(LOC_VCREG2, 0, 0); // Disable SID Voice 2
+	poke(LOC_VCREG3, 0, 0); // Disable SID Voice 3
+	poke(LOC_SIGVOL, 0, 0); // Set SID Volume to 0
+	SPRITE_BITMASK := 0;	// Disable sprites
+	SCREEN_BG_COL[0] := black;
+	SCREEN_FG_COL[0] := black;
+	SetBank(VIC_BANK0);	// Bank #0, $0000-$3FFF
+	SetTextMode(); // Set Text mode
+	poke(^$D016, 0, $c8); // Set default text mode
+	SetCharsetAndScreenLocation($D000, $0400);
+	//poke(^$D018, 0, %00010101);	// 21 - Set screen address to $0400, char data to default
+	ClearScreen($20, $0400); // Clear text screen
+	ClearScreen(cyan, ^$D800); // Fill color ram
+	moveTo(0, 0, hi(^$0400));
+	printstring("LOADING MENU..",0,16);
+	enableirq();
+
+	loadDevice := peek(^$BA, 0); // Get current device #
+
+	// Load file using KERNAL routines
+	_A := 0;	// file #
+	_X := loadDevice; //8;	// dev #
+	_Y := 1;	// secondary addr
+	call(^$FFBA);	// SETLFS
+	_A := length(menuFileName);
+	_X := lo(#menuFileName);
+	_Y := hi(#menuFileName);
+	call(^$FFBD);	// SETNAM
+	_A := 0;	// LOAD
+	_X := 0;	//
+	_Y := 0;	//$08;
+	call(^$FFD5);	// LOAD
+
+	SCREEN_BG_COL[0] := red;
+
+	// Check value in kernal load status register
+	while (loadedFlag <> 64) do begin
+		loadedFlag := peek(^$90, 0) & 64;	// STATUS flag (ST)
+		inc(SCREEN_BG_COL[0]);
+	end;
+
+	SCREEN_BG_COL[0] := green;
+	
+	// run menu program
+	call(^$080D);	// sys(2061)
+end;
+@endblock
+*/
+
+// Main routine
+begin
+    // A Koala Painter image typically contains:
+    //
+    // Section	       	Address (offset)	Size
+    // Header byte	   	$0000	2 bytes 		($0	  	- $2)
+    // Bitmap data	   	$0002	8000 bytes 	($2	  	- $1F41)
+    // Screen RAM	   	$1F42	1000 bytes 	($1F42	- $2329)
+    // Color RAM	       	$232A	1000 bytes 	($232A	- $2711)
+    // Background color	$2712	1 byte		($2712)
+    
+    // Use memory locations:
+    // Bitmap data: $2000 VIC ($6000 CPU)
+    // Screen RAM: $0400 VIC ($4400 CPU)
+    // Color RAM: $D800
+    // VIC-II screen control: $D011, $D016, etc
+    
+    // This example displays a Koala image assuming it's loaded at $6000.
+	DefineScreen(); 
+	preventirq();
+	disableciainterrupts();
+	irq_save_lo		:= peek(^$0314, 0);	// Save old IRQ handler address 
+	irq_save_hi		:= peek(^$0315, 0);	// for when we exit.
+	//irq_save_vic		:= peek(^$D019, 0);	// Save VICIRCL value
+	irq_save_mask	:= peek(^$D01A, 0);	// Save IRQMSK value
+
+	SetMemoryConfig(1,USE_KERNAL,0); // Enable I/O, Enable KERNAL, Disable BASIC
+
+	// Play sid file
+	InitSid(sidfile_1_init);
+	//StartRasterChain(irSidPlayer(),$50,USE_KERNAL);
+
+	// Configure raster IRQ
+	RasterIRQ(irSidPlayer(),$50,USE_KERNAL);
+	enablerasterirq();
+	enableirq();
+	
+	// Show Koala image	
+	displayKoalaScreen();
+	
+	initSprites();
+	
+	while (true) do 
+	begin		
+		waitforraster(0);
+		//SCREEN_BG_COL[0] := cyan; // for testing speed
+		
+		// Check if pattern should be updated		
+		if (anim_pattern_ctr = 0) then begin
+			update_animation_pattern();
+		end;
+		dec(anim_pattern_ctr);
+
+		// Update sprite definition pointers
+		if (sprite_anim_ctr = 0) then begin			
+			update_sprite_pointers();
+
+			// Reset animation counter
+			sprite_anim_ctr := SPRITE_ANIM_DEF;
+		end;
+		dec(sprite_anim_ctr);
+
+		// Update positions of sprites
+		update_sprite_positions();
+
+		// text scrolling animation 
+		scrollMessageSprites();
+		
+		// Check for space bar pressed
+		//Key::Read();
+		//if (Key::Held(KEY_KSPACE)) then begin			
+		//	load_menu(); // Load & Run MENU.PRG 
+		//end;
+		
+		//SCREEN_BG_COL[0] := blue; // for testing speed
+	end;
+
+	loop();
+end.
