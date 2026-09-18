@@ -1,0 +1,784 @@
+// Program to display KoalaPainter image
+
+program C64Project;
+
+//@userdata	$6000 $8712 "PIC_DATA"
+@define useKernal 1
+
+//@use "gfx/gfx"
+@use "input/key"	
+//@use "system"	
+//@use "screen/screen"
+//@use "text/txt"
+
+// deprecated commands - ensure not included
+@ignoremethod "initjoystick"
+@ignoremethod "initmoveto"
+
+// === includes =====================================
+// move start of code so it doesn't interfere with data
+@startblock $2200 "ORIGINATE" // Hokutu Force SID (also works at $2200)
+//@startblock $0810 "ORIGINATE" // Michal Hoffmann SID (also works at $3D00)
+//@include "variables.ras"
+//@endblock
+
+var
+	const USE_KERNAL: byte = 1;
+	const LOC_BITMAP_SCREEN:	address = $6000;		// Location for bitmap data
+	const LOC_CHAR_SCREEN:	address = $5C00;		// Location for text screen (1k)
+	const LOC_CHAR_COLOR:	address = $D800;		// Location for color data (1k)
+	const LOC_SPRITE_DATA:	address = $4000;		// Location for sprite data
+	const LOC_SPRITE_PTRS:	address = LOC_CHAR_SCREEN + 1016;		// Location of sprite pointers
+	//const LOC_CHAR_DATA:		address = $1200; 	// Location for CHAR data (1k)
+	//const LOC_SPRITE_WORK:	address = $1400;		// Location where sprite data gets updated
+	//const LOC_VCREG1:		address = $D404;		// Voice 1 Control Register
+	//const LOC_VCREG2:		address = $D40B;		// Voice 2 Control Register
+	//const LOC_VCREG3:		address = $D412;		// Voice 3 Control Register
+	const LOC_SIGVOL:		address = $D418;		// Volume and Filter Select Register (0:no sound, 15:max vol)
+	//const LOC_SCROLY:		address = $d011;		// VIC register - SCROLY
+	//const LOC_RASTER:		address = $d012;		// VIC register - RASTER	
+
+	i : byte = 0;
+	j : byte = 0;
+	k : byte = 0;
+	raster_sid_brk_pos		 : byte = 40;
+	title_text_color			 : byte = light_red; // light red has better contrast
+	subtext_color			 : byte = purple;
+	temp_byte_1				 : byte = 0;
+	
+	// Modes of displaying title sprites 
+	//  0 - nothing
+	//  1 - display monkey island title 
+	//  2 - display 'Psych!'
+	//  3 - display VCF-MW title 	
+	raster_title_brk_pos		 : byte = 123; // prepare to show new sprites 7 lines before they're needed
+	raster_title_brk2_pos	 : byte = 130; // the actual scanline where new sprites appear
+	raster_vcf_title_brk_pos	 : byte = 123; // prepare to show new sprites 7 lines before they're needed
+	raster_vcf_title_brk2_pos : byte = 130; // the actual scanline where new sprites appear
+	raster_troll_brk_pos		 : byte = 109;
+	title_display_idx	: byte = 0;
+	title_display_max	: byte = 6;
+											// blank, MI title, blank, psych, blank, VCF title
+	title_display_arr    : array[7] of byte = (0, 1, 0, 2, 0, 3, 0);
+	// Total # frames - 3300
+	title_delay_arr		: array[7] of integer = (400, 400, 30, 150, 40, 1500, 780);
+	title_anim_ctr		: integer = 400;
+	
+	// Title graphics
+	title_spr_arr	: array[24] of byte = (0, 1, 2, 3, 4,   5, 6, 7, 8, 9,   11, 
+										  12, 13, 14,
+										  15, 16, 17, 18, 19,   20, 21, 22, 23, 24,   11);
+
+	title_spr_xpos_arr : array[24] of integer = (64, 112, 160, 208, 256,  64, 112, 160, 208, 256,  112,
+											   122, 170, 218,
+											   64, 112, 160, 208, 256,  64, 112, 160, 208, 256,  176);
+
+	title_spr_ypos_arr : array[24] of byte = (88, 88, 88, 88, 88,  130, 130, 130, 130, 130,  172, 
+											116, 116, 116,
+											88, 88, 88, 88, 88,  130, 130, 130, 130, 130,  170);
+	// lowest title sprite position: 172-220
+
+	// Modes of displaying bottom text
+	//  0 - nothing
+	//  1 - The Collective  Presents
+	//  2 - Artwork / Code  By Fuzzybad
+	//  3 - Music By  Hokutu Force
+	//  4 - Based On Work  (c) Lucasarts
+	//  5 - All Power To  The People
+	//  6 - Press Space  To Continue
+	raster_subtxt_brk_pos : byte = 197; // when to display bottom text sprites
+	subtxt_display_idx	: byte = 0;
+	subtxt_display_max	: byte = 10;
+// Displays 'Press Space to Continue'
+//	subtxt_display_arr   : array[13] of byte = (0, 1,  0, 2,  0, 3,  0, 4,  0, 5,  0, 6,  0);
+
+// Does NOT display 'Press Space to Continue'
+	subtxt_display_arr   : array[11] of byte = (0, 1,  0, 2,  0, 3,  0, 4,  0, 5,  0);
+	// Total # frames - 3300
+	subtxt_delay_arr		: array[11] of integer = (200, 200,  750, 270,  95, 270,  95, 270,  95, 265,  790);
+	subtxt_anim_ctr		: integer = 200;
+	
+	subtxt_xpos_arr	: array[4] of byte = (94, 142, 190, 238);
+	subtxt_ypos_arr	: array[4] of byte = (204, 204, 204, 204);
+
+	subtxt_1_spr_arr		: array[4] of byte = (25, 26, 27, 28);
+	//subtxt_1_xpos_arr	: array[4] of byte = (94, 142, 190, 238);
+	//subtxt_1_ypos_arr	: array[4] of byte = (204, 204, 204, 204);
+	subtxt_2_spr_arr		: array[4] of byte = (29, 30, 31, 32);
+	//subtxt_2_xpos_arr	: array[4] of byte = (94, 142, 190, 238);
+	//subtxt_2_ypos_arr	: array[4] of byte = (204, 204, 204, 204);
+	subtxt_3_spr_arr		: array[4] of byte = (33, 34, 35, 36);
+	//subtxt_3_xpos_arr	: array[4] of byte = (94, 142, 190, 238);
+	//subtxt_3_ypos_arr	: array[4] of byte = (204, 204, 204, 204);
+	subtxt_4_spr_arr		: array[4] of byte = (37, 38, 39, 40);
+	//subtxt_4_xpos_arr	: array[4] of byte = (94, 142, 190, 238);
+	//subtxt_4_ypos_arr	: array[4] of byte = (204, 204, 204, 204);
+	subtxt_5_spr_arr		: array[4] of byte = (41, 42, 43, 44);
+	//subtxt_5_xpos_arr	: array[4] of byte = (94, 142, 190, 238);
+	//subtxt_5_ypos_arr	: array[4] of byte = (204, 204, 204, 204);
+	subtxt_6_spr_arr		: array[4] of byte = (45, 46, 47, 48);
+	//subtxt_6_xpos_arr	: array[4] of byte = (94, 142, 190, 238);
+	//subtxt_6_ypos_arr	: array[4] of byte = (204, 204, 204, 204);
+
+	// Import image data
+	imagedata: incbin("assets/melee_island_v11.koa", $8000);
+
+	// Import SID music file
+	sidfile: incsid("assets/Monkey_Island_Theme_Hokutu_Force.sid",2);
+	//sidfile: incsid("assets/Monkey_Island_Title_Theme_Michal_Hoffmann.sid",2);
+
+	// Import sprite data
+	sprites: incbin("assets/mi-title-sprites-v2.bin", LOC_SPRITE_DATA);
+
+// function placeholders
+interrupt irSetTitleRow2();
+interrupt irSetVcfTitleRow2();
+interrupt irSetSubtxt();
+interrupt irSetTrollRow();
+interrupt irSpriteReset();
+procedure setTitleRow1();
+procedure setTitleRow2();
+procedure setVcfTitleRow1();
+procedure setVcfTitleRow2();
+procedure initSprites_mode1();
+procedure initSprites_mode2();
+procedure initSprites_mode3();
+procedure set_sprite_colors();
+procedure initSprites();
+procedure exitDemo();
+
+//	Sid music is played by calling the sidfile_1_play address for each raster interupt trigger
+interrupt irRasterMainLoop();
+begin
+	StartIRQ(USE_KERNAL);
+	
+	//screen_bg_col := green;
+	call(sidfile_1_play);
+	
+	// Check if title sprite mode should change
+	if (title_anim_ctr = 0) then 
+	begin
+		// Increment to next mode
+		inc(title_display_idx);
+		if (title_display_idx > title_display_max) then title_display_idx := 0;
+		
+		// Set new delay value
+		title_anim_ctr := title_delay_arr[title_display_idx];
+		
+		// Configure sprites for each mode
+		if (title_display_arr[title_display_idx] = 0) then begin
+			//  0 - no sprites displayed
+			//screen_bg_col := black;
+			SPRITE_BITMASK	:= %00000000;
+		end else if (title_display_arr[title_display_idx] = 1) then begin
+			//  1 - display monkey island title
+			//screen_bg_col := white;
+			title_text_color := light_red;
+			initSprites();
+			initSprites_mode1();
+		end else if (title_display_arr[title_display_idx] = 2) then begin
+			//  2 - display 'Psych!'
+			//screen_bg_col := yellow;
+			// These sprites are now multiplexed and handled in interrupt
+		end else if (title_display_arr[title_display_idx] = 3) then begin
+			//  3 - display VCF-MW title		
+			//screen_bg_col := orange;
+			title_text_color := purple;
+			initSprites();
+			initSprites_mode3();
+		end;		
+	end else begin
+		dec(title_anim_ctr);
+	end;
+	
+	// Check if bottom text sprite sprites should change
+	if (subtxt_anim_ctr = 0) then 
+	begin
+		// Increment to next mode
+		inc(subtxt_display_idx);
+		if (subtxt_display_idx > subtxt_display_max) then subtxt_display_idx := 0;
+		
+		// Set new delay value
+		subtxt_anim_ctr := subtxt_delay_arr[subtxt_display_idx];
+	end else begin
+		dec(subtxt_anim_ctr);
+	end;
+
+	// Take action for current display mode
+	if (title_display_arr[title_display_idx] = 1) then 
+	begin
+		//  1 - display monkey island title
+		
+		// Display "Band A" sprites 0, 1, 2, 3 which are shared
+		setTitleRow1();
+		
+		// Setup IRQ to display "Band B" sprites 0, 1, 2 which are shared
+		// This is done several scanlines before raster reaches position 126, so 
+		// there's enough time to process in advance. irSetTitleRow2() only sets 
+		// new position of sprites 0, 1, 2, as this can be done in advance.
+		//
+		// Changing new sprite pointers for sprites 0, 1, 2 is actually done on 
+		// scanline 126 within the main loop.
+		RasterIRQ(irSetTitleRow2(), raster_title_brk_pos, @useKernal);
+	end else if (title_display_arr[title_display_idx] = 2) then 
+	begin
+		//	2 - display 'Psych!'
+		title_text_color := green;
+		initSprites();
+		SPRITE_BITMASK := %00000111;
+
+		RasterIRQ(irSetTrollRow(), raster_troll_brk_pos, @useKernal);
+	end else if (title_display_arr[title_display_idx] = 3) then 
+	begin
+		//  3 - display VCF title
+		
+		// Display "Band A" sprites 0, 1, 2 which are shared
+		setVcfTitleRow1();
+		
+		// Setup IRQ to display "Band B" sprites 0, 1, 2 in new position
+		RasterIRQ(irSetVcfTitleRow2(), raster_vcf_title_brk_pos, @useKernal);
+	end else if (subtxt_display_arr[subtxt_display_idx] > 0) then begin
+		// Display text at bottom
+		RasterIRQ(irSetSubtxt(), raster_subtxt_brk_pos, @useKernal);			
+	end;
+
+	CloseIRQ();
+end;
+
+// Set title sprites - Rows 2&3 - Y pos=126
+interrupt irSetTitleRow2();
+begin
+	StartIRQ(@useKernal);
+	//inc(screen_bg_col);
+
+	SpritePos(title_spr_xpos_arr[5], title_spr_ypos_arr[5], 0); 
+	SpritePos(title_spr_xpos_arr[6], title_spr_ypos_arr[6], 1);
+	SpritePos(title_spr_xpos_arr[7], title_spr_ypos_arr[7], 2);
+	SpritePos(title_spr_xpos_arr[3], title_spr_ypos_arr[3], 3);
+	//screen_bg_col := green; // for testing
+
+	// Check if bottom text should be displayed, or return IRQ to SID player
+	if (subtxt_display_arr[subtxt_display_idx] > 0) then begin
+		RasterIRQ(irSetSubtxt(), raster_subtxt_brk_pos, @useKernal);			
+	end else begin
+		RasterIRQ(irRasterMainLoop(), raster_sid_brk_pos, @useKernal);
+	end;
+	
+	CloseIRQ();
+end;
+
+// Set title sprites - Rows 2&3 - Y pos=126
+interrupt irSetVcfTitleRow2();
+begin
+	StartIRQ(@useKernal);
+	//inc(screen_bg_col);
+
+	SpritePos(title_spr_xpos_arr[19], title_spr_ypos_arr[19], 0); 
+	SpritePos(title_spr_xpos_arr[20], title_spr_ypos_arr[20], 1);
+	SpritePos(title_spr_xpos_arr[21], title_spr_ypos_arr[21], 2);
+	SpritePos(title_spr_xpos_arr[17], title_spr_ypos_arr[17], 3);
+	//screen_bg_col := green; // for testing
+
+	// Check if bottom text should be displayed, or return IRQ to SID player
+	if (subtxt_display_arr[subtxt_display_idx] > 0) then begin
+		RasterIRQ(irSetSubtxt(), raster_subtxt_brk_pos, @useKernal);			
+	end else begin
+		RasterIRQ(irRasterMainLoop(), raster_sid_brk_pos, @useKernal);
+	end;
+	
+	CloseIRQ();
+end;
+
+// Set 'Troll' title row
+interrupt irSetTrollRow();
+begin
+	StartIRQ(@useKernal);
+	//inc(screen_bg_col);
+
+	LOC_SPRITE_PTRS[0]	:= title_spr_arr[11];
+	LOC_SPRITE_PTRS[1]	:= title_spr_arr[12];
+	LOC_SPRITE_PTRS[2]	:= title_spr_arr[13];
+	SpritePos(title_spr_xpos_arr[11], title_spr_ypos_arr[11], 0);
+	SpritePos(title_spr_xpos_arr[12], title_spr_ypos_arr[12], 1);
+	SpritePos(title_spr_xpos_arr[13], title_spr_ypos_arr[13], 2);
+
+	// Check if bottom text should be displayed, or return IRQ to SID player
+	if (subtxt_display_arr[subtxt_display_idx] > 0) then begin
+		RasterIRQ(irSetSubtxt(), raster_subtxt_brk_pos, @useKernal);			
+	end else begin
+		RasterIRQ(irRasterMainLoop(), raster_sid_brk_pos, @useKernal);
+	end;
+	
+	CloseIRQ();	
+end;
+
+// Set bottom text: The Collective Presents
+interrupt irSetSubtxt();
+begin
+	StartIRQ(@useKernal);
+	//inc(screen_bg_col);
+	
+	// Ensure sprites 0-3 are enabled
+	SPRITE_BITMASK			:= SPRITE_BITMASK | %00001111;
+		
+	//SPRITE_STRETCH_X			:= SPRITE_STRETCH_X | %11111111;
+	//SPRITE_STRETCH_Y			:= SPRITE_STRETCH_Y | %11111111;
+	SPRITE_MULTICOLOR		:= SPRITE_MULTICOLOR | %00001111;
+	SPRITE_MULTICOLOR_REG1	:= black;
+	//SPRITE_MULTICOLOR_REG2	:= green;
+
+	SPRITE_COLOR[0]	:= subtext_color;
+	SPRITE_COLOR[1]	:= subtext_color;
+	SPRITE_COLOR[2]	:= subtext_color;
+	SPRITE_COLOR[3]	:= subtext_color;
+
+	if (subtxt_display_arr[subtxt_display_idx] = 1) then begin
+		LOC_SPRITE_PTRS[0]	:= subtxt_1_spr_arr[0];
+		LOC_SPRITE_PTRS[1]	:= subtxt_1_spr_arr[1];
+		LOC_SPRITE_PTRS[2]	:= subtxt_1_spr_arr[2];
+		LOC_SPRITE_PTRS[3]	:= subtxt_1_spr_arr[3];
+		//SpritePos(subtxt_1_xpos_arr[0], subtxt_ypos_1_arr[0], 0);
+		//SpritePos(subtxt_1_xpos_arr[1], subtxt_ypos_1_arr[1], 1);
+		//SpritePos(subtxt_1_xpos_arr[2], subtxt_ypos_1_arr[2], 2);
+		//SpritePos(subtxt_1_xpos_arr[3], subtxt_ypos_1_arr[3], 3);
+	end else if (subtxt_display_arr[subtxt_display_idx] = 2) then begin
+		LOC_SPRITE_PTRS[0]	:= subtxt_2_spr_arr[0];
+		LOC_SPRITE_PTRS[1]	:= subtxt_2_spr_arr[1];
+		LOC_SPRITE_PTRS[2]	:= subtxt_2_spr_arr[2];
+		LOC_SPRITE_PTRS[3]	:= subtxt_2_spr_arr[3];
+		//SpritePos(subtxt_2_xpos_arr[0], subtxt_2_ypos_arr[0], 0);
+		//SpritePos(subtxt_2_xpos_arr[1], subtxt_2_ypos_arr[1], 1);
+		//SpritePos(subtxt_2_xpos_arr[2], subtxt_2_ypos_arr[2], 2);
+		//SpritePos(subtxt_2_xpos_arr[3], subtxt_2_ypos_arr[3], 3);
+	end else if (subtxt_display_arr[subtxt_display_idx] = 3) then begin
+		LOC_SPRITE_PTRS[0]	:= subtxt_3_spr_arr[0];
+		LOC_SPRITE_PTRS[1]	:= subtxt_3_spr_arr[1];
+		LOC_SPRITE_PTRS[2]	:= subtxt_3_spr_arr[2];
+		LOC_SPRITE_PTRS[3]	:= subtxt_3_spr_arr[3];
+		//SpritePos(subtxt_3_xpos_arr[0], subtxt_3_ypos_arr[0], 0);
+		//SpritePos(subtxt_3_xpos_arr[1], subtxt_3_ypos_arr[1], 1);
+		//SpritePos(subtxt_3_xpos_arr[2], subtxt_3_ypos_arr[2], 2);
+		//SpritePos(subtxt_3_xpos_arr[3], subtxt_3_ypos_arr[3], 3);
+	end else if (subtxt_display_arr[subtxt_display_idx] = 4) then begin
+		LOC_SPRITE_PTRS[0]	:= subtxt_4_spr_arr[0];
+		LOC_SPRITE_PTRS[1]	:= subtxt_4_spr_arr[1];
+		LOC_SPRITE_PTRS[2]	:= subtxt_4_spr_arr[2];
+		LOC_SPRITE_PTRS[3]	:= subtxt_4_spr_arr[3];
+		//SpritePos(subtxt_4_xpos_arr[0], subtxt_4_ypos_arr[0], 0);
+		//SpritePos(subtxt_4_xpos_arr[1], subtxt_4_ypos_arr[1], 1);
+		//SpritePos(subtxt_4_xpos_arr[2], subtxt_4_ypos_arr[2], 2);
+		//SpritePos(subtxt_4_xpos_arr[3], subtxt_4_ypos_arr[3], 3);
+	end else if (subtxt_display_arr[subtxt_display_idx] = 5) then begin
+		LOC_SPRITE_PTRS[0]	:= subtxt_5_spr_arr[0];
+		LOC_SPRITE_PTRS[1]	:= subtxt_5_spr_arr[1];
+		LOC_SPRITE_PTRS[2]	:= subtxt_5_spr_arr[2];
+		LOC_SPRITE_PTRS[3]	:= subtxt_5_spr_arr[3];
+		//SpritePos(subtxt_5_xpos_arr[0], subtxt_5_ypos_arr[0], 0);
+		//SpritePos(subtxt_5_xpos_arr[1], subtxt_5_ypos_arr[1], 1);
+		//SpritePos(subtxt_5_xpos_arr[2], subtxt_5_ypos_arr[2], 2);
+		//SpritePos(subtxt_5_xpos_arr[3], subtxt_5_ypos_arr[3], 3);
+	end else if (subtxt_display_arr[subtxt_display_idx] = 6) then begin
+		LOC_SPRITE_PTRS[0]	:= subtxt_6_spr_arr[0];
+		LOC_SPRITE_PTRS[1]	:= subtxt_6_spr_arr[1];
+		LOC_SPRITE_PTRS[2]	:= subtxt_6_spr_arr[2];
+		LOC_SPRITE_PTRS[3]	:= subtxt_6_spr_arr[3];
+		//SpritePos(subtxt_6_xpos_arr[0], subtxt_6_ypos_arr[0], 0);
+		//SpritePos(subtxt_6_xpos_arr[1], subtxt_6_ypos_arr[1], 1);
+		//SpritePos(subtxt_6_xpos_arr[2], subtxt_6_ypos_arr[2], 2);
+		//SpritePos(subtxt_6_xpos_arr[3], subtxt_6_ypos_arr[3], 3);
+	end;
+
+	SpritePos(subtxt_xpos_arr[0], subtxt_ypos_arr[0], 0);
+	SpritePos(subtxt_xpos_arr[1], subtxt_ypos_arr[1], 1);
+	SpritePos(subtxt_xpos_arr[2], subtxt_ypos_arr[2], 2);
+	SpritePos(subtxt_xpos_arr[3], subtxt_ypos_arr[3], 3);
+
+	RasterIRQ(irRasterMainLoop(), raster_sid_brk_pos, @useKernal);
+
+	CloseIRQ();
+end;
+
+// Set title sprites - Rows 1 - Y pos=119
+// This function should be called on every frame when title is active
+procedure setTitleRow1();
+begin
+	// Set title row 1 sprites that are shared 
+	title_text_color := light_red;
+	initSprites();
+
+	LOC_SPRITE_PTRS[0]	:= title_spr_arr[0];
+	LOC_SPRITE_PTRS[1]	:= title_spr_arr[1];
+	LOC_SPRITE_PTRS[2]	:= title_spr_arr[2];
+	LOC_SPRITE_PTRS[3]	:= title_spr_arr[3];
+	SpritePos(title_spr_xpos_arr[0], title_spr_ypos_arr[0], 0); 
+	SpritePos(title_spr_xpos_arr[1], title_spr_ypos_arr[1], 1);
+	SpritePos(title_spr_xpos_arr[2], title_spr_ypos_arr[2], 2);
+	SpritePos(title_spr_xpos_arr[3], title_spr_ypos_arr[3], 3);
+	//screen_bg_col := yellow; // for testing
+end;
+
+// Set VCF title sprites - Rows 1 - Y pos=119
+// This function should be called on every frame when title is active
+procedure setVcfTitleRow1();
+begin
+	// Set VCF title row 1 sprites that are shared 
+	title_text_color := purple;
+	initSprites();
+
+	LOC_SPRITE_PTRS[0]	:= title_spr_arr[14];
+	LOC_SPRITE_PTRS[1]	:= title_spr_arr[15];
+	LOC_SPRITE_PTRS[2]	:= title_spr_arr[16];
+	LOC_SPRITE_PTRS[3]	:= title_spr_arr[17];
+	SpritePos(title_spr_xpos_arr[14], title_spr_ypos_arr[14], 0); 
+	SpritePos(title_spr_xpos_arr[15], title_spr_ypos_arr[15], 1);
+	SpritePos(title_spr_xpos_arr[16], title_spr_ypos_arr[16], 2);
+	SpritePos(title_spr_xpos_arr[17], title_spr_ypos_arr[17], 3);
+	//screen_bg_col := yellow; // for testing
+end;
+
+// Set title sprites - Rows 2&3 - Y pos=126
+procedure setTitleRow2();
+begin
+	LOC_SPRITE_PTRS[0]	:= title_spr_arr[5];
+	LOC_SPRITE_PTRS[1]	:= title_spr_arr[6];
+	LOC_SPRITE_PTRS[2]	:= title_spr_arr[7];
+	LOC_SPRITE_PTRS[3]	:= title_spr_arr[3];
+end;
+
+// Set title sprites - Rows 2&3 - Y pos=126
+procedure setVcfTitleRow2();
+begin
+	LOC_SPRITE_PTRS[0]	:= title_spr_arr[19];
+	LOC_SPRITE_PTRS[1]	:= title_spr_arr[20];
+	LOC_SPRITE_PTRS[2]	:= title_spr_arr[21];
+	LOC_SPRITE_PTRS[3]	:= title_spr_arr[17];
+end;
+
+// Set sprite colors
+procedure set_sprite_colors();
+begin
+	SPRITE_COLOR[0]	:= title_text_color;
+	SPRITE_COLOR[1]	:= title_text_color;
+	SPRITE_COLOR[2]	:= title_text_color;
+	SPRITE_COLOR[3]	:= title_text_color;
+	SPRITE_COLOR[4]	:= title_text_color;
+	SPRITE_COLOR[5]	:= title_text_color;
+	SPRITE_COLOR[6]	:= title_text_color;
+	SPRITE_COLOR[7]	:= title_text_color;
+end;
+
+// Show Koala-format image
+procedure displayKoalaScreen();
+begin
+	SetBank(VIC_BANK1);	// Bank #1, $4000-$7FFF
+	SetBitmapMode();	// Enable bitmap
+	SetMultiColorMode();	// Enable MC
+	
+	// $D018 VIC-II Chip Memory Control Register
+	//
+	// Bit 0: Unused
+	// Bits 1-3: Text character dot-data base address within VIC-II address space
+	// Bits 4-7: Video matrix base address within VIC-II address space
+	//
+	// Set screen address to $5C00 CPU ($1C00 VIC)
+	// Set bitmap loc to $6000 CPU ($2000 VIC) 
+	// Sprite data loads at $4000 CPU ($0000 VIC) - Allowing room for up to 106 sprite definitions
+	// Theoretically, there should be 384 bytes free at $1A80-$1BFF but TRSE throws an error.
+	poke(^$D018, 0, %01111100);
+	
+	// Copy bitmap data
+	BlockMemCpy(^$8002, LOC_BITMAP_SCREEN, 16); // Copy 4,096 bytes
+	BlockMemCpy(^$9002, LOC_BITMAP_SCREEN + $1000, 16); // Copy 4,096 bytes
+	
+	// Copy screen memory
+	BlockMemCpy(^$9F42, LOC_CHAR_SCREEN, 4);
+	
+	// Copy color memory
+	BlockMemCpy(^$A32A, LOC_CHAR_COLOR, 4);
+
+	// Set BG/Border colors
+	SCREEN_BG_COL[0] := blue;
+	SCREEN_FG_COL[0] := Peek(^$A712, 0);
+end;
+
+// Sprites 0-2 are multiplexed and defined in separate functions
+// Sprites 3-7 are static
+procedure initSprites_mode1();
+begin
+	// Hardware sprites that are multiplexed: 0, 1, 2
+	// No need to define these here, because they get initialized on every frame.
+	
+	// Hardware sprites that appear continually:
+	// "Band A" HW sprite 4
+	// "Band B" HW sprites 5 & 6
+	// "Band C" HW sprite 7
+	LOC_SPRITE_PTRS[4]	:= title_spr_arr[4];
+	LOC_SPRITE_PTRS[5]	:= title_spr_arr[8];
+	LOC_SPRITE_PTRS[6]	:= title_spr_arr[9];
+	LOC_SPRITE_PTRS[7]	:= title_spr_arr[10];
+	SpritePos(title_spr_xpos_arr[4], title_spr_ypos_arr[4], 4);
+	SpritePos(title_spr_xpos_arr[8], title_spr_ypos_arr[8], 5);
+	SpritePos(title_spr_xpos_arr[9], title_spr_ypos_arr[9], 6);
+	SpritePos(title_spr_xpos_arr[10], title_spr_ypos_arr[10], 7);	
+end;
+
+// Shows Psyche! and troll face
+procedure initSprites_mode2();
+begin
+	// Enable sprites 0-3
+	//SPRITE_BITMASK			:= %00000111;
+	//SPRITE_STRETCH_X			:= SPRITE_STRETCH_X | %11111111;
+	//SPRITE_STRETCH_Y			:= SPRITE_STRETCH_Y | %11111111;
+	//SPRITE_MULTICOLOR		:= %00000111;
+
+	//LOC_SPRITE_PTRS[0]	:= title_spr_arr[11];
+	//LOC_SPRITE_PTRS[1]	:= title_spr_arr[12];
+	//LOC_SPRITE_PTRS[2]	:= title_spr_arr[13];
+	//SpritePos(title_spr_xpos_arr[11], title_spr_ypos_arr[11], 0);
+	//SpritePos(title_spr_xpos_arr[12], title_spr_ypos_arr[12], 1);
+	//SpritePos(title_spr_xpos_arr[13], title_spr_ypos_arr[13], 2);
+end;
+
+// Shows VCF Title screen
+procedure initSprites_mode3();
+begin
+	// Hardware sprites that are multiplexed: 0, 1, 2, 3
+	// No need to define these here, because they get initialized on every frame.
+
+	// Hardware sprites that appear continually:
+	// "Band A" HW sprite 4
+	// "Band B" HW sprites 5 & 6
+	// "Band C" HW sprite 7
+	LOC_SPRITE_PTRS[4]	:= title_spr_arr[18];
+	LOC_SPRITE_PTRS[5]	:= title_spr_arr[22];
+	LOC_SPRITE_PTRS[6]	:= title_spr_arr[23];
+	LOC_SPRITE_PTRS[7]	:= title_spr_arr[24];
+	SpritePos(title_spr_xpos_arr[18], title_spr_ypos_arr[18], 4);
+	SpritePos(title_spr_xpos_arr[22], title_spr_ypos_arr[22], 5);
+	SpritePos(title_spr_xpos_arr[23], title_spr_ypos_arr[23], 6);
+	SpritePos(title_spr_xpos_arr[24], title_spr_ypos_arr[24], 7);	
+end;
+
+// Initialize sprites
+procedure initSprites();
+begin
+	SPRITE_BITMASK			:= %11111111;
+	SPRITE_STRETCH_X			:= %11111111;
+	SPRITE_STRETCH_Y			:= %01111111; // HW sprite 7 is the drop-arrow on 3rd row; this is regular-height
+	SPRITE_MULTICOLOR		:= %00000000; // to save vertical space.
+	//SPRITE_MULTICOLOR_REG1	:= light_red;
+	//SPRITE_MULTICOLOR_REG2	:= white;	
+
+	// Set initial sprite colors
+	set_sprite_colors();
+end;
+
+/*
+// Load MENU,8 (57 blocks/14,478 bytes/14.2 KB) Loads at $0801. Runs with SYS 2061 / call(^2061);
+//
+// Store this procedure in high memory ($C000-$CFFF) so it's not overwritten by loaded program.
+@startblock $C000 "LOADMENU"
+procedure loadMenu();
+begin
+    asm("
+        sei
+
+		;jsr $FF81	; SCINIT Initialize screen editor - Unnecessary and wipes out loading message
+		jsr $FF84	; IOINIT Initialize I/O devices
+		jsr $FF87	; RAMTAS Memory initialization
+		jsr $FF8A	; RESTOR Restore default system and interrupt vectors
+
+        ; Restore normal C64 memory configuration
+        lda #$37
+        sta $01
+
+        ; Disable VIC raster IRQs
+        lda #$00
+        sta $d01a
+        
+        ; Restore standard KERNAL IRQ vector
+        lda #$31
+        sta $0314
+        lda #$ea
+        sta $0315
+
+        cli
+
+        ; SETNAM: filename = MENU
+        lda #4
+        ldx #<menu_filename
+        ldy #>menu_filename
+        jsr $ffbd
+
+        ; SETLFS: logical file 1, device 8, secondary address 0
+        lda #1
+        ldx #8
+        ldy #0
+        jsr $ffba
+
+        ; LOAD MENU explicitly at $0801
+        lda #0
+        ldx #$01
+        ldy #$08
+        jsr $ffd5
+
+        bcs menu_load_error
+
+        ; X/Y contain address immediately following loaded program.
+        ; Set BASIC variable start.
+        stx $2d	; #45 (val after loading MENU: 215)
+        sty $2e	; #46 (val after loading MENU: 63) ($3FD7)
+
+		; CLOSE - closes logical file
+		;lda #1
+   		;jsr $FFC3	
+
+		; CLALL - closes all open files & resets I/O channels
+		jsr $FFE7
+		
+        ; BASIC program starts at $0801
+        lda #$01
+        sta $2b
+        lda #$08
+        sta $2c
+
+        ; SYS 2061 - Calling SYS address runs the program
+        jmp $080D
+
+menu_load_error:
+        rts
+
+menu_filename:
+        .byte $4d,$45,$4e,$55			; MENU
+    ");
+end;
+@endblock
+*/
+
+/*
+// Exit demo and load MENU.PRG
+procedure exitDemo();
+begin
+	// Disable interrupt
+	preventirq();
+	//	disableciainterrupts();
+	
+	// Disable all sprites
+	SPRITE_BITMASK := %00000000;
+	
+	// Stop all sound
+	LOC_SIGVOL[0] := 0;
+
+	// Restore defaults
+	SCREEN_BG_COL[0] := light_blue;
+	SCREEN_FG_COL[0] := blue;
+	
+	SetMemoryConfig(1,1,1); // Enable I/O, Enable KERNAL, Enable BASIC
+	SetBank(VIC_BANK0);	// Bank #0, $0000-$3FFF
+	SetTextMode(); // Set Text mode
+	poke(^$D016, 0, $c8); // Set default text mode
+	SetCharsetAndScreenLocation($D000, $0400);
+	//poke(^$D018, 0, %00010101);	// 21 - Set screen address to $0400, char data to default
+	ClearScreen($20, $0400); // Clear text screen
+	ClearScreen(light_blue, LOC_CHAR_COLOR); // Fill color ram
+	moveTo(13, 12, hi(^$0400));
+	printstring("LOADING MENU..",0,16);
+
+
+	// Load menu program
+	loadMenu();
+end;
+*/
+
+///////////////////////////////////////////////////////////////////////////////////
+// End functions
+///////////////////////////////////////////////////////////////////////////////////
+
+
+// Main routine
+begin
+    // A Koala Painter image typically contains:
+    //
+    // Section	       	Address (offset)	Size
+    // Header byte	   	$0000	2 bytes 		($0	  	- $2)
+    // Bitmap data	   	$0002	8000 bytes 	($2	  	- $1F41)
+    // Screen RAM	   	$1F42	1000 bytes 	($1F42	- $2329)
+    // Color RAM	       	$232A	1000 bytes 	($232A	- $2711)
+    // Background color	$2712	1 byte		($2712)
+    
+    // Use memory locations:
+    // Bitmap data: $2000 VIC ($6000 CPU)
+    // Screen RAM: $0400 VIC ($4400 CPU)
+    // Color RAM: $D800
+    // VIC-II screen control: $D011, $D016, etc
+    
+    // This example displays a Koala image assuming it's loaded at $6000.
+	DefineScreen(); 
+	preventirq();
+	disableciainterrupts();
+
+	SetMemoryConfig(1,USE_KERNAL,0); // Enable I/O, Enable KERNAL, Disable BASIC
+
+	// $D01B Sprite to Foreground Display Priority Register
+	// value of 0 = sprite appears above foreground
+	// value of 1 = sprite appears behind foreground 
+	// Bit 0: priority of sprite 0 
+	// Bit 1: priority of sprite 1
+	// Etc..
+	// Sprites with lower numbers appear above higher numbers (sprite 0 above all, etc)
+	poke(^$d01b, 0, %00000000);
+
+	// Play sid file
+	InitSid(sidfile_1_init);
+	//StartRasterChain(irRasterMainLoop(),$50,USE_KERNAL);
+
+	// Configure raster IRQ
+	RasterIRQ(irRasterMainLoop(), raster_sid_brk_pos, USE_KERNAL); 
+
+	enablerasterirq();
+	enableirq();
+	
+	// Show Koala image	
+	displayKoalaScreen();
+	
+	// Init sprites
+	initSprites();
+		
+	while (true) do 
+	begin
+		// Display title sprites only when flag is active
+		if (title_display_arr[title_display_idx] = 1) then begin		
+			// Change row 2 sprite pointers
+			waitforraster(raster_title_brk2_pos);
+			setTitleRow2();
+		end else if (title_display_arr[title_display_idx] = 3) then begin		
+			// Change row 2 sprite pointers
+			waitforraster(raster_vcf_title_brk2_pos);
+			setVcfTitleRow2();
+		end;		
+	
+	 	// Read Keyboard 
+		Key::Read();		
+		if Key::Held(KEY_KSPACE) then begin
+			call(^64738); // Reboots C64
+			//exitDemo();		
+		end;
+		
+		if Key::Held(KEY_KPLUS) then begin
+			inc(	title_text_color);
+			set_sprite_colors(); 
+			wait(255); wait(255); wait(255);
+			//screen_bg_col := cyan;
+		end;
+		
+		if Key::Held(KEY_KMINUS) then begin
+			dec(title_text_color); 
+			set_sprite_colors(); 
+			wait(255); wait(255); wait(255);
+			//screen_bg_col  := green;
+		end;
+
+	end;
+
+	loop();
+end.
